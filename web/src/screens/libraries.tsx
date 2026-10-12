@@ -17,7 +17,7 @@ export function LibrariesScreen() {
     <div>
       <PageHeader
         title="Libraries"
-        description="Each library is a folder Szalinski watches and converts toward its own goal."
+        description="Each library is a folder Popcorn Batch watches and converts toward its own goal."
         actions={
           <a href={href("/libraries/new")} className={buttonVariants({ variant: "primary" })}>
             <FolderPlus aria-hidden />
@@ -40,7 +40,7 @@ export function LibrariesScreen() {
             </a>
           }
         >
-          Add the folder that holds your movies or shows. Szalinski scans it and converts what&apos;s worth
+          Add the folder that holds your movies or shows. Popcorn Batch scans it and converts what&apos;s worth
           converting.
         </EmptyState>
       ) : (

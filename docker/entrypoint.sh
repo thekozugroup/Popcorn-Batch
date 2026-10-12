@@ -1,15 +1,16 @@
 #!/bin/sh
-# Szalinski container entrypoint (POSIX sh; runs under tini).
+# Popcorn Batch container entrypoint (POSIX sh; runs under tini).
 #
 # Started as root (the default), it:
-#   1. moves the "szalinski" user and group to PUID/PGID (default 1000/1000;
-#      Unraid uses 99/100) and applies UMASK (default 002),
+#   1. moves the "popcorn-batch" user and group to PUID/PGID (default
+#      1000/1000; Unraid uses 99/100) and applies UMASK (default 002),
 #   2. adds the user to the groups that own the GPU device nodes it can see
 #      (/dev/dri, /dev/nvidia*, and ARM video/codec nodes), except root,
-#   3. hands that user Szalinski's own files in /config (the database and its
-#      lock), the top folder of /config when it is new, empty or already holds
-#      the database, and the top folder of /temp, without ever re-owning other
-#      files or folders (the folder may be shared),
+#   3. hands that user Popcorn Batch's own files in /config (the database
+#      and its lock, also under the project's earlier names), the top folder
+#      of /config when it is new, empty or already holds the database, and
+#      the top folder of /temp, without ever re-owning other files or
+#      folders (the folder may be shared),
 #   4. prints a short banner and drops privileges with setpriv.
 # Started as any other user (docker run --user ...), it only applies UMASK
 # and the path defaults, then runs the command directly.
@@ -19,22 +20,22 @@
 # ("docker run image id").
 set -eu
 
-APP_USER=szalinski
+APP_USER=popcorn-batch
 
-log() { printf '[szalinski] %s\n' "$*"; }
-warn() { printf '[szalinski] Warning: %s\n' "$*" >&2; }
+log() { printf '[popcorn-batch] %s\n' "$*"; }
+warn() { printf '[popcorn-batch] Warning: %s\n' "$*" >&2; }
 die() {
-    printf '[szalinski] Error: %s\n' "$*" >&2
+    printf '[popcorn-batch] Error: %s\n' "$*" >&2
     exit 1
 }
 
 if [ $# -eq 0 ] || [ "${1#-}" != "$1" ]; then
-    set -- szalinski "$@"
+    set -- popcorn-batch "$@"
 fi
 
 # Show the banner only when starting the server for real.
 show_banner=0
-if [ "$1" = szalinski ]; then
+if [ "$1" = popcorn-batch ]; then
     show_banner=1
     for arg in "$@"; do
         case $arg in -h | --help | -V | --version) show_banner=0 ;; esac
@@ -107,16 +108,17 @@ anonymous_volume() {
     mount_info "$1" | grep -Eq '^[^ ]+ [^ ]+ [^ ]+ [^ ]*/volumes/[0-9a-f]{64}/_data '
 }
 
-# Names of the files Szalinski creates in the Config folder: the database (in
-# write-ahead mode, hence the extra files) and the lock that keeps a second
-# copy out.
-DB_FILE=szalinski.db
-LOCK_FILE=szalinski.lock
-# The same files under the name before the rename (Chrysopoeia 0.2). The
-# server renames the old database to $DB_FILE on its first start and keeps
-# holding the old lock, so they are Szalinski's own files too.
-LEGACY_DB_FILE=chrysopoeia.db
-LEGACY_LOCK_FILE=chrysopoeia.lock
+# Names of the files Popcorn Batch creates in the Config folder: the
+# database (in write-ahead mode, hence the extra files) and the lock that
+# keeps a second copy out.
+DB_FILE=popcorn-batch.db
+LOCK_FILE=popcorn-batch.lock
+# The same files under the project's earlier names, newest first: Szalinski
+# (0.3) and Chrysopoeia (0.2). The server renames the newest older database
+# to $DB_FILE on its first start and keeps holding the older locks, so they
+# are Popcorn Batch's own files too.
+LEGACY_DB_FILES="szalinski.db chrysopoeia.db"
+LEGACY_LOCK_FILES="szalinski.lock chrysopoeia.lock"
 
 # Whether the Config folder holds nothing yet (the "lost+found" of a freshly
 # formatted disk does not count).
@@ -124,10 +126,13 @@ config_dir_is_empty() {
     [ -z "$(find "$DATA_DIR" -mindepth 1 -maxdepth 1 ! -name lost+found -print -quit 2>/dev/null)" ]
 }
 
-# Whether the Config folder holds a Szalinski database, under the current
-# name or the one from before the rename.
+# Whether the Config folder holds a Popcorn Batch database, under the current
+# name or one of the earlier names.
 config_has_database() {
-    [ -e "$DATA_DIR/$DB_FILE" ] || [ -e "$DATA_DIR/$LEGACY_DB_FILE" ]
+    for db_name in "$DB_FILE" $LEGACY_DB_FILES; do
+        [ -e "$DATA_DIR/$db_name" ] && return 0
+    done
+    return 1
 }
 
 # Warnings about missing or unusable mounts, printed when the server starts.
@@ -138,19 +143,19 @@ check_mounts() {
         warn "No host folder is mounted at $DATA_DIR, so libraries, settings and history are lost when the container is recreated (for example by an update). Mount a folder there (Unraid: the Config path; docker: -v /path/on/host:$DATA_DIR)."
     fi
     if [ -d "$DATA_DIR" ] && ! config_has_database && ! config_dir_is_empty; then
-        warn "$DATA_DIR already holds other files but no Szalinski database. Szalinski adds its own files there and leaves the rest alone, but if this folder is shared with other apps, give Szalinski a folder of its own (Unraid: the Config path, for example /mnt/user/appdata/szalinski)."
+        warn "$DATA_DIR already holds other files but no Popcorn Batch database. Popcorn Batch adds its own files there and leaves the rest alone, but if this folder is shared with other apps, give Popcorn Batch a folder of its own (Unraid: the Config path, for example /mnt/user/appdata/popcorn-batch)."
     fi
     if [ "$media_mounted" = 0 ]; then
         if [ -z "${BROWSE_ROOTS:-}" ] && [ -z "${LIBRARIES:-}" ]; then
             warn "No media folder is mounted at /media. Mount the folder with your videos there (Unraid: the Media path; docker: -v /path/to/media:/media), or the folder picker will only show the container's own files."
         fi
     elif mounted_read_only /media; then
-        warn "/media is mounted read-only, so Szalinski cannot replace files there. That only works with an Output folder elsewhere (Settings > Output). To replace originals, make it writable: on Unraid set the Media path's Access Mode to Read/Write; with docker, remove :ro."
+        warn "/media is mounted read-only, so Popcorn Batch cannot replace files there. That only works with an Output folder elsewhere (Settings > Output). To replace originals, make it writable: on Unraid set the Media path's Access Mode to Read/Write; with docker, remove :ro."
     elif ! "$@" test -w /media; then
         if [ "$(id -u)" -eq 0 ]; then
-            warn "Szalinski (uid $PUID) cannot write to /media, so it cannot replace files there. Set PUID/PGID to the owner of your media (Unraid: 99/100), or choose Output folder in Settings > Output."
+            warn "Popcorn Batch (uid $PUID) cannot write to /media, so it cannot replace files there. Set PUID/PGID to the owner of your media (Unraid: 99/100), or choose Output folder in Settings > Output."
         else
-            warn "Szalinski (uid $(id -u)) cannot write to /media, so it cannot replace files there. Run the container as the owner of your media, or choose Output folder in Settings > Output."
+            warn "Popcorn Batch (uid $(id -u)) cannot write to /media, so it cannot replace files there. Run the container as the owner of your media, or choose Output folder in Settings > Output."
         fi
     fi
 }
@@ -171,13 +176,14 @@ banner() {
         temp_line="next to each file (mount /temp to use an SSD instead)"
     fi
     # The server reports its own version (Cargo.toml) in the log and API; the
-    # build label (a release tag, or <branch>-<commit>) names the image.
-    image_version=${SZALINSKI_VERSION:-${CHRYSOPOEIA_VERSION:-dev}}
-    app_version=$(szalinski --version 2>/dev/null | awk 'NR == 1 { print $NF }') || app_version=""
+    # build label (a release tag, or <branch>-<commit>) names the image. The
+    # variable's names under Szalinski and Chrysopoeia are read too.
+    image_version=${POPCORN_BATCH_VERSION:-${SZALINSKI_VERSION:-${CHRYSOPOEIA_VERSION:-dev}}}
+    app_version=$(popcorn-batch --version 2>/dev/null | awk 'NR == 1 { print $NF }') || app_version=""
     if [ -z "$app_version" ] || [ "$app_version" = "$image_version" ]; then
-        title="Szalinski $image_version"
+        title="Popcorn Batch $image_version"
     else
-        title="Szalinski $app_version (build $image_version)"
+        title="Popcorn Batch $app_version (build $image_version)"
     fi
     log "------------------------------------------------------------"
     log "$title"
@@ -263,10 +269,10 @@ case $PGID in '' | *[!0-9]*) die "PGID must be a number such as 100 or 1000 (got
 readonly_hint="Could not update the container's user list. If the container runs with a read-only root filesystem, start it with --user $PUID:$PGID instead of PUID/PGID."
 
 if [ "$PUID" -eq 0 ]; then
-    warn "PUID is 0, so Szalinski runs as root. Files it writes will be owned by root."
+    warn "PUID is 0, so Popcorn Batch runs as root. Files it writes will be owned by root."
 else
     # Use an existing group with this gid (e.g. 100 "users" on Unraid);
-    # otherwise move the image's "szalinski" group to it.
+    # otherwise move the image's "popcorn-batch" group to it.
     if [ -z "$(getent group "$PGID")" ]; then
         groupmod -g "$PGID" "$APP_USER" || die "$readonly_hint"
     fi
@@ -294,10 +300,10 @@ for dev in $DEVICE_NODES; do
     dev_group=$(getent group "$dev_gid" | cut -d: -f1)
     if [ "$PUID" -ne 0 ] && [ $((other_bits & 6)) -ne 6 ]; then
         if [ "$dev_gid" -eq 0 ] && [ "$PGID" -ne 0 ]; then
-            warn "$dev belongs to the root group, which Szalinski does not join, so it may not be able to use this device. On the host, give it a group of its own, for example: chgrp video $dev && chmod g+rw $dev (a udev rule makes this permanent)."
+            warn "$dev belongs to the root group, which Popcorn Batch does not join, so it may not be able to use this device. On the host, give it a group of its own, for example: chgrp video $dev && chmod g+rw $dev (a udev rule makes this permanent)."
         else
             if [ $((group_bits & 6)) -ne 6 ]; then
-                warn "$dev is not readable and writable by its group, so Szalinski may not be able to use it. On the host, run: chmod g+rw $dev"
+                warn "$dev is not readable and writable by its group, so Popcorn Batch may not be able to use it. On the host, run: chmod g+rw $dev"
             fi
             if [ "$dev_gid" != "$PGID" ]; then
                 if [ -z "$dev_group" ]; then
@@ -319,12 +325,12 @@ check_nvidia_runtime
 
 # Never change the owner of a whole folder tree: the Config folder may be shared
 # (for example an Unraid appdata folder that also holds other apps' data), and
-# re-owning that would damage those apps. Only what Szalinski itself creates
-# is fixed: its database and lock files (also under the name before the
-# rename, Chrysopoeia), and the top folder when it is new or empty (or already
-# holds Szalinski's database).
+# re-owning that would damage those apps. Only what Popcorn Batch itself
+# creates is fixed: its database and lock files (also under the project's
+# earlier names, Szalinski and Chrysopoeia), and the top folder when it is new
+# or empty (or already holds Popcorn Batch's database).
 
-# Give $1, a file Szalinski creates, to the app user. A symbolic link is
+# Give $1, a file Popcorn Batch creates, to the app user. A symbolic link is
 # changed itself, never followed.
 own_file() {
     { [ -e "$1" ] || [ -L "$1" ]; } || return 0
@@ -341,13 +347,14 @@ if [ "$PUID" -ne 0 ]; then
         log "Giving $DATA_DIR to uid $PUID, gid $PGID"
         chown "$PUID:$PGID" "$DATA_DIR" || warn "Could not change the owner of $DATA_DIR."
     fi
-    for db in "$DB_FILE" "$LEGACY_DB_FILE"; do
+    for db in "$DB_FILE" $LEGACY_DB_FILES; do
         for name in "$db" "$db-wal" "$db-shm" "$db-journal"; do
             own_file "$DATA_DIR/$name"
         done
     done
-    own_file "$DATA_DIR/$LOCK_FILE"
-    own_file "$DATA_DIR/$LEGACY_LOCK_FILE"
+    for lock in "$LOCK_FILE" $LEGACY_LOCK_FILES; do
+        own_file "$DATA_DIR/$lock"
+    done
     # The scratch folder may hold large files: fix only the folder itself.
     if [ -n "${TEMP_DIR:-}" ] && [ -d "$TEMP_DIR" ]; then
         if [ "$(stat -c %u:%g "$TEMP_DIR")" != "$PUID:$PGID" ]; then
@@ -369,7 +376,7 @@ as_app() {
 }
 
 if ! as_app test -w "$DATA_DIR"; then
-    die "Szalinski (uid $PUID) cannot write to $DATA_DIR. Make the folder writable for PUID/PGID $PUID/$PGID, or set PUID/PGID to the folder's owner. (Szalinski only changes the owner of its own files there, never of anything else in the folder.)"
+    die "Popcorn Batch (uid $PUID) cannot write to $DATA_DIR. Make the folder writable for PUID/PGID $PUID/$PGID, or set PUID/PGID to the folder's owner. (Popcorn Batch only changes the owner of its own files there, never of anything else in the folder.)"
 fi
 check_mounts as_app
 

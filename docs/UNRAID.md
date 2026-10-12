@@ -1,6 +1,6 @@
-# Szalinski on Unraid
+# Popcorn Batch on Unraid
 
-This guide takes you from nothing to a running, GPU-accelerated Szalinski in
+This guide takes you from nothing to a running, GPU-accelerated Popcorn Batch in
 about ten minutes. Hardware acceleration is optional: skip step 1 to encode on
 the CPU.
 
@@ -10,7 +10,7 @@ the **Community Applications** plugin (the *Apps* tab) installed.
 ## 1. Make the GPU available to Docker (optional)
 
 Pick the section for your graphics. If you have more than one, you can do
-both; Szalinski tests every encoder it can see and uses the best that works.
+both; Popcorn Batch tests every encoder it can see and uses the best that works.
 
 ### NVIDIA
 
@@ -45,43 +45,43 @@ In the template (step 3) you will add `/dev/dri` as a device.
 
 In the template (step 3) you will add `/dev/dri` as a device.
 
-## 2. Install Szalinski
+## 2. Install Popcorn Batch
 
-**Apps** > search **Szalinski** > **Install**.
+**Apps** > search **Popcorn Batch** > **Install**.
 
 If it is not listed yet, add the template by hand. In the Unraid terminal:
 
 ```sh
-wget -O /boot/config/plugins/dockerMan/templates-user/my-Szalinski.xml \
-  https://raw.githubusercontent.com/thekozugroup/Szalinski/main/unraid/szalinski.xml
+wget -O /boot/config/plugins/dockerMan/templates-user/my-Popcorn-Batch.xml \
+  https://raw.githubusercontent.com/thekozugroup/Popcorn-Batch/main/unraid/popcorn-batch.xml
 ```
 
-Then **Docker > Add Container**, and choose **Szalinski** in the *Template*
+Then **Docker > Add Container**, and choose **Popcorn-Batch** in the *Template*
 list.
 
 > **Before the first release, or from a branch.** The template, its icon and
-> the image `ghcr.io/thekozugroup/szalinski:stable` (the template's
+> the image `ghcr.io/thekozugroup/popcorn-batch:stable` (the template's
 > Repository) exist only once the project has been merged to `main`, a first
-> version tag (such as `v0.3.0`) has been pushed, its Release workflow has
+> version tag (such as `v0.4.0`) has been pushed, its Release workflow has
 > published the image, and the package has been made public. Until then the
 > `wget` address above answers *404*, and Unraid's pull of `:stable` fails
 > (*manifest unknown*, or *denied* while the package is private). Install from
 > the branch instead: replace `main` in the `wget` address with the branch's
 > name, and before clicking **Apply** in step 3 set **Repository** to
-> `ghcr.io/thekozugroup/szalinski:edge`. The details, including making the
+> `ghcr.io/thekozugroup/popcorn-batch:edge`. The details, including making the
 > package public, are under [Trying a test build](#trying-a-test-build). Or
 > [build the image yourself](../README.md#build-it-yourself) and set
-> **Repository** to `szalinski:local`.
+> **Repository** to `popcorn-batch:local`.
 
 ## 3. Fill in the template
 
 | Field | What to enter |
 |---|---|
-| Repository | Leave it at `ghcr.io/thekozugroup/szalinski:stable`: the newest tagged release, which only changes when a new release is published. That is the choice for automatic updates. `:latest` follows every build of `main` and `:edge` is a test build; see [Updates](#updates-stable-latest-and-edge). |
+| Repository | Leave it at `ghcr.io/thekozugroup/popcorn-batch:stable`: the newest tagged release, which only changes when a new release is published. That is the choice for automatic updates. `:latest` follows every build of `main` and `:edge` is a test build; see [Updates](#updates-stable-latest-and-edge). |
 | Web UI port | `8080`, or any free port. |
-| Config | `/mnt/user/appdata/szalinski` (the default). Holds the database; it stays small. Keep it a folder of its own: never choose `/mnt/user/appdata` itself, which other apps share. |
-| Media | **Required.** The share that holds your videos, e.g. `/mnt/user/media/` (click the field to browse). Choose only what you want converted, never all of `/mnt/user/`: Szalinski replaces files in this folder, so other apps' folders (appdata, photo libraries, camera recordings) must stay out of it. Inside the app this folder is `/media`. |
-| Transcode cache | Optional. A folder on an SSD pool for in-progress files, e.g. `/mnt/cache/szalinski-temp/`. See [Transcode cache](#transcode-cache-on-an-ssd). |
+| Config | `/mnt/user/appdata/popcorn-batch` (the default). Holds the database; it stays small. Keep it a folder of its own: never choose `/mnt/user/appdata` itself, which other apps share. |
+| Media | **Required.** The share that holds your videos, e.g. `/mnt/user/media/` (click the field to browse). Choose only what you want converted, never all of `/mnt/user/`: Popcorn Batch replaces files in this folder, so other apps' folders (appdata, photo libraries, camera recordings) must stay out of it. Inside the app this folder is `/media`. |
+| Transcode cache | Optional. A folder on an SSD pool for in-progress files, e.g. `/mnt/cache/popcorn-batch-temp/`. See [Transcode cache](#transcode-cache-on-an-ssd). |
 
 **Intel or AMD graphics:** add the GPU as a device. Do this only if
 `ls -l /dev/dri` listed `renderD128` in step 1: Docker will not start a
@@ -99,10 +99,10 @@ Under **Show more settings**:
 | Field | Default | Notes |
 |---|---|---|
 | PUID / PGID | `99` / `100` | Unraid's `nobody` / `users`. Keep them unless your media is owned by someone else. |
-| UMASK | `002` | For what Szalinski creates itself (work files, folders in an output folder): editable by the `users` group. A converted file keeps the permissions of the original it replaces. |
+| UMASK | `002` | For what Popcorn Batch creates itself (work files, folders in an output folder): editable by the `users` group. A converted file keeps the permissions of the original it replaces. |
 | HW_ACCEL | `auto` | Uses the best encoder that passes a test encode. `cpu` never uses the GPU. `nvenc` (NVIDIA), `qsv` (Intel) or `vaapi` (Intel or AMD) uses only that kind of GPU; when it is missing or cannot encode the chosen format, files are still converted, on the CPU, so check Settings › Hardware: under *Details: encoders and ffmpeg*, each format its test encode passed shows *Works*. Applied on the first start and on the next start whenever you change it here; in between, the choice in the app (Settings › Hardware) is kept. `auto` never overrides a choice made in the app. |
 | MAX_JOBS | empty | Empty = automatic. A number here replaces the automatic count while *Files at once* is *Automatic* in the app (Settings › Processing); a number chosen in the app wins. |
-| ALLOWED_HOSTS | empty | Only behind a reverse proxy: the domain name you open Szalinski at. See [Reverse proxy](#reverse-proxy-swag-nginx-proxy-manager-traefik). |
+| ALLOWED_HOSTS | empty | Only behind a reverse proxy: the domain name you open Popcorn Batch at. See [Reverse proxy](#reverse-proxy-swag-nginx-proxy-manager-traefik). |
 | NVIDIA_VISIBLE_DEVICES | empty | NVIDIA: `all`, or one GPU UUID to use only that card. |
 
 **NVIDIA only:** switch the editor to **Advanced View** (toggle at the top
@@ -115,7 +115,7 @@ Click **Apply**. Unraid pulls the image and starts the container.
 
 ## 4. First run
 
-1. On the **Docker** tab, click the Szalinski icon > **WebUI**. The welcome
+1. On the **Docker** tab, click the Popcorn Batch icon > **WebUI**. The welcome
    page already says which GPU it found (or that your CPU will do the work).
 2. Click **Choose a folder**. The folder browser opens at `/media`, which is
    the Media share you picked. Open the folder you want converted (for
@@ -138,7 +138,7 @@ Click **Apply**. Unraid pulls the image and starts the container.
    *Plays everywhere* a file whose subtitles or attachments MP4 can't hold is
    skipped, with the reason shown, instead of losing them; see
    [Troubleshooting](#troubleshooting).
-4. Click **Start**. Szalinski scans the folder, queues the files that need
+4. Click **Start**. Popcorn Batch scans the folder, queues the files that need
    work, and starts converting. The **Overview** shows the space saved so far
    and what is happening now; the **Queue** has three tabs: **Running** (each
    file with its step, progress and time left), **Up next** and **History**.
@@ -168,13 +168,13 @@ movie. In **History** and *Recently finished* the file shows its new name with
 
 ## Transcode cache on an SSD
 
-Without a cache folder, Szalinski writes each new file next to the original,
+Without a cache folder, Popcorn Batch writes each new file next to the original,
 which on Unraid means onto the array while it encodes. A folder on an SSD pool
 keeps that work off the array and your parity drive, and the finished file is
 copied into place once, after it passes verification.
 
 1. Create the folder on your pool, e.g. in the terminal:
-   `mkdir -p /mnt/cache/szalinski-temp` (use your pool's name instead of
+   `mkdir -p /mnt/cache/popcorn-batch-temp` (use your pool's name instead of
    `cache` if it differs). Using the pool path directly, rather than a
    `/mnt/user/...` share path, avoids Unraid's share overhead.
 2. Set **Transcode cache** in the template to that folder.
@@ -190,7 +190,7 @@ To leave your library untouched and write the converted files somewhere else,
 the container needs a second, writable folder, because the template has only
 Config, Media and Transcode cache:
 
-1. On the Docker tab, **Edit** Szalinski and click **Add another Path, Port,
+1. On the Docker tab, **Edit** Popcorn Batch and click **Add another Path, Port,
    Variable, Label or Device** at the bottom. Set **Config Type** to *Path*,
    **Name** to `Converted files`, **Container Path** to `/output`, **Host
    Path** to a share for the results, e.g. `/mnt/user/converted/`, and **Access
@@ -200,7 +200,7 @@ Config, Media and Transcode cache:
    folder browser, open `output` and click **Use “output”**.
 3. Optional, and only after step 2: set the Media path's **Access Mode** to
    *Read Only*, so that nothing can change your originals at all. While
-   Szalinski is set to replace originals, a read-only Media path stops every
+   Popcorn Batch is set to replace originals, a read-only Media path stops every
    conversion.
 
 The new files mirror each library's folder structure inside `/output`, with
@@ -216,7 +216,7 @@ files can't be saved*. When your libraries are folders of one share (`Movies`,
 
 ## Reverse proxy (SWAG, Nginx Proxy Manager, Traefik)
 
-Opening Szalinski at `http://<server IP>:8080`, `http://tower:8080` or
+Opening Popcorn Batch at `http://<server IP>:8080`, `http://tower:8080` or
 `http://tower.local:8080` needs no setup. To open it at a domain name through
 a reverse proxy:
 
@@ -230,34 +230,34 @@ a reverse proxy:
 3. Turn on WebSocket support (Nginx Proxy Manager: *Websockets Support*;
    SWAG and Traefik pass WebSockets through already). Live progress uses
    `/api/ws`.
-4. **Edit** the Szalinski container, click **Show more settings**, set
+4. **Edit** the Popcorn Batch container, click **Show more settings**, set
    **ALLOWED_HOSTS** to the domain, e.g. `transcode.example.com` (several:
    separate with commas), and click **Apply**.
 
-Without step 4 the app shows *Szalinski doesn't answer to the address
+Without step 4 the app shows *Popcorn Batch doesn't answer to the address
 "transcode.example.com"*. Without step 2 the page opens, but saving anything
-fails with *This request came from another website, so Szalinski refused
+fails with *This request came from another website, so Popcorn Batch refused
 it*, and progress does not update live. Both checks stop other websites from
-reaching Szalinski through your browser. Szalinski has no login of its own
+reaching Popcorn Batch through your browser. Popcorn Batch has no login of its own
 yet, so add authentication at the proxy (Authelia, Authentik or basic auth)
 before making it reachable from the internet.
 
 ## PUID, PGID and permissions
 
 Unraid shares are normally owned by `nobody:users` (99:100), which is why the
-template uses those ids. Szalinski starts as root only long enough to adopt
+template uses those ids. Popcorn Batch starts as root only long enough to adopt
 them, join the group that owns your GPU device, and fix the owner of its own
 files in the config folder (the database and its lock file); then it drops to
 that user. It never changes the owner of anything else there.
 
 A converted file takes the permissions of the original it replaces. Its owner
-and group stay the same too when Szalinski runs as that owner, which is the
+and group stay the same too when Popcorn Batch runs as that owner, which is the
 case with 99/100 on a normal share. If it cannot (the original belonged to
 someone else), the file belongs to PUID/PGID and its details in the Queue say
-so. UMASK applies to what Szalinski creates itself, such as work files and
+so. UMASK applies to what Popcorn Batch creates itself, such as work files and
 the folders of an output folder.
 
-If the log says Szalinski *cannot write to /media*, your media is owned by a
+If the log says Popcorn Batch *cannot write to /media*, your media is owned by a
 different user: either set PUID/PGID to that owner, or run **Tools > New
 Permissions** on the share (this resets it to `nobody:users`). Until then the
 Overview lists the files under **Needs your attention** as *Finished files
@@ -265,8 +265,8 @@ can't be saved*.
 
 ## Backing up
 
-Everything Szalinski keeps is in `/mnt/user/appdata/szalinski`: the
-database with your libraries, settings and history (`szalinski.db` and,
+Everything Popcorn Batch keeps is in `/mnt/user/appdata/popcorn-batch`: the
+database with your libraries, settings and history (`popcorn-batch.db` and,
 while it runs, its `-wal` and `-shm` files). Include the folder in your appdata
 backup, for example the *Appdata Backup* plugin, which stops the container
 while it copies and so keeps the database consistent. Copying it by hand? Stop
@@ -283,12 +283,12 @@ cannot replace, since conversion replaces files.
 
 ## Updates: stable, latest and edge
 
-**Docker** tab > **Check for Updates** > **apply update** next to Szalinski.
+**Docker** tab > **Check for Updates** > **apply update** next to Popcorn Batch.
 Your settings and libraries are kept, and the database is brought up to date on
 the first start. Files that were converting are stopped, their work files
 removed, and they start again from the beginning; originals are never left
 half-replaced. Unraid waits for the container to stop before replacing it, and
-Szalinski exits within a few seconds. To see which build is running, open
+Popcorn Batch exits within a few seconds. To see which build is running, open
 the bottom of **Settings** in the app (*About*) or the first lines of the
 container log.
 
@@ -313,43 +313,51 @@ a branch (see [Trying a test build](#trying-a-test-build)).
 An automatic update recreates the container the same way **apply update** does,
 so a conversion that is running is stopped and starts again from the
 beginning. Set the update time (Community Applications' auto-update, **Auto
-Update Applications** in Settings) outside the hours when Szalinski converts,
+Update Applications** in Settings) outside the hours when Popcorn Batch converts,
 for example at night when *When to convert* is off, or after the schedule's
 window ends.
 
-### Moving from Chrysopoeia
+<a id="moving-from-chrysopoeia"></a>
 
-Szalinski was called Chrysopoeia up to version 0.2. If you installed it under
-that name, it keeps working and keeps updating: every release is also
-published as `ghcr.io/thekozugroup/chrysopoeia` for a while. Switch to the new
-name when convenient:
+### Moving from Szalinski or Chrysopoeia
 
-1. Back up the Config folder first (see [Backing up](#backing-up)). The new
-   version renames and updates the database, so Chrysopoeia can't use it
-   afterwards.
-2. On the **Docker** tab, click the Chrysopoeia icon, then **Edit**.
-3. Change **Repository** from `ghcr.io/thekozugroup/chrysopoeia:<tag>` to
-   `ghcr.io/thekozugroup/szalinski:stable` (or `:latest` to follow every build
-   of `main`; if the pull fails with *manifest unknown*, no release has been
-   published yet, so use `:latest`). If you like, change **Name** to
-   Szalinski too. Leave the paths, the GPU device, the variables and the
-   limits as they are: the Config path can stay
-   `/mnt/user/appdata/chrysopoeia`.
+Popcorn Batch was called Szalinski in version 0.3 and Chrysopoeia up to
+version 0.2. If you installed it under one of those names, it keeps working
+and keeps updating: every release is also published as
+`ghcr.io/thekozugroup/szalinski` and `ghcr.io/thekozugroup/chrysopoeia` for a
+while. Switch to the new name when convenient:
+
+1. Back up the Config folder first, with the container stopped (see
+   [Backing up](#backing-up)). The new version renames and updates the
+   database, so the older version can't use it afterwards.
+2. On the **Docker** tab, click the container's icon (Szalinski or
+   Chrysopoeia), then **Edit**. Don't install Popcorn Batch from **Apps**
+   next to it: that starts from the template's defaults, with a new, empty
+   Config folder.
+3. Change **Repository** from `ghcr.io/thekozugroup/szalinski:<tag>` (or
+   `ghcr.io/thekozugroup/chrysopoeia:<tag>`) to
+   `ghcr.io/thekozugroup/popcorn-batch:stable` (or `:latest` to follow every
+   build of `main`; if the pull fails with *manifest unknown*, no release has
+   been published yet, so use `:latest`). If you like, change **Name** to
+   Popcorn-Batch too. Leave the paths, the GPU device, the variables and the
+   limits as they are, and keep the Config path: it can stay
+   `/mnt/user/appdata/szalinski` or `/mnt/user/appdata/chrysopoeia`.
 4. Click **Apply**. On the first start the database in the Config folder is
-   renamed from `chrysopoeia.db` to `szalinski.db` (the log says *carried over
-   the database of Chrysopoeia*); libraries, settings and history carry over.
-   A conversion that was interrupted under the old name is finished or undone
-   as usual.
+   renamed from `szalinski.db` (or `chrysopoeia.db`) to `popcorn-batch.db`
+   (the log says *carried over the database of Szalinski*, or *of
+   Chrysopoeia*); libraries, settings and history carry over. A conversion
+   that was interrupted under the old name is finished or undone as usual.
 
-Never start the old and the new image on the same Config folder at the same
+Never run the old and the new image on the same Config folder at the same
 time: whichever starts second refuses to (*already using the data folder* in
-its log) and changes nothing. To go back to Chrysopoeia, restore the backup
-from step 1 with the container stopped. Chrysopoeia started on the folder
-afterwards without the backup finds no `chrysopoeia.db` and starts empty, like
-a new install, with the first-run screens and no libraries, settings or
-history. It leaves `szalinski.db` alone, so nothing is lost: Szalinski started
-on the folder again carries on with everything it had (the new, empty
-`chrysopoeia.db` can then be deleted).
+its log) and changes nothing. To go back to the older version, stop the
+container, restore the backup from step 1, then set **Repository** back.
+Started on the folder without the backup, the older version finds no database
+under its own name and starts empty, like a new install, with the first-run
+screens and no libraries, settings or history. It leaves `popcorn-batch.db`
+alone, so nothing is lost: Popcorn Batch started on the folder again carries
+on with everything it had (the new, empty `szalinski.db` or `chrysopoeia.db`
+can then be deleted).
 
 ### Switching an existing install from :latest to :stable
 
@@ -362,71 +370,71 @@ container's **Edit** page changes that file. Do not count on a change to the
 template in the Apps store to switch a container that is already installed:
 change **Repository** once by hand.
 
-1. Check the version first. Open **Settings** in Szalinski and read the
+1. Check the version first. Open **Settings** in Popcorn Batch and read the
    *build* under *About*: `main-<commit>` means the container follows `latest`.
    Compare it with the newest release on the project's
-   [Releases page](https://github.com/thekozugroup/Szalinski/releases)
+   [Releases page](https://github.com/thekozugroup/Popcorn-Batch/releases)
    or in the [changelog](../CHANGELOG.md). `:stable` is the newest *release*,
    so it can be older than the `main` build you run. Going to an older build
    works only if it can still read your database: an older build refuses a
    newer database, stops with *This database was created by a newer version of
-   Szalinski* in the container log, and changes nothing. Then set
+   Popcorn Batch* in the container log, and changes nothing. Then set
    **Repository** back to `:latest`. So if your build is newer than the newest
    release, wait for the next release before you switch.
-2. On the **Docker** tab, click the Szalinski icon, then **Edit**. Do not
+2. On the **Docker** tab, click the Popcorn Batch icon, then **Edit**. Do not
    remove the container or install it again from **Apps**: that starts from the
    template's defaults and you would add the paths, the GPU device and the
    limits again.
-3. Change **Repository** from `ghcr.io/thekozugroup/szalinski:latest` to
-   `ghcr.io/thekozugroup/szalinski:stable`. Leave every other field as it is.
+3. Change **Repository** from `ghcr.io/thekozugroup/popcorn-batch:latest` to
+   `ghcr.io/thekozugroup/popcorn-batch:stable`. Leave every other field as it is.
    (If the pull then fails with *manifest unknown*, the first release has not
    been published yet: put `:latest` back.)
 4. Click **Apply**. Unraid pulls the image and recreates the container with
    all the paths, the device, the variables and the limits you already had. The
    libraries, settings and history are in the Config folder and are kept.
 5. Check the result: the first lines of the container log and *About* in
-   Settings show the release number as the build (for example `0.3.0`), not
+   Settings show the release number as the build (for example `0.4.0`), not
    `main-<commit>`, and **Settings > Hardware** still lists your GPU.
 
 From then on, Check for Updates and the automatic updater offer releases only.
 To follow `main` again, repeat the steps with `:latest`.
 
 To go back to an older version, set **Repository** to that version (for
-example `ghcr.io/thekozugroup/szalinski:0.3.0`, which never changes) and
+example `ghcr.io/thekozugroup/popcorn-batch:0.4.0`, which never changes) and
 restore a backup of the config folder taken before the upgrade: a database
 written by a newer version is refused by an older one with a plain message.
 
 ## Trying a test build
 
 A branch that is not merged yet is published as
-`ghcr.io/thekozugroup/szalinski:edge` when someone opens **Actions >
+`ghcr.io/thekozugroup/popcorn-batch:edge` when someone opens **Actions >
 Release > Run workflow** on GitHub and picks that branch. The workflow builds
 the image, runs its tests and pushes it for amd64 and arm64; `latest` and
 `stable` are not touched. To use it, **Edit** the container, set **Repository**
-to `ghcr.io/thekozugroup/szalinski:edge` and click **Apply**. Afterwards set
-**Repository** back to `ghcr.io/thekozugroup/szalinski:stable` (releases only),
+to `ghcr.io/thekozugroup/popcorn-batch:edge` and click **Apply**. Afterwards set
+**Repository** back to `ghcr.io/thekozugroup/popcorn-batch:stable` (releases only),
 or, once the branch is merged to `main` and you want the change at once, to
-`ghcr.io/thekozugroup/szalinski:latest`, which then carries it. Your settings
+`ghcr.io/thekozugroup/popcorn-batch:latest`, which then carries it. Your settings
 and libraries are kept either way. Switch back soon: `:edge` changes whenever
 anyone publishes a branch, and a daily auto-update would follow it.
 
 If that run published the very first image, the package on GitHub is still
 private and Unraid's pull is refused (*denied* or *unauthorized* in the pull
 log). The repository owner makes it public once: on GitHub, **Packages** >
-**szalinski** > **Package settings** > **Change visibility** > **Public**.
+**popcorn-batch** > **Package settings** > **Change visibility** > **Public**.
 
 The template's `Icon` and `TemplateURL` point at the `main` branch. Until the
-template and `unraid/szalinski.png` are on `main`, a template installed from
+template and `unraid/popcorn-batch.png` are on `main`, a template installed from
 a branch shows no icon and cannot refresh itself; the container works the same.
 Before the very first release there is also no `stable` (and no `latest` until
 `main` has been built): install the template from the branch instead (replace
 `main` in the `wget` address of step 2 with the branch name, e.g.
-`.../Szalinski/my-branch/unraid/szalinski.xml`) and set
+`.../Popcorn-Batch/my-branch/unraid/popcorn-batch.xml`) and set
 **Repository** to the `edge` image before clicking **Apply**.
 
 Without waiting for either, you can
 [build the image yourself](../README.md#build-it-yourself) (10 to 15 minutes)
-and set **Repository** to `szalinski:local`.
+and set **Repository** to `popcorn-batch:local`.
 
 ## Troubleshooting
 
@@ -444,27 +452,28 @@ Start with the app itself:
   the ffmpeg command and the end of ffmpeg's log. The **Log** at the bottom of
   that tab lists scans, warnings and problems.
 
-Then the container log (Docker tab > Szalinski icon > **Logs**). The first
+Then the container log (Docker tab > Popcorn Batch icon > **Logs**). The first
 lines list the version, the user it runs as, the transcode folder and every
 GPU device it can see.
 
 | Problem | Fix |
 |---|---|
 | Container will not start: *error gathering device information while adding custom device "/dev/dri"* | The template has a `/dev/dri` device, but the server has no `/dev/dri`. Install Intel GPU TOP or Radeon TOP and reboot, or remove the device: **Edit** the container and click **Remove** next to it. |
-| Log warns that a device *belongs to the root group* | Szalinski does not join the root group, for safety. In the Unraid terminal run `chgrp video /dev/dri/renderD128 && chmod g+rw /dev/dri/renderD128` (with the device named in the warning), then restart the container. To keep it after a reboot, add the same line to `/boot/config/go`. |
+| Log warns that a device *belongs to the root group* | Popcorn Batch does not join the root group, for safety. In the Unraid terminal run `chgrp video /dev/dri/renderD128 && chmod g+rw /dev/dri/renderD128` (with the device named in the warning), then restart the container. To keep it after a reboot, add the same line to `/boot/config/go`. |
 | NVIDIA card not used; log says *NVIDIA_VISIBLE_DEVICES is set but no NVIDIA GPU is visible* | Add `--runtime=nvidia` to Extra Parameters (Advanced View). After installing the Nvidia-Driver plugin, restart Docker once. |
-| NVIDIA encoders show *Failed test* in Settings > Hardware | Check that the driver plugin shows your card, that `NVIDIA_VISIBLE_DEVICES` is `all` or the right UUID, and that another container is not holding all encode sessions. `docker exec Szalinski nvidia-smi` should list the card. |
+| NVIDIA encoders show *Failed test* in Settings > Hardware | Check that the driver plugin shows your card, that `NVIDIA_VISIBLE_DEVICES` is `all` or the right UUID, and that another container is not holding all encode sessions. `docker exec Popcorn-Batch nvidia-smi` should list the card. |
 | Docker error when applying: *unknown or invalid runtime name: nvidia* | `--runtime=nvidia` is in Extra Parameters, but Docker does not have the NVIDIA runtime yet, so the container is not even created. Install the **Nvidia-Driver** plugin, wait until it says it is done, then restart Docker (**Settings > Docker > Enable Docker: No > Apply**, then **Yes > Apply**) or reboot. To use the CPU instead, remove `--runtime=nvidia` from Extra Parameters. |
 | Intel/AMD: no hardware encoders, `/dev/dri` present | Check that `renderD128` exists (`ls -l /dev/dri`). Settings > Hardware shows the exact error; permission errors mean the container was started with a custom `--user`: remove it and use PUID/PGID. |
-| A file fails with *Szalinski doesn't have permission to write in the work folder*, or the Overview says *The work folder can't be used* or *The disk is full* | The **Transcode cache** folder (without one, the folder of each original) is not writable for PUID/PGID, or has no room: it needs space for the largest file you convert, times *Files at once*. Restarting the container makes its top folder belong to PUID/PGID again; for what is inside it, run `chown -R 99:100 /mnt/cache/szalinski-temp` in the Unraid terminal (with your own path), and free up space if the disk is full. Then click **Try again** on the Overview, which queues every file that waited. |
+| A file fails with *Popcorn Batch doesn't have permission to write in the work folder*, or the Overview says *The work folder can't be used* or *The disk is full* | The **Transcode cache** folder (without one, the folder of each original) is not writable for PUID/PGID, or has no room: it needs space for the largest file you convert, times *Files at once*. Restarting the container makes its top folder belong to PUID/PGID again; for what is inside it, run `chown -R 99:100 /mnt/cache/popcorn-batch-temp` in the Unraid terminal (with your own path), and free up space if the disk is full. Then click **Try again** on the Overview, which queues every file that waited. |
 | Log says *cannot write to /media* | See [PUID, PGID and permissions](#puid-pgid-and-permissions). |
 | Log says */media is mounted read-only* | The Media path's **Access Mode** is *Read Only*. **Edit** the container, click **Edit** next to Media, set Access Mode to *Read/Write* and click **Apply**. Read-only is fine only when Settings > Output writes new files to a separate output folder (see [Keeping your originals](#keeping-your-originals)). |
-| Log says */config already holds other files but no Szalinski database* | The Config path points at a folder that other apps use, such as `/mnt/user/appdata`. Szalinski only adds its own files there and leaves the rest alone, but give it a folder of its own: **Edit** the container, set Config to `/mnt/user/appdata/szalinski` and click **Apply**. |
-| Log says *cannot write to /config* | The Config folder belongs to someone else and is not writable for PUID/PGID, and Szalinski will not take over a folder that holds other data. Set PUID/PGID to the folder's owner, or set Config to a new folder such as `/mnt/user/appdata/szalinski`, which Szalinski then takes over. |
-| Log says *No host folder is mounted at /config* | The Config path is empty, so settings and history would be lost on the next update. Set it to `/mnt/user/appdata/szalinski`. |
-| Log says *Another Szalinski is already using the data folder /config* | A second Szalinski container uses the same Config path (or the first is still running). Nothing was changed. Stop the other one, or **Edit** this one and give it a Config folder of its own, for example `/mnt/user/appdata/szalinski2`. |
+| Log says */config already holds other files but no Popcorn Batch database* | The Config path points at a folder that other apps use, such as `/mnt/user/appdata`. Popcorn Batch only adds its own files there and leaves the rest alone, but give it a folder of its own: **Edit** the container, set Config to `/mnt/user/appdata/popcorn-batch` and click **Apply**. |
+| Log says *cannot write to /config* | The Config folder belongs to someone else and is not writable for PUID/PGID, and Popcorn Batch will not take over a folder that holds other data. Set PUID/PGID to the folder's owner, or set Config to a new folder such as `/mnt/user/appdata/popcorn-batch`, which Popcorn Batch then takes over. |
+| Log says *No host folder is mounted at /config* | The Config path is empty, so settings and history would be lost on the next update. Set it to `/mnt/user/appdata/popcorn-batch`. |
+| Log says *Another Popcorn Batch is already using the data folder /config* | A second Popcorn Batch container uses the same Config path (or the first is still running). Nothing was changed. Stop the other one, or **Edit** this one and give it a Config folder of its own, for example `/mnt/user/appdata/popcorn-batch2`. |
+| Log says *An older version (Szalinski or Chrysopoeia, …) is already using the data folder /config* | A container from before the rename still runs on the same Config path. Nothing was changed. Stop the old container; to switch it to the new name instead of running two, see [Moving from Szalinski or Chrysopoeia](#moving-from-szalinski-or-chrysopoeia). |
 | Log says *The disk that holds the data folder (/config) is full* | The disk behind the Config path (your cache pool or an array disk) has no room for the database. Free some space on it, then start the container again. |
-| A library is listed under **Needs your attention** as *The folder … isn't responding*, and nothing in it converts | The share or drive behind that folder stopped answering, for example a remote SMB or NFS share that went away, or an Unassigned Devices drive that is stuck. Whenever that happens, even in the middle of a job, the job goes back in the queue and nothing is marked failed; the other libraries keep converting, and **Cancel** and *Stop now* still answer within seconds. Fix the connection or the mount on the Unraid side: when the folder answers, the files start over by themselves. A new file that was being put in place is finished or undone, never left half-replaced. Szalinski exits within seconds when you stop the container, but Linux can't kill a process that is waiting on a hung mount, so Docker may keep showing it as running (and the stop may fail with *did not receive an exit event*) until the share answers or its mount is fixed. |
+| A library is listed under **Needs your attention** as *The folder … isn't responding*, and nothing in it converts | The share or drive behind that folder stopped answering, for example a remote SMB or NFS share that went away, or an Unassigned Devices drive that is stuck. Whenever that happens, even in the middle of a job, the job goes back in the queue and nothing is marked failed; the other libraries keep converting, and **Cancel** and *Stop now* still answer within seconds. Fix the connection or the mount on the Unraid side: when the folder answers, the files start over by themselves. A new file that was being put in place is finished or undone, never left half-replaced. Popcorn Batch exits within seconds when you stop the container, but Linux can't kill a process that is waiting on a hung mount, so Docker may keep showing it as running (and the stop may fail with *did not receive an exit event*) until the share answers or its mount is fixed. |
 | A file is skipped with *MP4 can't hold this file's …, so it was left unchanged* | The goal writes MP4 (*Plays everywhere*) and the file has picture-based subtitles (PGS, VobSub), styled ASS/SSA subtitles, fonts or other attached files, or a cover image MP4 can't keep, so replacing the original would lose them. Choose an MKV goal (*Balanced*, *Save space* or *Archive*), which keeps everything; save converted files to a separate folder ([Keeping your originals](#keeping-your-originals)); or open the file and click **Convert anyway** to convert it without them. |
 | A file is skipped with *This file has another hard link* | A torrent that is still seeding, or another hard link, shares the file, so replacing it would use more space instead of saving it. Remove the other link, or click **Convert anyway**; the job then reads *Converted, no space freed*. |
 | Choosing a folder says *The whole server can't be a library*, or that */config* or a system folder can't be one | A library can't be `/`, `/config`, `/app`, `/proc`, `/sys` or `/dev`, or a folder inside one of them. Choose the folder that holds your videos, inside `/media`. |
@@ -472,7 +481,7 @@ GPU device it can see.
 | New files are not picked up | Folder watching sees changes made through `/mnt/user` shares. Files added directly to a disk (`/mnt/disk1/...`) are found by the periodic rescan (every 12 hours by default), or open the **⋯** menu at the top right of the library's page and choose **Scan now**. |
 | The server feels slow while converting | Lower *Files at once* in Settings > Processing, or turn on *When to convert* there so conversions run overnight. |
 | Nothing converts at night / during the day as expected | *When to convert* uses the server's time zone. Unraid passes it automatically; check **Settings > Date and Time**. |
-| The app says *Szalinski doesn't answer to the address …* | You opened it through a name that is not listed. The screen shows the line to use: add that name to ALLOWED_HOSTS and restart (see [Reverse proxy](#reverse-proxy-swag-nginx-proxy-manager-traefik)). Behind nginx, it also needs `proxy_set_header Host $http_host;`. |
-| Through a reverse proxy the page opens, but saving says *This request came from another website, so Szalinski refused it* | The proxy replaces the address the browser used. nginx: add `proxy_set_header Host $http_host;`; Apache: `ProxyPreserveHost On` (see [Reverse proxy](#reverse-proxy-swag-nginx-proxy-manager-traefik)). Opened directly (`http://<server IP>:8080`), this message means a page on another website really did try to change something. |
+| The app says *Popcorn Batch doesn't answer to the address …* | You opened it through a name that is not listed. The screen shows the line to use: add that name to ALLOWED_HOSTS and restart (see [Reverse proxy](#reverse-proxy-swag-nginx-proxy-manager-traefik)). Behind nginx, it also needs `proxy_set_header Host $http_host;`. |
+| Through a reverse proxy the page opens, but saving says *This request came from another website, so Popcorn Batch refused it* | The proxy replaces the address the browser used. nginx: add `proxy_set_header Host $http_host;`; Apache: `ProxyPreserveHost On` (see [Reverse proxy](#reverse-proxy-swag-nginx-proxy-manager-traefik)). Opened directly (`http://<server IP>:8080`), this message means a page on another website really did try to change something. |
 | MAX_JOBS or HW_ACCEL seem to be ignored | A number chosen in the app under *Files at once* wins over MAX_JOBS; choose *Automatic* there to use MAX_JOBS. HW_ACCEL is applied when its value changes, so a later choice in Settings > Hardware stays until you change HW_ACCEL again. |
 | A job's ffmpeg log says `set_mempolicy: Operation not permitted` | Harmless: the HEVC (x265) encoder asks for a memory placement that Docker does not allow, and carries on normally. To silence it, add `--cap-add=SYS_NICE` to Extra Parameters. |

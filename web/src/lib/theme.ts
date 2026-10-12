@@ -7,17 +7,25 @@
  */
 
 import { useEffect, useSyncExternalStore } from "react";
-import { LEGACY_THEME_STORAGE_KEY, THEME_STORAGE_KEY } from "./theme-script";
+import { LEGACY_THEME_STORAGE_KEYS, THEME_STORAGE_KEY, THEME_STORAGE_KEYS } from "./theme-script";
 
 export type ThemeChoice = "system" | "light" | "dark";
 
 const listeners = new Set<() => void>();
 
-function readChoice(): ThemeChoice {
+/**
+ * The saved choice: under the current key, else under the key of one of the
+ * project's earlier names (newest first), so a choice made before a rename
+ * stays.
+ */
+export function readThemeChoice(): ThemeChoice {
   try {
-    const value =
-      window.localStorage.getItem(THEME_STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
-    if (value === "light" || value === "dark") return value;
+    for (const key of THEME_STORAGE_KEYS) {
+      const value = window.localStorage.getItem(key);
+      if (value === null) continue;
+      if (value === "light" || value === "dark") return value;
+      break;
+    }
   } catch {
     // Storage blocked: fall back to the OS setting.
   }
@@ -36,10 +44,10 @@ export function applyTheme(choice: ThemeChoice): void {
   root.style.colorScheme = dark ? "dark" : "light";
 }
 
-/** Remember and apply a theme choice. */
+/** Remember and apply a theme choice. The earlier names' keys are removed. */
 export function setTheme(choice: ThemeChoice): void {
   try {
-    window.localStorage.removeItem(LEGACY_THEME_STORAGE_KEY);
+    for (const key of LEGACY_THEME_STORAGE_KEYS) window.localStorage.removeItem(key);
     if (choice === "system") window.localStorage.removeItem(THEME_STORAGE_KEY);
     else window.localStorage.setItem(THEME_STORAGE_KEY, choice);
   } catch {
@@ -58,7 +66,7 @@ function subscribe(listener: () => void): () => void {
 }
 
 function snapshot(): ThemeChoice {
-  if (current === null) current = readChoice();
+  if (current === null) current = readThemeChoice();
   return current;
 }
 

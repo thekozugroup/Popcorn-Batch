@@ -60,7 +60,7 @@ export interface SpeedHint {
 }
 
 /**
- * How long each format takes on the CPU with the encoders Szalinski uses
+ * How long each format takes on the CPU with the encoders Popcorn Batch uses
  * (x264, x265, libvpx-vp9, SVT-AV1), fastest first.
  */
 const CPU_SPEED_TEXT: Record<VideoCodec, string> = {
@@ -311,7 +311,7 @@ export function bugReportText({
   settings?: Pick<Settings, "hardware"> | undefined;
 }): string {
   const lines = [
-    `Szalinski ${system.version}${system.build ? ` (build ${system.build})` : ""}${system.in_container ? ", in a container" : ""}`,
+    `Popcorn Batch ${system.version}${system.build ? ` (build ${system.build})` : ""}${system.in_container ? ", in a container" : ""}`,
   ];
   if (hw) {
     lines.push(`ffmpeg: ${hw.ffmpeg.found ? (hw.ffmpeg.version ?? "found, version unknown") : "not found"}`);

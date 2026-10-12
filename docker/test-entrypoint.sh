@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Regression tests for docker/entrypoint.sh, run against a built image.
 #
-#   docker/test-entrypoint.sh <image>        e.g. docker/test-entrypoint.sh szalinski:dev
+#   docker/test-entrypoint.sh <image>        e.g. docker/test-entrypoint.sh popcorn-batch:dev
 #
 # Covers PUID/PGID (including a gid that already exists, such as Unraid's 100
 # "users"), GPU device groups (never the root group), UMASK, the /temp and
 # empty-variable rules, the startup banner, warnings about missing, read-only
-# or unwritable mounts, /config ownership (only Szalinski's own files are
-# re-owned, never a shared folder's other contents; a folder from Chrysopoeia,
-# the name before the rename, counts as Szalinski's), the privilege drop and
-# argument pass-through. Fake GPU nodes are created inside the container with mknod
+# or unwritable mounts, /config ownership (only Popcorn Batch's own files are
+# re-owned, never a shared folder's other contents; a folder from Szalinski or
+# Chrysopoeia, the project's earlier names, counts as Popcorn Batch's), the
+# build label's older variable names, the privilege drop and argument
+# pass-through. Fake GPU nodes are created inside the container with mknod
 # (Docker's default capabilities allow it), so no GPU and no sudo are needed.
 # Takes about 30 seconds; nothing is left behind.
 #
@@ -27,10 +28,10 @@ command -v docker >/dev/null 2>&1 || {
     exit 2
 }
 
-VOLUME="szalinski-entrypoint-test-$$"
-MEDIA_VOLUME="szalinski-entrypoint-test-media-$$"
-SHARED_VOLUME="szalinski-entrypoint-test-shared-$$"
-CONTAINER="szalinski-entrypoint-test-$$"
+VOLUME="popcorn-batch-entrypoint-test-$$"
+MEDIA_VOLUME="popcorn-batch-entrypoint-test-media-$$"
+SHARED_VOLUME="popcorn-batch-entrypoint-test-shared-$$"
+CONTAINER="popcorn-batch-entrypoint-test-$$"
 FAILURES=0
 OUT=""
 STATUS=0
@@ -92,15 +93,18 @@ exec /usr/local/bin/entrypoint.sh "$@"'
 # server_log <docker run options...>
 # Starts the server detached through the normal entrypoint and puts its log,
 # up to the end of the startup banner, in $OUT. Warnings about mounts are
-# printed only when the server itself starts, before the banner.
+# printed only when the server itself starts, before the banner. With
+# UNTIL=<text> set, waits for that text in the log instead of the banner's
+# end (e.g. the server's own "is running on" line).
 server_log() {
+    local until=${UNTIL:-Web UI}
     docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
     STATUS=0
     OUT=""
     docker run -d --name "$CONTAINER" "$@" "$IMAGE" >/dev/null || STATUS=$?
     for _ in $(seq 1 30); do
         OUT=$(docker logs "$CONTAINER" 2>&1 || true)
-        case $OUT in *"Web UI"*) break ;; esac
+        case $OUT in *"$until"*) break ;; esac
         sleep 0.5
     done
     docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
@@ -138,13 +142,13 @@ echo "Testing the entrypoint of $IMAGE"
 # --- Users and groups ---------------------------------------------------------
 
 run -- id
-expect "defaults to uid 1000 and gid 1000" '^uid=1000\(szalinski\) gid=1000\(szalinski\)'
+expect "defaults to uid 1000 and gid 1000" '^uid=1000\(popcorn-batch\) gid=1000\(popcorn-batch\)'
 
 run -e PUID=99 -e PGID=100 -- id
-expect "Unraid ids 99/100 reuse the existing users group" '^uid=99\(szalinski\) gid=100\(users\)'
+expect "Unraid ids 99/100 reuse the existing users group" '^uid=99\(popcorn-batch\) gid=100\(users\)'
 
 run -e PUID=4242 -e PGID=4343 -- id
-expect "new ids move the image's user and group" '^uid=4242\(szalinski\) gid=4343\(szalinski\)'
+expect "new ids move the image's user and group" '^uid=4242\(popcorn-batch\) gid=4343\(popcorn-batch\)'
 
 # 33 is www-data in Debian: `id` may print either account's name.
 run -e PUID=33 -e PGID=33 -- id
@@ -181,9 +185,9 @@ done
 docker rm -f -v "$CONTAINER" >/dev/null 2>&1 || true
 STATUS=0
 expect "the startup banner lists GPU devices" 'GPU devices +/dev/dri/renderD128 \(group gpu993\)'
-expect "the startup banner names the user" 'Runs as +uid 99 \(szalinski\), gid 100 \(users\)'
+expect "the startup banner names the user" 'Runs as +uid 99 \(popcorn-batch\), gid 100 \(users\)'
 # The server's own version (Cargo.toml), plus the build label when it differs.
-expect "the startup banner shows the server version" 'Szalinski [0-9]+\.[0-9]+\.[0-9]+( \(build [^)]+\))?$'
+expect "the startup banner shows the server version" 'Popcorn Batch [0-9]+\.[0-9]+\.[0-9]+( \(build [^)]+\))?$'
 
 # --- Mount warnings ---------------------------------------------------------------
 
@@ -206,10 +210,10 @@ expect "explains a read-only /media" '/media is mounted read-only'
 expect_not "does not blame PUID/PGID for a read-only /media" 'cannot write to /media'
 
 server_log -e PUID=99 -e PGID=100 -v "$VOLUME:/config" -v "$MEDIA_VOLUME:/media"
-expect "warns when PUID/PGID cannot write to /media" 'Szalinski \(uid 99\) cannot write to /media.*PUID/PGID'
+expect "warns when PUID/PGID cannot write to /media" 'Popcorn Batch \(uid 99\) cannot write to /media.*PUID/PGID'
 
 server_log --user 1234:1234 -v "$VOLUME:/config" -v "$MEDIA_VOLUME:/media"
-expect "with --user, warns that /media is not writable" 'Szalinski \(uid 1234\) cannot write to /media'
+expect "with --user, warns that /media is not writable" 'Popcorn Batch \(uid 1234\) cannot write to /media'
 
 # --- Environment rules ----------------------------------------------------------
 
@@ -235,7 +239,7 @@ run -v "$VOLUME:/config" -e PUID=99 -e PGID=100 -- stat -c '%u:%g' /config
 expect "gives /config to PUID/PGID" '^99:100$'
 
 # /config may be a folder shared with other apps (a template mistake such as
-# pointing Config at /mnt/user/appdata). Only Szalinski's own files may change
+# pointing Config at /mnt/user/appdata). Only Popcorn Batch's own files may change
 # owner; everything else in it must be left exactly as it is.
 
 # seed_shared <shell commands run as root in /config, which starts empty>
@@ -250,29 +254,29 @@ shared_owners() {
 }
 docker volume create "$SHARED_VOLUME" >/dev/null
 
-# Szalinski's database and lock files left behind by another owner (for
+# Popcorn Batch's database and lock files left behind by another owner (for
 # example by an earlier PUID) are fixed; a neighbour's files are not.
 seed_shared 'mkdir -p /config/otherapp/data
 echo x > /config/otherapp/data/file
 echo y > /config/notes.txt
-touch /config/szalinski.db /config/szalinski.db-wal /config/szalinski.db-shm /config/szalinski.lock
+touch /config/popcorn-batch.db /config/popcorn-batch.db-wal /config/popcorn-batch.db-shm /config/popcorn-batch.lock
 chown -R 1234:1234 /config/otherapp /config/notes.txt
-chown 555:555 /config/szalinski.db /config/szalinski.db-wal /config/szalinski.db-shm /config/szalinski.lock
+chown 555:555 /config/popcorn-batch.db /config/popcorn-batch.db-wal /config/popcorn-batch.db-shm /config/popcorn-batch.lock
 chown 555:555 /config'
 run -v "$SHARED_VOLUME:/config" -e PUID=99 -e PGID=100 -- id -u
-expect "starts with a Config folder that has Szalinski's files and other data" '^99$'
-shared_owners /config /config/szalinski.db /config/szalinski.db-wal /config/szalinski.db-shm /config/szalinski.lock \
+expect "starts with a Config folder that has Popcorn Batch's files and other data" '^99$'
+shared_owners /config /config/popcorn-batch.db /config/popcorn-batch.db-wal /config/popcorn-batch.db-shm /config/popcorn-batch.lock \
     /config/notes.txt /config/otherapp /config/otherapp/data /config/otherapp/data/file
-expect "gives the database to PUID/PGID" '^/config/szalinski\.db 99:100$'
-expect "gives the database's write-ahead files to PUID/PGID" '^/config/szalinski\.db-wal 99:100$'
-expect "gives the database's shared-memory file to PUID/PGID" '^/config/szalinski\.db-shm 99:100$'
-expect "gives the lock file to PUID/PGID" '^/config/szalinski\.lock 99:100$'
+expect "gives the database to PUID/PGID" '^/config/popcorn-batch\.db 99:100$'
+expect "gives the database's write-ahead files to PUID/PGID" '^/config/popcorn-batch\.db-wal 99:100$'
+expect "gives the database's shared-memory file to PUID/PGID" '^/config/popcorn-batch\.db-shm 99:100$'
+expect "gives the lock file to PUID/PGID" '^/config/popcorn-batch\.lock 99:100$'
 expect "gives a Config folder that holds the database to PUID/PGID" '^/config 99:100$'
 expect "leaves another app's folder alone" '^/config/otherapp 1234:1234$'
 expect "leaves files inside another app's folder alone" '^/config/otherapp/data/file 1234:1234$'
 expect "leaves other files in the Config folder alone" '^/config/notes\.txt 1234:1234$'
 
-# A folder that only holds other data is not Szalinski's to take over: it
+# A folder that only holds other data is not Popcorn Batch's to take over: it
 # is left as it is, and the container stops with a message if it cannot write.
 seed_shared 'mkdir -p /config/otherapp
 echo x > /config/otherapp/file
@@ -293,32 +297,64 @@ chown 1234:1234 /config/other.conf
 chown 99:100 /config
 chmod 775 /config'
 server_log -e PUID=99 -e PGID=100 -v "$SHARED_VOLUME:/config"
-expect "warns when the Config folder holds other files and no Szalinski database" 'already holds other files but no Szalinski database'
+expect "warns when the Config folder holds other files and no Popcorn Batch database" 'already holds other files but no Popcorn Batch database'
 shared_owners /config/other.conf
 expect "still leaves the other files alone" '^/config/other\.conf 1234:1234$'
 
-# A Config folder from Chrysopoeia (the name before the rename) holds its
-# database under the old name: that is Szalinski's database too, so the folder
-# and the old files are Szalinski's to fix, and there is nothing to warn about.
-seed_shared 'touch /config/chrysopoeia.db /config/chrysopoeia.db-wal /config/chrysopoeia.db-shm /config/chrysopoeia.lock
+# A Config folder from Szalinski or Chrysopoeia (the project's earlier names)
+# holds the database under that name: that is Popcorn Batch's database too,
+# so the folder and the old files are Popcorn Batch's to fix, and there is
+# nothing to warn about. Szalinski also took Chrysopoeia's lock file.
+for older in szalinski:Szalinski chrysopoeia:Chrysopoeia; do
+    file=${older%%:*}
+    name=${older#*:}
+    if [ "$file" = szalinski ]; then
+        locks="szalinski.lock chrysopoeia.lock"
+    else
+        locks="chrysopoeia.lock"
+    fi
+    own=""
+    for f in "$file.db" "$file.db-wal" "$file.db-shm" "$file.db-journal" $locks; do
+        own="$own /config/$f"
+    done
+    seed_shared "touch $own
 echo y > /config/notes.txt
 chown 1234:1234 /config/notes.txt
-chown 555:555 /config/chrysopoeia.db /config/chrysopoeia.db-wal /config/chrysopoeia.db-shm /config/chrysopoeia.lock
+chown 555:555 $own
 chown 555:555 /config
-chmod 755 /config'
-run -v "$SHARED_VOLUME:/config" -e PUID=99 -e PGID=100 -- id -u
-expect "starts with a Config folder from Chrysopoeia" '^99$'
-shared_owners /config /config/chrysopoeia.db /config/chrysopoeia.db-wal /config/chrysopoeia.db-shm /config/chrysopoeia.lock /config/notes.txt
-expect "gives a Config folder that holds Chrysopoeia's database to PUID/PGID" '^/config 99:100$'
-expect "gives Chrysopoeia's database to PUID/PGID" '^/config/chrysopoeia\.db 99:100$'
-expect "gives Chrysopoeia's write-ahead files to PUID/PGID" '^/config/chrysopoeia\.db-wal 99:100$'
-expect "gives Chrysopoeia's shared-memory file to PUID/PGID" '^/config/chrysopoeia\.db-shm 99:100$'
-expect "gives Chrysopoeia's lock file to PUID/PGID" '^/config/chrysopoeia\.lock 99:100$'
-expect "still leaves other files next to Chrysopoeia's alone" '^/config/notes\.txt 1234:1234$'
-seed_shared 'touch /config/chrysopoeia.db
-chown -R 99:100 /config'
-server_log -e PUID=99 -e PGID=100 -v "$SHARED_VOLUME:/config"
-expect_not "no shared-folder warning for a Config folder from Chrysopoeia" 'no Szalinski database'
+chmod 755 /config"
+    run -v "$SHARED_VOLUME:/config" -e PUID=99 -e PGID=100 -- id -u
+    expect "starts with a Config folder from $name" '^99$'
+    # shellcheck disable=SC2086 # $own is a list of paths
+    shared_owners /config $own /config/notes.txt
+    expect "gives a Config folder that holds $name's database to PUID/PGID" '^/config 99:100$'
+    expect "gives $name's database to PUID/PGID" "^/config/$file\\.db 99:100\$"
+    expect "gives $name's write-ahead files to PUID/PGID" "^/config/$file\\.db-wal 99:100\$"
+    expect "gives $name's shared-memory file to PUID/PGID" "^/config/$file\\.db-shm 99:100\$"
+    expect "gives $name's rollback journal to PUID/PGID" "^/config/$file\\.db-journal 99:100\$"
+    for lock in $locks; do
+        expect "gives the lock file $lock in $name's folder to PUID/PGID" "^/config/${lock%.lock}\\.lock 99:100\$"
+    done
+    expect "still leaves other files next to $name's alone" '^/config/notes\.txt 1234:1234$'
+    # The server itself then carries the database over on its first start,
+    # says so in the log, and leaves nothing under the older name.
+    seed_shared "touch /config/$file.db
+chown -R 99:100 /config"
+    UNTIL="is running on" server_log -e PUID=99 -e PGID=100 -v "$SHARED_VOLUME:/config"
+    expect_not "no shared-folder warning for a Config folder from $name" 'no Popcorn Batch database'
+    expect "the server carries over $name's database" "carried over the database of $name"
+    STATUS=0
+    OUT=$(docker run --rm --entrypoint /bin/ls -v "$SHARED_VOLUME:/config" "$IMAGE" -1 /config 2>&1) || STATUS=$?
+    expect "$name's database is now popcorn-batch.db" '^popcorn-batch\.db$'
+    expect_not "nothing is left under $name's database name" "^$file\\.db"
+done
+
+# The image's build label: POPCORN_BATCH_VERSION, else the variable's names
+# under Szalinski and Chrysopoeia (an empty value counts as unset).
+server_log -e PUID=99 -e PGID=100 -e POPCORN_BATCH_VERSION= -e SZALINSKI_VERSION=older-1a2b3c4 -e CHRYSOPOEIA_VERSION=oldest-7654321
+expect "the banner reads SZALINSKI_VERSION when POPCORN_BATCH_VERSION is empty" 'Popcorn Batch [0-9.]+ \(build older-1a2b3c4\)$'
+server_log -e PUID=99 -e PGID=100 -e POPCORN_BATCH_VERSION= -e CHRYSOPOEIA_VERSION=oldest-7654321
+expect "the banner reads CHRYSOPOEIA_VERSION when neither newer name is set" 'Popcorn Batch [0-9.]+ \(build oldest-7654321\)$'
 
 run -e PUID=99 -e PGID=100 -- sh -c 'grep -E "^(NoNewPrivs|CapEff)" /proc/self/status'
 expect "drops all capabilities" 'CapEff:[[:space:]]+0+$'

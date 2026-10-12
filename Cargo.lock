@@ -1423,6 +1423,106 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
+name = "popcorn-batch-core"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "rustix",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "uuid",
+]
+
+[[package]]
+name = "popcorn-batch-hwdetect"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "popcorn-batch-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "popcorn-batch-scanner"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "globset",
+ "inotify",
+ "notify",
+ "popcorn-batch-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+ "walkdir",
+]
+
+[[package]]
+name = "popcorn-batch-server"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "chrono",
+ "clap",
+ "futures",
+ "globset",
+ "hyper",
+ "hyper-util",
+ "popcorn-batch-core",
+ "popcorn-batch-hwdetect",
+ "popcorn-batch-scanner",
+ "popcorn-batch-worker",
+ "rustix",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "sqlx",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-tungstenite",
+ "tokio-util",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "popcorn-batch-worker"
+version = "0.4.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "filetime",
+ "popcorn-batch-core",
+ "popcorn-batch-scanner",
+ "popcorn-batch-worker",
+ "rustix",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
 name = "potential_utf"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2064,106 +2164,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "szalinski-core"
-version = "0.3.0"
-dependencies = [
- "chrono",
- "rustix",
- "serde",
- "serde_json",
- "thiserror",
- "uuid",
-]
-
-[[package]]
-name = "szalinski-hwdetect"
-version = "0.3.0"
-dependencies = [
- "anyhow",
- "chrono",
- "serde",
- "serde_json",
- "szalinski-core",
- "tempfile",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "szalinski-scanner"
-version = "0.3.0"
-dependencies = [
- "anyhow",
- "chrono",
- "globset",
- "inotify",
- "notify",
- "serde",
- "serde_json",
- "szalinski-core",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "uuid",
- "walkdir",
-]
-
-[[package]]
-name = "szalinski-server"
-version = "0.3.0"
-dependencies = [
- "anyhow",
- "axum",
- "chrono",
- "clap",
- "futures",
- "globset",
- "hyper",
- "hyper-util",
- "rustix",
- "serde",
- "serde_json",
- "serde_path_to_error",
- "sqlx",
- "szalinski-core",
- "szalinski-hwdetect",
- "szalinski-scanner",
- "szalinski-worker",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-tungstenite",
- "tokio-util",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "szalinski-worker"
-version = "0.3.0"
-dependencies = [
- "anyhow",
- "chrono",
- "filetime",
- "rustix",
- "serde",
- "serde_json",
- "szalinski-core",
- "szalinski-scanner",
- "szalinski-worker",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "uuid",
 ]
 
 [[package]]

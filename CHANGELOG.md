@@ -41,6 +41,31 @@ What is coming after 0.2.0, from an evaluation on a real AMD Unraid server.
 
 ### Changed
 
+- **Renamed to Popcorn Batch** (it was Szalinski, and Chrysopoeia before
+  that). It joins the Popcorn family of open-source tools, next to
+  [Popcorn SR](https://github.com/thekozugroup/Popcorn-SR). The image is now
+  `ghcr.io/thekozugroup/popcorn-batch`, the binary `popcorn-batch`, the Unraid
+  template `unraid/popcorn-batch.xml`, the build label variable
+  `POPCORN_BATCH_VERSION`, and the repository
+  [thekozugroup/Popcorn-Batch](https://github.com/thekozugroup/Popcorn-Batch).
+  Version 0.4.0. An existing install under either older name keeps working:
+  the database (`szalinski.db`, or `chrysopoeia.db` when there is no
+  `szalinski.db`) is carried over to `popcorn-batch.db` on the first start,
+  backup and temporary files left by either older name are still found and
+  put back after an interrupted conversion, the container treats the older
+  databases and locks as its own (no warning about a shared Config folder,
+  and their owner is fixed like the new files'), and both older images' locks
+  are honoured so neither can share a `/config` folder with this one.
+  `SZALINSKI_VERSION`, `CHRYSOPOEIA_VERSION` and a theme saved in the browser
+  under either older name are still read. Every release is also published
+  under both older image names for a while, so an install that still pulls
+  `ghcr.io/thekozugroup/szalinski` or `ghcr.io/thekozugroup/chrysopoeia` keeps
+  updating; switch its Repository to
+  `ghcr.io/thekozugroup/popcorn-batch:stable` when convenient (see
+  [docs/UNRAID.md](docs/UNRAID.md#moving-from-szalinski-or-chrysopoeia)).
+  With Compose, the project, service and container are now `popcorn-batch`
+  (stop the old one with the old file first), and `SZALINSKI_IMAGE` is now
+  `POPCORN_BATCH_IMAGE`.
 - **Renamed to Szalinski** (it was Chrysopoeia), after the inventor in *Honey,
   I Shrunk the Kids*. The image is now `ghcr.io/thekozugroup/szalinski`, the
   binary `szalinski`, the Unraid template `unraid/szalinski.xml`, and the
@@ -158,5 +183,5 @@ The first release, published as Chrysopoeia (from `main`; it was not tagged).
   through `ALLOWED_HOSTS`, and the published images `:latest` (every build of
   `main`) and `:edge` (a test build of a branch).
 
-[Unreleased]: https://github.com/thekozugroup/Szalinski/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/thekozugroup/Szalinski/releases/tag/v0.2.0
+[Unreleased]: https://github.com/thekozugroup/Popcorn-Batch/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/thekozugroup/Popcorn-Batch/releases/tag/v0.2.0
