@@ -49,3 +49,6 @@ web/test-results/
 
 # Agent worktrees
 .claude/worktrees/
+
+# Screenshot and test evidence (kept local, like Popcorn SR)
+evidence/
