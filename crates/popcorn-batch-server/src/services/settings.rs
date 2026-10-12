@@ -72,6 +72,58 @@ fn blank_to_none(value: &mut Option<String>) {
     }
 }
 
+/// The longest Popcorn SR address Settings accepts, in characters.
+pub const POPCORN_SR_URL_MAX_LEN: usize = 2048;
+
+const POPCORN_SR_URL_NOT_FULL: &str =
+    "Enter the full address, starting with http:// or https://, such as http://tower:8787.";
+const POPCORN_SR_URL_HAS_LOGIN: &str =
+    "Leave out the user name and password. Popcorn SR asks for its key when you open it.";
+const POPCORN_SR_URL_TOO_LONG: &str =
+    "This address is too long. Use the address you open Popcorn SR at.";
+
+/// Check the Popcorn SR address (already trimmed, `blank_to_none`): a full
+/// `http://` or `https://` address with a host and no user name or
+/// password, at most [`POPCORN_SR_URL_MAX_LEN`] characters. The address is
+/// only parsed here and kept as it was typed; it is never connected to.
+fn check_popcorn_sr_url(address: Option<&str>) -> ApiResult<()> {
+    let Some(address) = address else {
+        return Ok(());
+    };
+    let bad = |message: &'static str| invalid_field("popcorn_sr_url", message);
+    if address.chars().count() > POPCORN_SR_URL_MAX_LEN {
+        return Err(bad(POPCORN_SR_URL_TOO_LONG));
+    }
+    // The address must start the way the message asks for ("http:tower"
+    // and "http:/tower" would also parse, as http://tower/), and have no
+    // spaces or line breaks, which parsers drop or refuse differently.
+    let lower = address.to_ascii_lowercase();
+    let after_scheme = lower
+        .strip_prefix("http://")
+        .or_else(|| lower.strip_prefix("https://"));
+    let clean = !address.chars().any(|c| c.is_whitespace() || c.is_control());
+    let (Some(after_scheme), true) = (after_scheme, clean) else {
+        return Err(bad(POPCORN_SR_URL_NOT_FULL));
+    };
+    let Ok(parsed) = url::Url::parse(address) else {
+        return Err(bad(POPCORN_SR_URL_NOT_FULL));
+    };
+    if !matches!(parsed.scheme(), "http" | "https") || parsed.host().is_none() {
+        return Err(bad(POPCORN_SR_URL_NOT_FULL));
+    }
+    // Also an empty login ("http://@tower"), which the parser drops.
+    let authority_end = after_scheme
+        .find(['/', '?', '#', '\\'])
+        .unwrap_or(after_scheme.len());
+    if !parsed.username().is_empty()
+        || parsed.password().is_some()
+        || after_scheme[..authority_end].contains('@')
+    {
+        return Err(bad(POPCORN_SR_URL_HAS_LOGIN));
+    }
+    Ok(())
+}
+
 /// How long a folder chosen in Settings may take to answer the checks
 /// below: a share that stopped answering doesn't hold the save.
 const FOLDER_CHECK_TIMEOUT: Duration = if cfg!(test) {
@@ -207,6 +259,8 @@ fn work_folder(state: &AppState, settings: &Settings) -> Option<String> {
 pub async fn validate(state: &AppState, old: &Settings, s: &mut Settings) -> ApiResult<Kept> {
     blank_to_none(&mut s.temp_dir);
     blank_to_none(&mut s.output_folder);
+    blank_to_none(&mut s.popcorn_sr_url);
+    check_popcorn_sr_url(s.popcorn_sr_url.as_deref())?;
     // The work folder in use is the setting, else the one the server was
     // started with (TEMP_DIR): choosing that same folder in Settings is no
     // change.
@@ -532,5 +586,107 @@ mod tests {
         };
         let s = merge(&current, json!({"max_jobs": null})).unwrap();
         assert_eq!(s.max_jobs, None);
+    }
+
+    #[test]
+    fn popcorn_sr_url_merges_and_clears_like_other_optional_settings() {
+        let s = merge(
+            &Settings::default(),
+            json!({"popcorn_sr_url": "http://tower:8787"}),
+        )
+        .unwrap();
+        assert_eq!(s.popcorn_sr_url.as_deref(), Some("http://tower:8787"));
+        // Other changes leave it alone; null clears it.
+        let s = merge(&s, json!({"max_jobs": 2})).unwrap();
+        assert_eq!(s.popcorn_sr_url.as_deref(), Some("http://tower:8787"));
+        let s = merge(&s, json!({"popcorn_sr_url": null})).unwrap();
+        assert_eq!(s.popcorn_sr_url, None);
+        // Something that isn't text is named, not guessed at.
+        let e = merge(&Settings::default(), json!({"popcorn_sr_url": 8787})).unwrap_err();
+        assert_eq!(e.code, "invalid_settings");
+        assert_eq!(e.field.as_deref(), Some("popcorn_sr_url"));
+    }
+
+    fn sr_refused(address: &str) -> ApiError {
+        let e = check_popcorn_sr_url(Some(address)).unwrap_err();
+        assert_eq!(e.code, "invalid_settings", "{address:?}");
+        assert_eq!(e.field.as_deref(), Some("popcorn_sr_url"), "{address:?}");
+        e
+    }
+
+    #[test]
+    fn popcorn_sr_url_accepts_full_http_and_https_addresses() {
+        for ok in [
+            "http://tower:8787",
+            "https://sr.example.com/",
+            "HTTPS://Tower.local:8787/sr?x=1#top",
+            "http://192.168.1.20:8787",
+            "http://[fd00::20]:8787/",
+            "http://tower/path@with-at",
+        ] {
+            assert!(check_popcorn_sr_url(Some(ok)).is_ok(), "{ok}");
+        }
+        assert!(check_popcorn_sr_url(None).is_ok());
+        // Exactly the longest allowed address.
+        let longest = format!("http://tower/{}", "a".repeat(POPCORN_SR_URL_MAX_LEN - 13));
+        assert_eq!(longest.chars().count(), POPCORN_SR_URL_MAX_LEN);
+        assert!(check_popcorn_sr_url(Some(&longest)).is_ok());
+    }
+
+    #[test]
+    fn popcorn_sr_url_must_be_a_full_http_or_https_address() {
+        let message =
+            "Enter the full address, starting with http:// or https://, such as http://tower:8787.";
+        for bad in [
+            "javascript:alert(1)",
+            "ftp://tower",
+            "file:///etc/passwd",
+            "data:text/html,hi",
+            "ws://tower:8787",
+            "tower:8787",
+            "tower",
+            "/sr",
+            "//tower:8787",
+            "http:tower",
+            "http:/tower",
+            "http://",
+            "http:///",
+            "http://:8787",
+            "http://tower:99999",
+            "http://to wer:8787",
+            "http://tow\ner:8787",
+            "http://tower:8787 /sr",
+        ] {
+            assert_eq!(sr_refused(bad).message, message, "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn popcorn_sr_url_must_not_hold_a_user_name_or_password() {
+        let message =
+            "Leave out the user name and password. Popcorn SR asks for its key when you open it.";
+        for bad in [
+            "http://user:pass@tower:8787",
+            "https://user@tower",
+            "http://:pass@tower",
+            "http://@tower:8787",
+            "http://:@tower:8787/sr",
+        ] {
+            assert_eq!(sr_refused(bad).message, message, "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn popcorn_sr_url_has_a_length_limit() {
+        let message = "This address is too long. Use the address you open Popcorn SR at.";
+        let long = format!("http://tower/{}", "a".repeat(POPCORN_SR_URL_MAX_LEN - 12));
+        assert_eq!(long.chars().count(), 2049);
+        assert_eq!(sr_refused(&long).message, message);
+        // Characters are counted, not bytes: 2,048 two-byte letters fit.
+        let wide = format!("http://tower/{}", "é".repeat(POPCORN_SR_URL_MAX_LEN - 13));
+        assert!(check_popcorn_sr_url(Some(&wide)).is_ok());
+        // Too long wins over everything else wrong with it.
+        let long_text = "x".repeat(POPCORN_SR_URL_MAX_LEN + 1);
+        assert_eq!(sr_refused(&long_text).message, message);
     }
 }

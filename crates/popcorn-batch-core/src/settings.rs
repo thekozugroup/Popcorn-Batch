@@ -114,6 +114,12 @@ pub struct Settings {
     pub default_profile: TranscodeProfile,
     /// Set once the first-run setup has been completed or dismissed.
     pub onboarded: bool,
+    /// Where the Popcorn SR manager is reached on the user's network, as
+    /// `http://` or `https://` (checked on save). Optional; `None` = not
+    /// given. Only the web UI uses it, to link to Popcorn SR: the server
+    /// never contacts it.
+    #[serde(default)]
+    pub popcorn_sr_url: Option<String>,
 }
 
 impl Default for Settings {
@@ -141,6 +147,7 @@ impl Default for Settings {
             min_file_size_mb: 0,
             default_profile: TranscodeProfile::default(),
             onboarded: false,
+            popcorn_sr_url: None,
         }
     }
 }
@@ -165,5 +172,34 @@ mod tests {
         assert_eq!(s.max_jobs, Some(3));
         assert!(s.auto_queue);
         assert_eq!(s.validation, ValidationLevel::Standard);
+    }
+
+    #[test]
+    fn popcorn_sr_url_is_unset_by_default() {
+        assert_eq!(Settings::default().popcorn_sr_url, None);
+        let json = serde_json::to_value(Settings::default()).unwrap();
+        assert!(json["popcorn_sr_url"].is_null(), "{json}");
+    }
+
+    #[test]
+    fn settings_saved_before_popcorn_sr_url_existed_still_load() {
+        // What an older database holds: every key but `popcorn_sr_url`.
+        let mut old = serde_json::to_value(Settings::default()).unwrap();
+        old.as_object_mut().unwrap().remove("popcorn_sr_url");
+        assert!(old.get("popcorn_sr_url").is_none());
+        let s: Settings = serde_json::from_value(old).unwrap();
+        assert_eq!(s, Settings::default());
+    }
+
+    #[test]
+    fn popcorn_sr_url_round_trips_through_json() {
+        let s = Settings {
+            popcorn_sr_url: Some("http://tower:8787".into()),
+            ..Settings::default()
+        };
+        let back: Settings = serde_json::from_str(&serde_json::to_string(&s).unwrap()).unwrap();
+        assert_eq!(back.popcorn_sr_url.as_deref(), Some("http://tower:8787"));
+        let cleared: Settings = serde_json::from_str(r#"{"popcorn_sr_url":null}"#).unwrap();
+        assert_eq!(cleared.popcorn_sr_url, None);
     }
 }

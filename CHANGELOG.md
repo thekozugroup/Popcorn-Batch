@@ -16,6 +16,13 @@ What is coming after 0.2.0, from an evaluation on a real AMD Unraid server.
 
 ### Added
 
+- An optional **Popcorn SR address** setting (`popcorn_sr_url`), for linking
+  to [Popcorn SR](https://github.com/thekozugroup/Popcorn-SR). `PATCH
+  /api/settings` saves it (empty or `null` clears it) after checking that it
+  is a full `http://` or `https://` address with a host, no user name or
+  password and at most 2,048 characters, and says in plain words what to fix.
+  Popcorn Batch only stores it and never connects to it. Settings saved by
+  earlier versions load with it unset.
 - A **stable update channel**. `ghcr.io/thekozugroup/szalinski:stable`
   follows the newest tagged release (not a prerelease) and only moves when a
   newer release is published, never backwards, so automatic updates (such as
