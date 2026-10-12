@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-labelledby="title">
+  <title id="title">Popcorn Batch</title>
+  <!-- DRAFT, needs owner approval. A pile of three kernels: a batch, with the one being worked on in the accent.
+       Tile: Zinc Ink (Tailwind zinc-900, #18181b), radius 10 of 32 like Popcorn SR's brand mark.
+       Kernels: Zinc Paper (zinc-50, #fafafa) and Action Blue (blue-500, #3b82f6).
+       Flat: no gradients, no shadows, no strokes. Hex values because favicon and PNG tools do not read OKLCH. -->
+  <rect width="32" height="32" rx="10" fill="#18181b"/>
+  <circle cx="16" cy="11.7" r="4.5" fill="#3b82f6"/>
+  <circle cx="11" cy="20.3" r="4.5" fill="#fafafa"/>
+  <circle cx="21" cy="20.3" r="4.5" fill="#fafafa"/>
+</svg>
