@@ -98,6 +98,9 @@ async function main() {
   const { chromium } = await loadPlaywright();
   const browser = await chromium.launch();
   const shot = async (page, name, options = {}) => {
+    // The pointer stays where the last click was (Start, a history row); move it off the
+    // content so no row shows its hover state (an underlined name) in the picture.
+    await page.mouse.move(0, 0);
     await sleep(700); // let transitions and live numbers settle
     await page.screenshot({ path: join(opts.out, `${name}.png`), animations: "disabled", ...options });
     log(`Saved ${name}.png`);
