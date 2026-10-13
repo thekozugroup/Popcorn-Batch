@@ -297,6 +297,9 @@ async function main() {
         if (heights.some((h) => h < 24)) fail(`${vp.name}: a quality option is under 24 px tall`);
         if (opts.screenshots) await page.screenshot({ path: join(opts.screenshots, `${vp.name}-settings-advanced.png`) });
       }
+      // Polling requests still in the route handler would otherwise reach
+      // route.fetch after the context is gone.
+      await context.unrouteAll({ behavior: "ignoreErrors" });
       await context.close();
     }
   } finally {
