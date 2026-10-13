@@ -43,12 +43,12 @@ import { cn } from "@/lib/utils";
 
 function DeviceCard({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-line bg-surface p-4">
+    <div className="rounded-panel border border-line bg-surface p-4">
       <div className="flex items-center gap-2 text-muted [&_svg]:size-4">
         {icon}
         <h3 className="text-[0.8125rem] font-medium">{title}</h3>
       </div>
-      <div className="mt-2 text-sm text-fg">{children}</div>
+      <div className="mt-2 text-sm text-ink">{children}</div>
     </div>
   );
 }
@@ -74,7 +74,7 @@ function Devices({ hw }: { hw: HardwareInfo }) {
         hw.gpus.map((gpu) => (
           <DeviceCard key={`${gpu.name}-${gpu.render_node ?? ""}`} icon={<MonitorPlay aria-hidden />} title={`${GPU_VENDOR_LABEL[gpu.vendor]} graphics`}>
             <p className="font-medium">{gpu.name}</p>
-            <p className="mt-0.5 font-mono text-xs text-muted">
+            <p className="mt-0.5 text-xs text-muted">
               {[gpu.driver, gpu.render_node].filter(Boolean).join(" · ") || "No render node"}
             </p>
           </DeviceCard>
@@ -96,15 +96,15 @@ function cellFor(encoders: EncoderStatus[], codec: string, api: HwApi) {
 function EncoderReasons({ title, encoders }: { title: string; encoders: EncoderStatus[] }) {
   if (!encoders.length) return null;
   return (
-    <details className="group mt-4 rounded-lg border border-line bg-surface">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-fg [&::-webkit-details-marker]:hidden">
+    <details className="group mt-4 rounded-panel border border-line bg-surface">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 text-sm font-medium text-ink [&::-webkit-details-marker]:hidden">
         <ChevronRight className="size-4 text-muted transition-transform duration-200 group-open:rotate-90" aria-hidden />
         {title}
       </summary>
       <ul className="divide-y divide-line border-t border-line">
         {encoders.map((e) => (
           <li key={e.name} className="px-4 py-3">
-            <p className="font-mono text-[0.8125rem] text-fg">{e.name}</p>
+            <p className="font-mono text-[0.8125rem] text-ink">{e.name}</p>
             <p className="mt-1 text-[0.8125rem] leading-relaxed break-words whitespace-pre-wrap text-muted">{e.error}</p>
           </li>
         ))}
@@ -123,7 +123,7 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
   const notSetUp = shown.some((e) => encoderCell(hw, e) === "not_set_up");
   return (
     <div>
-      <div className="overflow-x-auto rounded-lg border border-line bg-surface">
+      <div className="overflow-x-auto rounded-panel border border-line bg-surface">
         <table className={cn("w-full text-sm", apis.length > 2 && "min-w-[32rem]")}>
           <caption className="sr-only">Which video formats each device can encode</caption>
           <thead>
@@ -142,7 +142,7 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
           <tbody className="divide-y divide-line">
             {VIDEO_CODECS.map((codec) => (
               <tr key={codec}>
-                <th scope="row" className="py-3 pl-4 text-left font-medium text-fg">
+                <th scope="row" className="py-3 pl-4 text-left font-medium text-ink">
                   {VIDEO_CODEC_LABEL[codec]}
                 </th>
                 {apis.map((api) => {
@@ -158,9 +158,9 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
                     );
                   } else if (cell === "works") {
                     content = (
-                      <span className="inline-flex items-center gap-1.5 text-success">
-                        <CircleCheck className="size-4" aria-hidden />
-                        <span className="text-fg">Works</span>
+                      <span className="inline-flex items-center gap-1.5 text-ink">
+                        <CircleCheck className="size-4 text-ok" aria-hidden />
+                        <span className="text-ink">Works</span>
                       </span>
                     );
                   } else if (cell === "unsupported") {
@@ -179,8 +179,8 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
                     );
                   } else {
                     content = (
-                      <span className="inline-flex items-center gap-1.5 text-danger">
-                        <CircleX className="size-4" aria-hidden />
+                      <span className="inline-flex items-center gap-1.5 text-ink">
+                        <CircleX className="size-4 text-error" aria-hidden />
                         <span>Failed test</span>
                       </span>
                     );
@@ -263,7 +263,7 @@ export function HardwareSection({
         ) : null}
         {hw ? (
           <div className={cn("flex flex-col gap-4", detecting && "opacity-60 transition-opacity")}>
-            <p className="text-[1.0625rem] font-medium text-fg">{machineSummary(hw, draft.hardware)}</p>
+            <p className="text-[1.0625rem] font-medium text-ink">{machineSummary(hw, draft.hardware)}</p>
             <Devices hw={hw} />
           </div>
         ) : hardware.error && !stillStarting ? (
@@ -333,13 +333,13 @@ export function HardwareSection({
       {hw ? (
         <Disclosure title="Details: encoders and ffmpeg">
           <section aria-label="What can encode what">
-            <h3 className="mb-2.5 text-sm font-semibold text-fg">What can encode what</h3>
+            <h3 className="mb-2.5 text-sm font-semibold text-ink">What can encode what</h3>
             <EncoderMatrix hw={hw} />
           </section>
           {hw.ffmpeg.found ? (
             <section aria-label="ffmpeg" className="flex flex-col gap-2">
-              <h3 className="text-sm font-semibold text-fg">ffmpeg</h3>
-              <p className="flex items-center gap-2 text-sm text-fg">
+              <h3 className="text-sm font-semibold text-ink">ffmpeg</h3>
+              <p className="flex items-center gap-2 text-sm text-ink">
                 <Server className="size-4 text-muted" aria-hidden />
                 {ffmpegVersionLabel(hw.ffmpeg.version)}
               </p>

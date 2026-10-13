@@ -3,14 +3,14 @@
 /**
  * Goal cards: Save space / Balanced / Plays everywhere / Archive. Each card
  * says what you get in one line, how fast it converts on this machine in a
- * word, and the formats as small secondary detail. The "Best fit" badge
+ * word, and the formats as small secondary detail. The "Best fit" tag
  * carries the hardware recommendation, so nothing else repeats it.
  */
 
 import { Gauge, Hourglass, TriangleAlert, Zap } from "lucide-react";
 import { useId } from "react";
 import { ChoiceCard } from "@/components/ui/controls";
-import { Badge, Skeleton } from "@/components/ui/display";
+import { Skeleton, StatusDot, Tag } from "@/components/ui/display";
 import { recommendedGoal, speedWord, type SpeedWord } from "@/lib/hardware";
 import { GOAL_LABEL, GOAL_SUMMARY, GOALS, profileSummary } from "@/lib/labels";
 import { presetProfile } from "@/lib/profile";
@@ -40,15 +40,12 @@ function Formats({
   const Icon = speed ? SPEED_ICON[speed.tone] : null;
   return (
     <span className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      <span className="font-mono text-xs text-muted">{profileSummary(profile)}</span>
+      <span className="text-[13px] text-muted">{profileSummary(profile)}</span>
       {speed && Icon ? (
-        <span
-          className={cn(
-            "inline-flex items-center gap-1 text-[0.8125rem] font-medium",
-            speed.tone === "fast" ? "text-success" : speed.tone === "blocked" ? "text-danger" : "text-muted",
-          )}
-        >
-          <Icon className="size-3.5" aria-hidden />
+        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted">
+          {/* "Can't convert here" is the one speed with a status: a red dot before the words. */}
+          {speed.tone === "blocked" ? <StatusDot tone="danger" /> : null}
+          <Icon className="size-3.5 shrink-0" aria-hidden />
           <span className="sr-only">Speed on this machine: </span>
           {speed.label}
         </span>
@@ -128,13 +125,7 @@ export function GoalPicker({
               // Our own outcome line: the server's summary names formats and
               // speeds, which the line below already shows.
               description={GOAL_SUMMARY[goal]}
-              badge={
-                recommended === goal ? (
-                  <Badge tone="accent" icon={<Gauge aria-hidden />}>
-                    Best fit
-                  </Badge>
-                ) : null
-              }
+              badge={recommended === goal ? <Tag>Best fit</Tag> : null}
             >
               {formats(presetProfile(presets, goal))}
             </ChoiceCard>

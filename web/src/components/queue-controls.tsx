@@ -2,7 +2,6 @@
 
 /** Pause / resume / stop for the queue, with its state in words. */
 
-import { CirclePause, CirclePlay, CircleStop } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/overlays";
@@ -49,18 +48,16 @@ export function QueueControls({ queue, compact = false }: { queue: QueueState; c
     <div className="flex flex-wrap items-center gap-2">
       {queue.running > 0 ? (
         <Button variant="quiet" size={size} onClick={() => setConfirmStop(true)} needsServer>
-          <CircleStop aria-hidden />
           Stop now
         </Button>
       ) : null}
+      {/* Resume is the next processing action while paused, so it is the primary one. */}
       {queue.paused ? (
         <Button variant="primary" size={size} onClick={() => resume.mutate()} loading={resume.isPending} needsServer>
-          <CirclePlay aria-hidden />
           Resume
         </Button>
       ) : (
         <Button variant="secondary" size={size} onClick={() => pause.mutate()} loading={pause.isPending} needsServer>
-          <CirclePause aria-hidden />
           Pause
         </Button>
       )}

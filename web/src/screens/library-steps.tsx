@@ -63,7 +63,7 @@ export function StepHeading({
   }, [focusOnMount]);
   const Tag = level === 1 ? "h1" : "h2";
   return (
-    <Tag ref={ref} tabIndex={-1} className={className ?? "font-display text-[2rem] leading-tight text-fg outline-none"}>
+    <Tag ref={ref} tabIndex={-1} className={className ?? "font-semibold text-[2rem] leading-tight text-ink outline-none"}>
       {step ? <span className="sr-only">{step}: </span> : null}
       {children}
     </Tag>
@@ -95,7 +95,7 @@ export function FolderStep({
       </StepHeading>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
         Choose the folder that holds your movies or shows; folders inside it are included. In Docker this is the
-        path inside the container, such as <code className="font-mono text-[0.8125rem] text-fg">/media</code>.
+        path inside the container, such as <code className="font-mono text-[0.8125rem] text-ink">/media</code>.
       </p>
       <FolderPicker
         className="mt-6"
@@ -193,9 +193,9 @@ export function GoalStep({
         Pick what matters most. You can fine-tune quality, formats and tracks later in the library&apos;s settings.
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-surface px-4 py-3">
-        <FolderOpen className="size-[1.125rem] shrink-0 text-accent-ink" aria-hidden />
-        <span className="min-w-0 flex-1 truncate font-mono text-[0.8125rem] text-fg">{path}</span>
+      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-control border border-line bg-surface px-4 py-3">
+        <FolderOpen className="size-[1.125rem] shrink-0 text-ink" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-ink">{path}</span>
         <Button variant="link" onClick={onChangeFolder}>
           Change folder
         </Button>
@@ -231,14 +231,14 @@ export function GoalStep({
       </Field>
 
       {error ? (
-        <p role="alert" className="mt-5 rounded-md bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger">
+        <p role="alert" className="mt-5 rounded-control border border-error bg-subtle px-[18px] py-[14px] text-sm font-medium text-ink">
           {error}
         </p>
       ) : null}
 
       {/* Primary first in the DOM (and tab order); shown on the right from sm up. */}
       <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
-        <Button type="submit" variant="primary" size="lg" loading={create.isPending}>
+        <Button type="submit" variant="primary" loading={create.isPending}>
           {submitLabel}
         </Button>
         {secondary}

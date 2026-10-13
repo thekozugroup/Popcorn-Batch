@@ -6,12 +6,13 @@
  * names and raw stream data sit in one closed "Technical details".
  */
 
-import { ArrowUpToLine, AudioLines, CircleMinus, Film, Captions, Play, RotateCcw } from "lucide-react";
+import { AudioLines, Film, Captions } from "lucide-react";
 import type { ReactNode } from "react";
 import {
   ConvertAgainAction,
   ConvertAnywayButton,
   FailureCallout,
+  ROWS,
   SkipUnreadableButton,
   SheetSection,
   noSpaceFreed,
@@ -20,7 +21,7 @@ import {
 import { WasName } from "@/components/file-name";
 import { FileStatusBadge, JobStateBadge } from "@/components/status";
 import { Button } from "@/components/ui/button";
-import { Badge, Callout, Detail, Disclosure, Meter, Skeleton } from "@/components/ui/display";
+import { Callout, Detail, Disclosure, Meter, Skeleton, Tag } from "@/components/ui/display";
 import { Sheet } from "@/components/ui/overlays";
 import { useFileActions } from "@/lib/actions";
 import { convertsAgain, repeatsForce, skipFollowsSettings } from "@/lib/convertible";
@@ -70,13 +71,13 @@ function StreamRow({
   tags?: ReactNode;
 }) {
   return (
-    <li className="flex gap-3 px-3.5 py-3">
-      <span className="mt-0.5 text-muted [&_svg]:size-4">{icon}</span>
+    <li className="flex gap-3 py-3">
+      <span className="mt-0.5 shrink-0 text-muted [&_svg]:size-4">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm text-fg">{title}</p>
-        {meta ? <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted">{meta}</p> : null}
+        <p className="text-sm font-[550] text-ink">{title}</p>
+        {meta ? <p className="mt-0.5 text-[13px] leading-[1.5] text-muted">{meta}</p> : null}
         {note ? (
-          <p className="mt-0.5 truncate text-[0.8125rem] leading-snug text-muted" title={note}>
+          <p className="mt-0.5 truncate text-[13px] leading-[1.5] text-muted" title={note}>
             {note}
           </p>
         ) : null}
@@ -167,7 +168,7 @@ function Tracks({ detail }: { detail: FileDetail }) {
   const audio = probe.streams.filter((s) => s.kind === "audio");
   const subs = probe.streams.filter((s) => s.kind === "subtitle");
   return (
-    <ul className="divide-y divide-line rounded-lg border border-line">
+    <ul className={ROWS}>
       {video.map((s) => (
         <StreamRow key={s.index} icon={<Film aria-hidden />} title="Video" meta={trackDetails(s)} note={s.title} />
       ))}
@@ -178,7 +179,7 @@ function Tracks({ detail }: { detail: FileDetail }) {
           title={trackName("audio", s.language)}
           meta={trackDetails(s)}
           note={s.title}
-          tags={s.is_default ? <Badge>Default</Badge> : null}
+          tags={s.is_default ? <Tag>Default</Tag> : null}
         />
       ))}
       {subs.map((s) => (
@@ -190,14 +191,14 @@ function Tracks({ detail }: { detail: FileDetail }) {
           note={s.title}
           tags={
             <>
-              {s.is_forced ? <Badge>Forced</Badge> : null}
-              {s.is_default ? <Badge>Default</Badge> : null}
+              {s.is_forced ? <Tag>Forced</Tag> : null}
+              {s.is_default ? <Tag>Default</Tag> : null}
             </>
           }
         />
       ))}
       {video.length + audio.length + subs.length === 0 ? (
-        <li className="px-3.5 py-3 text-sm text-muted">No audio, video or subtitle tracks were found.</li>
+        <li className="py-3 text-sm text-muted">No audio, video or subtitle tracks were found.</li>
       ) : null}
     </ul>
   );
@@ -213,8 +214,8 @@ function FileTechnical({ file }: { file: MediaFile }) {
     .map((s) => hdrTechnical(s))
     .find(Boolean);
   return (
-    <Disclosure className="mt-7">
-      <dl className="-my-2 divide-y divide-line">
+    <Disclosure className="mt-6">
+      <dl className="divide-y divide-line">
         <Detail label="Container" mono>
           {probe?.format_long_name ?? (file.container ? sourceCodecLabel(file.container) : "—")}
         </Detail>
@@ -231,10 +232,10 @@ function FileTechnical({ file }: { file: MediaFile }) {
         ) : null}
       </dl>
       {streams.length ? (
-        <ul className="flex flex-col gap-1.5 font-mono text-xs leading-relaxed text-muted" aria-label="Streams">
+        <ul className="flex flex-col gap-1.5 font-mono text-xs leading-[1.6] text-muted" aria-label="Streams">
           {streams.map((s) => (
             <li key={s.index} className="break-words">
-              <span className="text-fg">
+              <span className="text-ink">
                 #{s.index} {s.kind ?? "data"}
               </span>{" "}
               {s.kind === "video" ? videoMeta(s) : s.kind === "audio" ? audioMeta(s) : [s.codec, s.language].filter(Boolean).join(" · ")}
@@ -287,25 +288,23 @@ function StatusExplanation({ file, jobs }: { file: MediaFile; jobs: Job[] }) {
   }
   if (file.status === "processing") {
     return (
-      <div className="rounded-lg border border-line p-4">
-        <p className="text-sm font-medium text-fg">Converting now</p>
+      <Callout title="Converting now">
         {live ? (
           <>
             <Meter
-              className="mt-2.5"
+              className="mt-2"
               value={live.overall}
               valueText={live.reading.kind === "unknown" ? fileProgressText(live) : undefined}
               label="Conversion progress, whole file"
-              live
             />
-            <p className="mt-1.5 text-[0.8125rem] text-muted tabular">
+            <p className="mt-2 text-[13px] text-muted tabular">
               {fileProgressText(live)} · {JOB_STAGE_LABEL[live.stage]}
             </p>
           </>
         ) : (
-          <p className="mt-1 text-[0.8125rem] text-muted">Progress appears here in a moment.</p>
+          <p className="text-[13px] text-muted">Progress appears here in a moment.</p>
         )}
-      </div>
+      </Callout>
     );
   }
   if (file.status === "done") {
@@ -373,7 +372,6 @@ function FileActions({ file, jobs }: { file: MediaFile; jobs: Job[] }) {
           className={unreadable ? "mr-auto" : undefined}
           needsServer
         >
-          <RotateCcw aria-hidden />
           Try again
         </Button>
         {unreadable ? <SkipUnreadableButton file={file} /> : null}
@@ -393,7 +391,6 @@ function FileActions({ file, jobs }: { file: MediaFile; jobs: Job[] }) {
           className="mr-auto"
           needsServer
         >
-          <CircleMinus aria-hidden />
           Skip
         </Button>
       ) : null}
@@ -405,13 +402,11 @@ function FileActions({ file, jobs }: { file: MediaFile; jobs: Job[] }) {
           disabled={queue.isPending}
           needsServer
         >
-          <ArrowUpToLine aria-hidden />
           Convert next
         </Button>
       ) : null}
       {canQueue ? (
         <Button variant="primary" size="sm" onClick={() => queue.mutate({ file, force })} loading={queue.isPending} needsServer>
-          {file.status === "failed" ? <RotateCcw aria-hidden /> : <Play aria-hidden />}
           {file.status === "failed" ? "Try again" : "Convert"}
         </Button>
       ) : null}
@@ -447,14 +442,14 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
       open={Boolean(fileId)}
       onOpenChange={(open) => !open && onClose()}
       title={file ? middleTruncate(file.file_name, 80) : "Loading…"}
-      description={file ? <span className="font-mono text-xs break-all">{file.relative_path}</span> : undefined}
+      description={file ? <span className="break-all">{file.relative_path}</span> : undefined}
       footer={file && detail && hasActions(file, library?.profile) ? <FileActions file={file} jobs={detail.jobs} /> : undefined}
     >
       {detail && file ? (
         <>
-          <div className="mb-5 flex flex-wrap items-center gap-2">
+          <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
             <SheetStatus file={file} />
-            <span className="text-[0.8125rem] text-muted">Updated {formatRelative(file.updated_at)}</span>
+            <span className="text-[13px] text-muted">Updated {formatRelative(file.updated_at)}</span>
           </div>
           <StatusExplanation file={file} jobs={detail.jobs} />
 
@@ -468,9 +463,7 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
               </Detail>
               {file.duration_secs ? <Detail label="Length">{formatClock(file.duration_secs)}</Detail> : null}
               {video || file.resolution ? <Detail label="Picture">{pictureText(file, video)}</Detail> : null}
-              <Detail label="Location" mono>
-                {file.path}
-              </Detail>
+              <Detail label="Location">{file.path}</Detail>
             </dl>
           </SheetSection>
 
@@ -482,7 +475,7 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
 
           {detail.jobs.length ? (
             <SheetSection title="History">
-              <ul className="divide-y divide-line rounded-lg border border-line">
+              <ul className={ROWS}>
                 {detail.jobs.map((job) => {
                   // The server's figure for what was freed beats the sizes (0 for a hard-linked original).
                   const savings = savingsText(job.input_size, job.output_size, job.freed_bytes);
@@ -492,16 +485,16 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
                       <button
                         type="button"
                         onClick={() => openSheet({ file: null, job: job.id })}
-                        className="flex w-full flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-3 text-left hover:bg-raised pointer-coarse:min-h-11"
+                        className="flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 py-3 text-left -outline-offset-2 hover:bg-subtle"
                       >
                         <JobStateBadge job={job} standing={jobStanding(job, detail)} />
-                        <span className="text-[0.8125rem] text-muted">
+                        <span className="text-[13px] text-muted">
                           {formatRelative(job.finished_at ?? job.started_at ?? job.created_at)}
                         </span>
                         {savings && job.state === "done" ? (
-                          <span className="ml-auto text-[0.8125rem] text-fg tabular">{savings.text}</span>
+                          <span className="ml-auto text-[13px] text-ink tabular">{savings.text}</span>
                         ) : job.state === "done" && noSpaceFreed(job) ? (
-                          <span className="ml-auto text-[0.8125rem] text-muted">No space freed</span>
+                          <span className="ml-auto text-[13px] text-muted">No space freed</span>
                         ) : null}
                         {renamed ? <WasName name={job.file_name} className="w-full" /> : null}
                       </button>

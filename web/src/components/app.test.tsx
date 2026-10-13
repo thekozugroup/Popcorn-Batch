@@ -41,4 +41,16 @@ describe("the unknown-address screen", () => {
     screen.getByRole("button", { name: "Try again" }).click();
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  it("uses the family's frame: the brand as one name, a system-sans headline and a text-only primary button", () => {
+    render(<HostNotAllowed retrying={false} onRetry={() => {}} host="media.example.com" />);
+    expect(screen.getByText("Batch").tagName).toBe("SMALL");
+    expect(screen.getByText("Batch").parentElement?.textContent).toBe("Popcorn Batch");
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1.className).toContain("font-semibold");
+    expect(h1.className).toContain("text-3xl");
+    const retry = screen.getByRole("button", { name: "Try again" });
+    expect(retry.querySelector("svg")).toBeNull();
+    expect(retry.className).toContain("bg-accent");
+  });
 });

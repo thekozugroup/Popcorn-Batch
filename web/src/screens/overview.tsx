@@ -132,7 +132,7 @@ export function overviewStatus(
   }
   if (queue.running) {
     return {
-      icon: <LoaderCircle className="spin text-accent-ink" aria-hidden />,
+      icon: <LoaderCircle className="spin text-ink" aria-hidden />,
       text: `Converting ${plural(queue.running, "file")}`,
       detail: waiting,
     };
@@ -145,10 +145,10 @@ export function overviewStatus(
       detail: waiting,
     };
   }
-  if (scanning) return { icon: <LoaderCircle className="spin text-accent-ink" aria-hidden />, text: scanning };
+  if (scanning) return { icon: <LoaderCircle className="spin text-ink" aria-hidden />, text: scanning };
   if (queue.queued) return { icon: <Clock aria-hidden />, text: `${plural(queue.queued, "file")} waiting to start` };
   // "Needs your attention" follows right below with the fix.
-  if (attention.blocked) return { icon: <TriangleAlert className="text-warning" aria-hidden />, text: "Waiting for a fix" };
+  if (attention.blocked) return { icon: <TriangleAlert className="text-warn" aria-hidden />, text: "Waiting for a fix" };
   // Not "All caught up" while a file is still arriving.
   if (attention.settling) {
     return {
@@ -158,7 +158,7 @@ export function overviewStatus(
     };
   }
   return {
-    icon: <CircleCheck className="text-success" aria-hidden />,
+    icon: <CircleCheck className="text-ok" aria-hidden />,
     text: "All caught up",
     detail:
       attention.failed > 0
@@ -188,7 +188,7 @@ function StatusLine({ queue, failed }: { queue: QueueState; failed: number }) {
         role="status"
         className={cn(
           "flex items-center gap-2 text-[1.0625rem] [&_svg]:size-[1.125rem] [&_svg]:shrink-0",
-          down ? "text-muted" : "text-fg",
+          down ? "text-muted" : "text-ink",
         )}
       >
         {down ? null : status.icon}
@@ -276,7 +276,7 @@ function SavedHero({ overview }: { overview: Overview }) {
               : "Once a library is scanned and files are converted, the space you get back shows up here.";
     return (
       <div className="min-w-0">
-        <h1 className="font-display text-[2.5rem] leading-[1.08] text-fg sm:text-[3.25rem]">{title}</h1>
+        <h1 className="font-semibold text-[2.5rem] leading-[1.08] text-ink sm:text-[3.25rem]">{title}</h1>
         <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted">{detail}</p>
         <StatusLine queue={overview.queue} failed={totals.failed} />
         {holdings}
@@ -287,10 +287,10 @@ function SavedHero({ overview }: { overview: Overview }) {
   return (
     <div className="min-w-0">
       <h1 className="sr-only">Overview</h1>
-      <p className="flex flex-wrap items-baseline gap-x-3 text-fg">
-        <span className="font-display text-[4.25rem] leading-[0.95] tracking-[-0.015em] sm:text-[5.5rem]">
+      <p className="flex flex-wrap items-baseline gap-x-3 text-ink">
+        <span className="font-semibold text-[4.25rem] leading-[0.95] tracking-[-0.015em] sm:text-[5.5rem]">
           {value}
-          <span className="ml-2 text-[0.5em] tracking-normal text-accent-ink">{unit}</span>
+          <span className="ml-2 text-[0.5em] tracking-normal text-ink">{unit}</span>
         </span>
         <span className="text-lg font-medium text-muted">saved</span>
       </p>
@@ -298,7 +298,7 @@ function SavedHero({ overview }: { overview: Overview }) {
         <SavedFrom totals={totals} />
         {projected && projected > 0 && remaining > 0 ? (
           <>
-            . About <span className="font-semibold text-fg">{formatBytes(projected)}</span> more once the remaining{" "}
+            . About <span className="font-semibold text-ink">{formatBytes(projected)}</span> more once the remaining{" "}
             {plural(remaining, "file")} {remaining === 1 ? "is" : "are"} done.
           </>
         ) : (
@@ -563,7 +563,7 @@ function NeedsAttention() {
   return (
     <section aria-labelledby="attention-heading">
       <SectionHeading id="attention-heading" title="Needs your attention" />
-      <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
+      <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
         {problems.map((p) => {
           // Two actions go under the text on phones, lined up with it.
           const two = Boolean(p.action && p.retry);
@@ -580,17 +580,17 @@ function NeedsAttention() {
                 className={cn(
                   "mt-0.5 shrink-0 [&_svg]:size-[1.125rem]",
                   !p.reasons?.length && "sm:mt-0",
-                  p.tone === "danger" ? "text-danger" : p.tone === "warning" ? "text-warning" : "text-info",
+                  p.tone === "danger" ? "text-error" : p.tone === "warning" ? "text-warn" : "text-muted",
                 )}
               >
                 {p.icon}
               </span>
               <div className={cn("min-w-0 flex-1", two && "max-sm:basis-[calc(100%-1.875rem)]")}>
-                <p className="text-sm font-medium text-fg">{p.title}</p>
+                <p className="text-sm font-medium text-ink">{p.title}</p>
                 <p className="mt-0.5 max-w-[31rem] text-[0.8125rem] leading-snug text-muted">{p.detail}</p>
                 {p.reasons?.length ? (
                   // The server's own words: the exact cause and what to do about it.
-                  <ul className="mt-2 max-w-[31rem] space-y-1.5 border-l-2 border-line pl-3 text-[0.8125rem] leading-snug text-fg/85">
+                  <ul className="mt-2 max-w-[31rem] space-y-1.5 border-l-2 border-line pl-3 text-[0.8125rem] leading-snug text-ink">
                     {p.reasons.map((reason) => (
                       <li key={reason} className="break-words">
                         {reason}
@@ -670,7 +670,7 @@ export function LibraryRow({ library }: { library: Library }) {
   // Files being copied in get their own line, unless that's the whole story.
   let settling = copying > 0 && Boolean(library.enabled && !library.path_error);
   if (library.path_error) {
-    status = <span className="text-warning">{library.path_error}</span>;
+    status = <span className="text-ink">{library.path_error}</span>;
   } else if (!library.enabled) {
     status = "Paused. Not scanned or converted.";
   } else if (scanning) {
@@ -702,12 +702,12 @@ export function LibraryRow({ library }: { library: Library }) {
         : "Everything is finished";
   }
   return (
-    <li className="group relative px-4 py-4 transition-colors hover:bg-raised/60 sm:px-5">
+    <li className="group relative px-4 py-4 transition-colors hover:bg-subtle sm:px-5">
       <div className="flex items-baseline justify-between gap-4">
         {/* The name's link covers the whole row; "to review" sits above it. */}
         <a
           href={href(`/library/${library.id}`)}
-          className="min-w-0 truncate text-[0.9375rem] font-semibold text-fg no-underline outline-none group-hover:text-accent-ink after:absolute after:inset-0 after:rounded-lg focus-visible:after:ring-2 focus-visible:after:ring-accent-ink focus-visible:after:ring-inset"
+          className="min-w-0 truncate text-[0.9375rem] font-semibold text-ink no-underline outline-none group-hover:underline after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-accent focus-visible:after:outline-solid"
         >
           {library.name}
         </a>
@@ -723,7 +723,7 @@ export function LibraryRow({ library }: { library: Library }) {
               {" · "}
               <a
                 href={href(`/library/${library.id}`, { status: "failed" })}
-                className="relative z-10 text-fg underline decoration-line-strong underline-offset-2 hover:text-accent-ink"
+                className="relative z-10 text-ink underline decoration-field underline-offset-2"
               >
                 {formatCount(stats.failed)} to review
               </a>
@@ -734,7 +734,7 @@ export function LibraryRow({ library }: { library: Library }) {
       </div>
       {settling ? (
         <p className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-muted">
-          <Hourglass className="size-3.5 shrink-0 text-accent-ink" aria-hidden />
+          <Hourglass className="size-3.5 shrink-0 text-ink" aria-hidden />
           {settlingText(copying)}
         </p>
       ) : null}
@@ -784,7 +784,7 @@ function Libraries() {
           </a>
         }
       />
-      <div className="rounded-lg border border-line bg-surface">
+      <div className="rounded-panel border border-line bg-surface">
         <ul className="divide-y divide-line">
           {list.map((library) => (
             <LibraryRow key={library.id} library={library} />
@@ -825,13 +825,13 @@ export function RecentResults() {
         }
       />
       {history.isPending ? (
-        <div className="space-y-3 rounded-lg border border-line bg-surface p-4">
+        <div className="space-y-3 rounded-panel border border-line bg-surface p-4">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
       ) : (
-        <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
           {items.map((job) => {
             const standing = standings.get(job.id) ?? "current";
             // A conversion that changed the file's extension is listed by the new name, the old one secondary.
@@ -841,11 +841,11 @@ export function RecentResults() {
                 <button
                   type="button"
                   onClick={() => openSheet({ job: job.id })}
-                  className="flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-raised/60"
+                  className="flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-subtle"
                 >
                   <span className="flex w-full items-center justify-between gap-3">
                     <span className="min-w-0 flex-1">
-                      <FileName name={renamed ?? job.file_name} className="text-sm font-medium text-fg" />
+                      <FileName name={renamed ?? job.file_name} className="text-sm font-medium text-ink" />
                       {renamed ? <WasName name={job.file_name} className="mt-0.5" /> : null}
                     </span>
                     <JobStateBadge job={job} standing={standing} />
@@ -855,7 +855,7 @@ export function RecentResults() {
                       <span aria-hidden className="skeleton inline-block h-3 w-40" />
                     ) : (
                       // The reason comes first; two lines hold it in this narrow column.
-                      <span className={cn("line-clamp-2 min-w-0", job.state === "done" ? "text-fg/85" : "text-muted")}>
+                      <span className={cn("line-clamp-2 min-w-0", job.state === "done" ? "text-ink" : "text-muted")}>
                         {historyNote(job, minSavings(job.library_id), standing)}
                       </span>
                     )}
@@ -900,14 +900,14 @@ function Welcome() {
   const problems = problemsFrom(libraries.data ?? [], failures, hardware.hw, settings.data, kept);
   return (
     <div className="max-w-2xl">
-      <h1 className="font-display text-[2.75rem] leading-[1.08] text-fg sm:text-[3.5rem]">
+      <h1 className="font-semibold text-[2.75rem] leading-[1.08] text-ink sm:text-[3.5rem]">
         Make your video library smaller, safely.
       </h1>
       <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted">
         Point Popcorn Batch at a folder and choose a goal. It converts files in the background, checks each result
         against the original, and only then replaces it.
       </p>
-      <a href={href("/libraries/new")} className={cn(buttonVariants({ variant: "primary", size: "lg" }), "mt-8")}>
+      <a href={href("/libraries/new")} className={cn(buttonVariants({ variant: "primary" }), "mt-8")}>
         Choose a folder
       </a>
       <div className="mt-5 text-[0.8125rem] text-muted">
@@ -977,7 +977,7 @@ export function OverviewScreen() {
         {chart ? (
           <SavingsChart
             points={data.savings_history}
-            className="rounded-lg border border-line bg-surface p-4 lg:col-start-2 lg:row-start-1 lg:self-end"
+            className="rounded-panel border border-line bg-surface p-4 lg:col-start-2 lg:row-start-1 lg:self-end"
           />
         ) : null}
       </div>

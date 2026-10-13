@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
 import type { FsBrowse, FsEntry, UserFolder } from "@/lib/types";
@@ -256,11 +256,32 @@ describe("FolderPicker in a container", () => {
   it("keeps the arrow keys on the folders shown", async () => {
     pick(containerRoot());
     await waitFor(() => expect(rows().length).toBeGreaterThan(0));
-    const list = screen.getByRole("list", { name: "Folders in /" });
+    // One group holds a list per kind of folder (yours, the others, the system's).
+    const list = screen.getByRole("group", { name: "Folders in /" });
     fireEvent.keyDown(list, { key: "ArrowDown" });
     expect(document.activeElement?.textContent).toBe("config");
     fireEvent.keyDown(list, { key: "End" });
     // Folded away: the last one shown is the last of the others.
     expect(document.activeElement?.textContent).toBe("mnt");
+  });
+
+  it("gives each kind of folder its own list, holding only list items (axe's list rule)", async () => {
+    pick(containerRoot());
+    await waitFor(() => expect(rows().length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: /System folders/ }));
+    const group = screen.getByRole("group", { name: "Folders in /" });
+    expect(within(group).getAllByRole("list")).toHaveLength(3);
+    // Every list in the picker, the path's breadcrumb too.
+    for (const list of screen.getAllByRole("list")) {
+      for (const child of Array.from(list.children)) {
+        expect(child.tagName).toBe("LI");
+        expect(child.getAttribute("role")).toBeNull();
+      }
+    }
+    // The others are named by their visible heading.
+    expect(screen.getByRole("list", { name: "Other folders" }).textContent).toContain("home");
+    expect(screen.getByRole("list", { name: "System folders" }).textContent).toContain("etc");
+    // One roving tab stop across the groups.
+    expect(rows().filter((b) => b.tabIndex === 0)).toHaveLength(1);
   });
 });
