@@ -14,9 +14,9 @@ import { UseDriveButton, UseDriveConfirm } from "@/components/drive-change";
 import { FolderField } from "@/components/folder-field";
 import { ProfileEditor } from "@/components/profile-editor";
 import { SaveBar } from "@/components/save-bar";
-import { PageHeader, ThemeSwitch } from "@/components/shell";
+import { PageHeader } from "@/components/shell";
 import { Button } from "@/components/ui/button";
-import { ChoiceCard, Field, Input, Select, SwitchRow, Textarea } from "@/components/ui/controls";
+import { ChoiceCard, ErrorText, Field, Input, Select, SwitchRow, Textarea } from "@/components/ui/controls";
 import { Badge, Callout, CopyButton, Skeleton } from "@/components/ui/display";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { formatHour, plural } from "@/lib/format";
@@ -109,7 +109,7 @@ function Block({
       className="grid scroll-mt-20 gap-4 border-t border-line py-7 outline-none first:border-t-0 first:pt-0 lg:grid-cols-[15rem_1fr] lg:gap-10"
     >
       <div>
-        <h2 className="text-[1.0625rem] leading-snug font-semibold text-fg">{title}</h2>
+        <h2 className="text-[1.0625rem] leading-snug font-semibold text-ink">{title}</h2>
         {description ? <p className="mt-1 text-[0.8125rem] leading-snug text-muted">{description}</p> : null}
       </div>
       <div className="flex min-w-0 max-w-2xl flex-col gap-5">{children}</div>
@@ -131,7 +131,7 @@ function Stepper({
   label: string;
 }) {
   return (
-    <div className="inline-flex items-center rounded-md border border-line-strong bg-surface shadow-card" role="group" aria-label={label}>
+    <div className="inline-flex items-center rounded-control border border-line bg-surface" role="group" aria-label={label}>
       <Button variant="quiet" size="icon" aria-label="Fewer" disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}>
         <Minus />
       </Button>
@@ -146,7 +146,7 @@ function Stepper({
           const n = Math.round(Number(e.target.value));
           if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, n)));
         }}
-        className="h-9 w-12 bg-transparent text-center text-sm font-semibold text-fg tabular [appearance:textfield] focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="h-9 w-12 bg-transparent text-center text-sm font-semibold text-ink tabular [appearance:textfield] focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none"
       />
       <Button variant="quiet" size="icon" aria-label="More" disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}>
         <Plus />
@@ -190,7 +190,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
                   : `Automatic (${auto.count})`
             }
             description={auto.description}
-            badge={<Badge tone="accent">Recommended</Badge>}
+            badge={<Badge>Recommended</Badge>}
           />
           <ChoiceCard
             name={name}
@@ -204,12 +204,12 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
               <span className="mt-3 flex items-center gap-3">
                 <Stepper value={draft.max_jobs} onChange={(max_jobs) => onChange({ max_jobs })} min={1} max={32} label="Files at once" />
                 {auto.count !== null && draft.max_jobs > auto.count * 2 ? (
-                  <span className="text-[0.8125rem] text-warning">Much more than recommended ({auto.count}).</span>
+                  <span className="text-[0.8125rem] text-ink">Much more than recommended ({auto.count}).</span>
                 ) : null}
               </span>
             ) : null}
           </ChoiceCard>
-          {errors.max_jobs ? <p role="alert" className="text-[0.8125rem] font-medium text-danger">{errors.max_jobs}</p> : null}
+          {errors.max_jobs ? <ErrorText>{errors.max_jobs}</ErrorText> : null}
         </fieldset>
       </Block>
 
@@ -249,7 +249,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
             </p>
           </div>
         ) : null}
-        {errors.active_hours ? <p role="alert" className="text-[0.8125rem] font-medium text-danger">{errors.active_hours}</p> : null}
+        {errors.active_hours ? <ErrorText>{errors.active_hours}</ErrorText> : null}
         <SwitchRow
           label="Run at low priority"
           description="Keeps the server responsive for streaming and other apps while converting."
@@ -308,7 +308,7 @@ export function automaticWorkFolderText(system: SystemInfo | undefined): ReactNo
   if (system.default_temp_dir) {
     return (
       <>
-        Uses <span className="font-mono text-[0.8125rem] text-fg">{system.default_temp_dir}</span>, the work folder this
+        Uses <span className="text-ink">{system.default_temp_dir}</span>, the work folder this
         server was started with.
         {system.in_container ? <> {UNRAID_TEMP_TIP}</> : null}
       </>
@@ -468,7 +468,7 @@ function OutputSection({
         </fieldset>
         {draft.output_mode === "folder" ? (
           <div>
-            <p id={`${name}-label`} className="mb-1.5 text-sm font-medium text-fg">
+            <p id={`${name}-label`} className="mb-1.5 text-sm font-medium text-ink">
               Output folder
             </p>
             <FolderField
@@ -569,7 +569,7 @@ function ChecksBlock({ draft, onChange }: Pick<SectionProps, "draft" | "onChange
               onChange={() => onChange({ validation: level })}
               title={VALIDATION_LABEL[level]}
               description={VALIDATION_HELP[level]}
-              badge={level === "standard" ? <Badge tone="accent">Recommended</Badge> : null}
+              badge={level === "standard" ? <Badge>Recommended</Badge> : null}
             />
           ))}
         </fieldset>
@@ -665,7 +665,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
                 const n = Math.round(Number(e.target.value));
                 onChange({ min_file_size_mb: Number.isFinite(n) && n > 0 ? n : 0 });
               }}
-              className="w-28 font-mono"
+              className="w-28"
             />
             <span className="text-sm text-muted">MB</span>
           </div>
@@ -673,7 +673,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
       </Block>
 
       <section className="border-t border-line pt-7">
-        <h2 className="text-[0.9375rem] font-semibold text-fg">Defaults for new libraries</h2>
+        <h2 className="text-[0.9375rem] font-semibold text-ink">Defaults for new libraries</h2>
         <p className="mt-1 mb-6 max-w-2xl text-[0.8125rem] text-muted">
           {newLibraryDefaultsText(
             defaultsCustomized(presets.data, draft.default_profile),
@@ -843,15 +843,15 @@ function About() {
       className="mt-12 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="min-w-0">
-        <h2 id="about-heading" className="text-sm font-semibold text-fg">
+        <h2 id="about-heading" className="text-sm font-semibold text-ink">
           About
         </h2>
         <p className="mt-0.5 text-[0.8125rem] text-muted">
-          Popcorn Batch <span className="font-mono text-fg">{info.version}</span>
+          Popcorn Batch <span className="text-ink">{info.version}</span>
           {info.build ? (
             <>
               {" "}
-              · build <span className="font-mono text-fg">{info.build}</span>
+              · build <span className="text-ink">{info.build}</span>
             </>
           ) : null}
         </p>
@@ -868,16 +868,7 @@ export function SettingsScreen({ route }: { route: Route }) {
 
   return (
     <div>
-      <PageHeader
-        title="Settings"
-        description={current.description}
-        actions={
-          <div className="flex items-center gap-3 md:hidden">
-            <span className="text-[0.8125rem] text-muted">Appearance</span>
-            <ThemeSwitch />
-          </div>
-        }
-      />
+      <PageHeader title="Settings" description={current.description} />
       <div className="lg:grid lg:grid-cols-[11rem_1fr] lg:gap-10">
         <nav aria-label="Settings sections" className="hidden lg:block">
           <ul className="sticky top-8 flex flex-col gap-0.5">
@@ -887,8 +878,8 @@ export function SettingsScreen({ route }: { route: Route }) {
                   href={href(`/settings/${s.id}`)}
                   aria-current={s.id === section ? "page" : undefined}
                   className={cn(
-                    "block rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors",
-                    s.id === section ? "bg-raised text-fg" : "text-muted hover:bg-raised/60 hover:text-fg",
+                    "block rounded-control px-3 py-2 text-sm font-medium no-underline transition-colors",
+                    s.id === section ? "bg-subtle text-ink" : "text-muted hover:bg-subtle hover:text-ink",
                   )}
                 >
                   {s.label}
@@ -906,10 +897,10 @@ export function SettingsScreen({ route }: { route: Route }) {
                   href={href(`/settings/${s.id}`)}
                   aria-current={s.id === section ? "page" : undefined}
                   className={cn(
-                    "inline-flex h-9 items-center rounded-full border px-4 text-sm font-medium no-underline transition-colors pointer-coarse:h-11",
+                    "inline-flex min-h-11 items-center rounded-control border px-4 text-sm font-medium no-underline",
                     s.id === section
-                      ? "border-accent-ink bg-accent-soft text-fg"
-                      : "border-line-strong/50 bg-surface text-muted hover:border-line-strong hover:text-fg",
+                      ? "border-accent bg-subtle text-ink"
+                      : "border-line bg-surface text-muted hover:border-field hover:text-ink",
                   )}
                 >
                   {s.label}

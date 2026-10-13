@@ -1,15 +1,14 @@
 "use client";
 
 /**
- * The library bar: one horizontal bar per library that fills from the left
- * as files finish. Finished files are one gold family (converted is solid
- * gold, skipped a pale gold tint with a gold outline, which keeps it 3:1
- * against the track), so the filled length is the "% finished" next to it;
- * files on their way are gold stripes; files still to convert are the plain
- * track. Failed conversions are a thin amber mark
- * at the end; originals that can't be read aren't drawn at all (they're
- * listed under "Needs your attention") and aren't counted in "% finished"
- * either. Every segment is also said in words.
+ * The library bar: one 5px bar per library that fills from the left as files
+ * finish. Converted files are Action Blue and skipped ones Zinc Status, so
+ * the filled length is the "% finished" next to it; files in the queue or
+ * converting and files still to convert are the empty track (the legend
+ * names them). Failed conversions are an amber mark at the end; originals
+ * that can't be read aren't drawn at all (they're listed under "Needs your
+ * attention") and aren't counted in "% finished" either. Every part is also
+ * said in words.
  */
 
 import { formatCount, formatPercent, percentOf } from "@/lib/format";
@@ -20,26 +19,22 @@ interface Segment {
   key: string;
   label: string;
   count: number;
-  className: string;
+  /** The segment's fill; `null` for a part of the empty track. */
+  fill: string | null;
 }
 
 function segments(stats: LibraryStats, unreadable: number): Segment[] {
   return [
-    { key: "done", label: "Converted", count: stats.done, className: "bg-meter" },
-    { key: "skipped", label: "Skipped", count: stats.skipped, className: "bar-skipped" },
-    {
-      key: "active",
-      label: "In queue or converting",
-      count: stats.queued + stats.processing,
-      className: "bar-active",
-    },
-    // The plain track: drawn empty, so the filled part is what's finished.
-    { key: "pending", label: "To convert", count: stats.pending, className: "bg-transparent" },
+    { key: "done", label: "Converted", count: stats.done, fill: "bg-accent" },
+    { key: "skipped", label: "Skipped", count: stats.skipped, fill: "bg-field" },
+    // The empty track, so the filled part is what's finished.
+    { key: "active", label: "In queue or converting", count: stats.queued + stats.processing, fill: null },
+    { key: "pending", label: "To convert", count: stats.pending, fill: null },
     {
       key: "failed",
       label: "Couldn't convert",
       count: Math.max(0, stats.failed - unreadable),
-      className: "bg-warning",
+      fill: "bg-warn",
     },
   ];
 }
@@ -108,13 +103,11 @@ export function statsSentence(stats: LibraryStats, unreadable = 0): string {
 export function LibraryBar({
   stats,
   unreadable = 0,
-  size = "md",
   className,
 }: {
   stats: LibraryStats;
   /** Failed files whose original can't be read: left out of the bar. */
   unreadable?: number;
-  size?: "xs" | "md";
   className?: string;
 }) {
   const total = countedFiles(stats, unreadable);
@@ -122,19 +115,16 @@ export function LibraryBar({
     <div
       role="img"
       aria-label={statsSentence(stats, unreadable)}
-      className={cn(
-        "flex w-full gap-px overflow-hidden rounded-full bg-raised",
-        size === "xs" ? "h-1" : "h-2",
-        className,
-      )}
+      className={cn("flex h-[5px] w-full gap-px overflow-hidden rounded-progress bg-subtle", className)}
     >
       {total > 0
         ? segments(stats, unreadable)
-            .filter((s) => s.count > 0)
+            .filter((s) => s.count > 0 && s.fill)
             .map((s) => (
               <div
                 key={s.key}
-                className={cn("h-full min-w-[3px] first:rounded-l-full last:rounded-r-full", s.className)}
+                // The couldn't-convert mark sits at the far end, past the empty track.
+                className={cn("h-full min-w-[3px]", s.fill, s.key === "failed" && "ml-auto")}
                 style={{ width: `${percentOf(s.count, total)}%` }}
               />
             ))
@@ -154,26 +144,18 @@ export function LibraryLegend({
   className?: string;
 }) {
   return (
-    <ul className={cn("flex flex-wrap gap-x-5 gap-y-1.5 text-[0.8125rem] text-muted", className)}>
+    <ul className={cn("flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted", className)}>
       {segments(stats, unreadable)
         .filter((s) => s.count > 0 || s.key === "done")
         .map((s) => (
           <li key={s.key} className="inline-flex items-center gap-1.5">
+            {/* A filled swatch for a drawn part, an outlined one for the empty track. */}
             <span
               aria-hidden
-              className={cn(
-                "size-2.5 rounded-[3px] ring-1 ring-inset",
-                // "To convert" is the empty track: an outlined swatch. "Skipped"
-                // draws its own gold outline, as in the bar.
-                s.key === "pending"
-                  ? "bg-raised ring-line-strong/60"
-                  : s.key === "skipped"
-                    ? s.className
-                    : cn("ring-line", s.className),
-              )}
+              className={cn("size-2.5 shrink-0 rounded-[2px]", s.fill ?? "border border-field bg-subtle")}
             />
             <span>
-              {s.label} <span className="tabular font-medium text-fg">{formatCount(s.count)}</span>
+              {s.label} <span className="font-medium text-ink tabular">{formatCount(s.count)}</span>
             </span>
           </li>
         ))}

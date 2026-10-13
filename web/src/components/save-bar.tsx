@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Floating "unsaved changes" bar shared by every settings form. While there
+ * Sticky "unsaved changes" bar shared by every settings form, 16px above the
+ * bottom of the viewport (flat: a 1px border, red while saving failed). While there
  * are unsaved changes it also guards navigation: closing the tab warns, and
  * leaving the screen inside the app asks to save, discard or keep editing.
  */
@@ -58,17 +59,17 @@ export function SaveBar({
 
   if (!dirty && !error) return null;
   return (
-    <div className="pointer-events-none sticky bottom-20 z-20 mt-8 flex justify-center md:bottom-5">
+    <div className="pointer-events-none sticky bottom-4 z-20 mt-8 flex justify-center">
       <div
         role="region"
         aria-label="Unsaved changes"
         className={cn(
-          "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-xl border bg-surface px-4 py-3 shadow-pop sm:flex-row sm:items-center",
-          error ? "border-danger/40" : "border-line",
+          "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-panel border bg-surface px-4 py-3 roomy:flex-row roomy:items-center",
+          error ? "border-error" : "border-line",
         )}
       >
         <p
-          className={cn("min-w-0 flex-1 text-sm", error ? "font-medium text-danger" : "text-fg")}
+          className={cn("min-w-0 flex-1 text-sm text-ink", error && "font-[550]")}
           role={error ? errorRole : "status"}
         >
           {error ?? "You have unsaved changes."}

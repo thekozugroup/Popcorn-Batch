@@ -9,14 +9,14 @@ needs no Node at runtime. Everything talks to `/api` on the same origin; see
 
 | Command | What it does |
 |---|---|
-| `pnpm install` | Install dependencies (fonts are self-hosted via `@fontsource`, no Google access needed) |
+| `pnpm install` | Install dependencies (no web fonts: the UI uses the platform's system sans) |
 | `pnpm dev` | Dev server on http://localhost:3000 |
 | `pnpm build` | Static export to `web/out` (`out/index.html` plus `_next/` assets) |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm test` | Unit and component tests (Vitest + jsdom): API errors and their `field`, live events and reconnecting, router and navigation guard, profiles, formatting |
 | `pnpm e2e <url>` | Browser smoke test of the first-run flow against a running server with an empty data dir (`e2e/smoke.mjs`, needs Playwright; see the file for options) |
-| `pnpm e2e:layout` | After `pnpm build`: phone (390 and 320 px) and tablet layout check of `out/` against the mock API with 90-character file names (no sideways scrolling, running-job buttons on screen and named after their file, touch-sized quality options, a confirmation's title fitting its dialog with a dotted release name; `e2e/layout.mjs`, needs Playwright) |
+| `pnpm e2e:layout` | After `pnpm build`: phone (390 and 320 px), tablet (768), 800 px and desktop layout check of `out/` against the mock API with 90-character file names (no sideways scrolling, the frame of the Popcorn family: a 228 px sidebar from 801 px, a compact top block with the four sections in one row at 800 px and below, nothing fixed to the bottom, 44 px frame controls; running-job buttons on screen and named after their file, touch-sized quality options, a confirmation's title fitting its dialog with a dotted release name; `e2e/layout.mjs`, needs Playwright) |
 | `pnpm mock` | Dev-only mock API with fake sample data on http://localhost:8787 |
 
 ## Working on the UI
@@ -74,7 +74,9 @@ page errors or server errors.
 
 ## Layout
 
-- `src/app` — root layout (fonts, theme boot script) and the single page.
+- `src/app` — root layout, the design tokens (`globals.css`, the Popcorn
+  family system in `DESIGN.md`; light and dark follow the system), the icon
+  and the single page.
 - `src/components/app.tsx` — picks setup, "can't reach the server" or the app,
   and maps hash routes (`#/`, `#/queue`, `#/library/<id>`, `#/settings/hardware`,
   …) to screens. Detail sheets open from `?job=<id>` and `?file=<id>`.

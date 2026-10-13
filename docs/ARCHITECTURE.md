@@ -1561,19 +1561,27 @@ served by the Rust binary. All data comes from `/api` on the same origin
 `/api/ws` events. No mock data in the bundle. State lives in the URL hash
 (`#/queue/history`), so reloads and links keep the view.
 
-Navigation: a sidebar on wide screens (Overview, Queue, each library, "Add
-library", Settings; appearance switch), a bottom tab bar on phones
-(Overview, Queue, Libraries, Settings). The queue link shows what is
-running. Details of a job or file open in a sheet over the current screen.
+Navigation, as in Popcorn SR: from 801px a 228px sidebar with the brand,
+Overview, Libraries, Queue and Settings, then each library with its state
+and "Add library", and a footer with the queue status link and the
+server's version; at 800px and below the same element is a compact top
+block that scrolls away (the brand and the queue status on one line, then
+the four sections). There is no bottom tab bar and no appearance switch:
+light and dark follow the system preference. The queue status link shows
+what is running with a status dot. A skip link reaches the content first,
+and focus moves to it on each new screen. Details of a job or file open in
+a sheet over the current screen.
 A file's sheet lists its tracks with the language, codec and channels always
 in full; the optional title a release gave a track (often the whole release
 name) is a line of its own that is cut short, with the full text as its
 tooltip, so it never hides the codec.
 
-Typography: display type (page titles, the big savings number, the brand)
-is Newsreader, self-hosted (`@fontsource-variable/newsreader`, with its
-optical-size axis, which follows the font size on its own), DM Sans for the
-interface and JetBrains Mono for technical values.
+Typography and colour follow the Popcorn family system (`DESIGN.md`): the
+platform's system sans for everything, with monospace only for commands,
+logs and encoder names; zinc neutrals, Tailwind blue-500 as the one action,
+focus and progress colour with dark text on it, and emerald, amber and red
+only as status dots, icons and borders beside neutral words. No web fonts
+are bundled.
 
 Screens:
 1. **Setup** (first run, when `settings.onboarded` is false and there are no

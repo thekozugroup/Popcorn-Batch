@@ -1,8 +1,11 @@
 #!/usr/bin/env node
 /**
- * Phone and tablet layout check: the built UI (`web/out`, from `pnpm build`)
- * against the mock API with every file given a long, Plex/Sonarr-style name
- * (about 90 characters). It fails when a screen scrolls sideways, when a
+ * Phone, tablet and desktop layout check: the built UI (`web/out`, from
+ * `pnpm build`) against the mock API with every file given a long,
+ * Plex/Sonarr-style name (about 90 characters). It fails when a screen
+ * scrolls sideways, when the frame isn't Popcorn SR's (a 228px sidebar from
+ * 801px, a compact top block with the four sections in one row at 800px and
+ * below, nothing fixed to the bottom, frame controls under 44px), when a
  * running job's Stop or Details button is off screen, when those buttons
  * aren't named after their file, when a name's late episode is cut off, when
  * a stacked quality option on a touch screen is shorter than the 24 px
@@ -130,12 +133,24 @@ async function main() {
 
   try {
     const libraries = await (await fetch(`http://127.0.0.1:${mockPort}/api/libraries`)).json();
-    const screens = ["#/", "#/queue", "#/queue/next", "#/queue/history", `#/library/${libraries[0].id}`];
+    const screens = [
+      "#/",
+      "#/queue",
+      "#/queue/next",
+      "#/queue/history",
+      `#/library/${libraries[0].id}`,
+      // Goal cards with a "Best fit" tag beside the sidebar once ran past a 768px screen.
+      `#/library/${libraries[0].id}/settings`,
+      "#/settings/advanced",
+    ];
     const viewports = [
       { name: "phone", width: 390, height: 844, isMobile: false },
       // The narrowest screens still in use: the Overview's heading and rows must wrap, not run past the edge.
       { name: "phone-small", width: 320, height: 640, isMobile: false },
       { name: "tablet", width: 768, height: 1024, isMobile: false },
+      // The widest compact top block, and the first width with the sidebar.
+      { name: "compact-800", width: 800, height: 900, isMobile: false },
+      { name: "desktop", width: 1440, height: 900, isMobile: false },
       // A real phone: an overflowing page would widen the layout viewport instead of scrolling.
       { name: "phone-touch", width: 390, height: 844, isMobile: true, hasTouch: true },
     ];
@@ -169,6 +184,40 @@ async function main() {
         console.log(`${where}: scrollWidth ${widths.scroll}, innerWidth ${widths.inner}`);
         if (widths.scroll > widths.inner) fail(`${where} scrolls sideways (${widths.scroll} > ${widths.inner})`);
         if (widths.inner !== vp.width) fail(`${where} widened the layout viewport to ${widths.inner}`);
+        // The frame (Popcorn SR's): a 228px sidebar from 801px, a compact top block that scrolls away at
+        // 800px and below with the four sections in one row, nothing fixed to the bottom of the screen,
+        // and every control in it at least 44px tall.
+        const shell = await page.evaluate(() => {
+          const visible = (el) => {
+            const r = el.getBoundingClientRect();
+            const s = getComputedStyle(el);
+            return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none";
+          };
+          const aside = document.querySelector("aside");
+          const sections = [...document.querySelectorAll('nav[aria-label="Sections"] a')].filter(visible);
+          return {
+            aside: aside ? { width: aside.getBoundingClientRect().width, position: getComputedStyle(aside).position } : null,
+            rows: new Set(sections.map((a) => Math.round(a.getBoundingClientRect().top))).size,
+            sections: sections.length,
+            small: [...(aside?.querySelectorAll("a, button") ?? [])]
+              .filter((el) => visible(el) && el.getBoundingClientRect().height < 43.5)
+              .map((el) => (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40)),
+            fixedBottom: [...document.querySelectorAll("body *")]
+              .filter((el) => getComputedStyle(el).position === "fixed" && visible(el))
+              .filter((el) => el.getBoundingClientRect().bottom >= innerHeight - 1)
+              .filter((el) => !el.closest("[role=dialog], [role=alertdialog], [data-sonner-toaster]"))
+              .map((el) => el.tagName.toLowerCase()),
+          };
+        });
+        const compact = vp.width <= 800;
+        if (!shell.aside) fail(`${where}: the frame has no sidebar`);
+        else if (shell.aside.width > widths.inner) fail(`${where}: the sidebar is wider than the screen`);
+        else if (!compact && Math.round(shell.aside.width) !== 228) fail(`${where}: the sidebar is ${shell.aside.width}px wide, not 228`);
+        else if (compact && shell.aside.position === "sticky") fail(`${where}: the compact top block sticks instead of scrolling away`);
+        if (shell.sections !== 4) fail(`${where}: ${shell.sections} section links instead of 4`);
+        if (compact && shell.rows !== 1) fail(`${where}: the four sections take ${shell.rows} rows instead of one`);
+        if (shell.small.length) fail(`${where}: frame controls under 44px: ${shell.small.join(", ")}`);
+        if (shell.fixedBottom.length) fail(`${where}: something is fixed to the bottom of the screen (${shell.fixedBottom.join(", ")})`);
         // A late episode stays in view however the name is cut (its first six characters aren't clipped).
         const clipped = await page.locator("[data-file-tail]").evaluateAll((tails) =>
           tails

@@ -186,7 +186,7 @@ function ScanBanner({ library }: { library: Library }) {
     : "Scanning for new and changed files…";
   return (
     <p role="status" className="mt-4 flex items-center gap-2 text-[0.8125rem] text-muted">
-      <LoaderCircle className="spin size-4 text-accent-ink" aria-hidden />
+      <LoaderCircle className="spin size-4 text-ink" aria-hidden />
       {text}
     </p>
   );
@@ -227,9 +227,9 @@ function Header({ library }: { library: Library }) {
       }
     >
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span className="min-w-0 truncate font-mono text-[0.8125rem] text-muted">{library.path}</span>
-        <Badge tone="accent">{GOAL_LABEL[library.profile.goal]}</Badge>
-        {!library.enabled ? <Badge icon={<CirclePause aria-hidden />}>Paused</Badge> : null}
+        <span className="min-w-0 truncate text-[0.8125rem] text-muted">{library.path}</span>
+        <Badge>{GOAL_LABEL[library.profile.goal]}</Badge>
+        {!library.enabled ? <Badge tone="info" icon={<CirclePause aria-hidden />}>Paused</Badge> : null}
         {library.last_scan_at ? (
           <span className="text-xs text-muted">Scanned {formatRelative(library.last_scan_at)}</span>
         ) : null}
@@ -262,10 +262,10 @@ function RemoveLibraryDialog({
       onConfirm={onConfirm}
     >
       <p>
-        Popcorn Batch stops watching <span className="font-mono text-[0.8125rem] text-fg">{library.path}</span> and
+        Popcorn Batch stops watching <span className="text-ink">{library.path}</span> and
         forgets its files and history. Anything converting in it is cancelled.
       </p>
-      <p className="font-medium text-fg">Your media files are not deleted or changed.</p>
+      <p className="font-medium text-ink">Your media files are not deleted or changed.</p>
     </ConfirmDialog>
   );
 }
@@ -282,9 +282,9 @@ export function Summary({ library }: { library: Library }) {
   const copying = stats.settling;
   const waiting = isWaiting(stats, library.scanning || Boolean(scan && scan.phase !== "done"));
   return (
-    <section aria-label="Progress" className="rounded-lg border border-line bg-surface p-4 sm:p-5">
+    <section aria-label="Progress" className="rounded-panel border border-line bg-surface p-4 sm:p-5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <p className="text-sm text-fg">
+        <p className="text-sm text-ink">
           <span className="font-semibold tabular">{formatCount(stats.done + stats.skipped)}</span> of{" "}
           <span className="tabular">{plural(counted, "file")}</span> finished{waiting ? " so far" : ""}
           {stats.skipped > 0 ? (
@@ -298,7 +298,7 @@ export function Summary({ library }: { library: Library }) {
         <p className="text-sm text-muted">
           {stats.saved_bytes > 0 ? (
             <>
-              <span className="font-semibold text-accent-ink">{formatBytes(stats.saved_bytes)}</span> saved ·{" "}
+              <span className="font-semibold text-ink">{formatBytes(stats.saved_bytes)}</span> saved ·{" "}
             </>
           ) : null}
           {formatBytes(stats.total_bytes)} in total
@@ -307,7 +307,7 @@ export function Summary({ library }: { library: Library }) {
       {copying > 0 ? (
         // Added once they stop changing, so they aren't in the counts yet.
         <p className="mt-2 flex items-center gap-2 text-[0.8125rem] text-muted">
-          <Hourglass className="size-4 shrink-0 text-accent-ink" aria-hidden />
+          <Hourglass className="size-4 shrink-0 text-ink" aria-hidden />
           {settlingText(copying)}
         </p>
       ) : null}
@@ -396,29 +396,29 @@ function SetupNotice({ library }: { library: Library }) {
   return (
     <section
       aria-label="Needs a fix in the setup"
-      className="mt-4 overflow-hidden rounded-lg border border-warning/30 bg-warning-soft"
+      className="mt-4 overflow-hidden rounded-control border border-warn bg-subtle"
     >
-      <ul className="divide-y divide-warning/20">
+      <ul className="divide-y divide-line">
         {groups.map(({ kind, files }) => {
           const fix = setupFix(kind, settings.data?.output_mode);
           const { reasons, rest } = reasonsFor(files, 2);
           return (
             <li key={kind} className="flex flex-wrap items-start gap-x-3 gap-y-3 px-4 py-3.5 sm:flex-nowrap">
-              <TriangleAlert className="mt-px size-[1.125rem] shrink-0 text-warning" aria-hidden />
+              <TriangleAlert className="mt-px size-[1.125rem] shrink-0 text-warn" aria-hidden />
               <div className="min-w-0 flex-1 basis-[calc(100%-2rem)] sm:basis-auto">
-                <p className="text-sm font-semibold text-fg">{fix.title}</p>
+                <p className="text-sm font-semibold text-ink">{fix.title}</p>
                 {reasons.length === 0 ? (
-                  <p className="mt-1 max-w-[32rem] text-[0.8125rem] leading-relaxed text-fg/85">{fix.fix}</p>
+                  <p className="mt-1 max-w-[32rem] text-[0.8125rem] leading-relaxed text-ink">{fix.fix}</p>
                 ) : (
                   // The server's own sentences: the exact cause and fix, each once.
                   reasons.map((r) => (
-                    <p key={r.text} className="mt-1 max-w-[32rem] text-[0.8125rem] leading-relaxed break-words text-fg/85">
+                    <p key={r.text} className="mt-1 max-w-[32rem] text-[0.8125rem] leading-relaxed break-words text-ink">
                       {reasons.length > 1 ? `${plural(r.count, "file")}: ${r.text}` : r.text}
                     </p>
                   ))
                 )}
                 {rest > 0 ? (
-                  <p className="mt-1 text-[0.8125rem] text-fg/85">
+                  <p className="mt-1 text-[0.8125rem] text-ink">
                     {`${plural(rest, "more file")} with other messages: open one to see why.`}
                   </p>
                 ) : null}
@@ -434,7 +434,7 @@ function SetupNotice({ library }: { library: Library }) {
           );
         })}
       </ul>
-      <p className="border-t border-warning/20 px-4 py-2.5 text-[0.8125rem] text-fg/85">
+      <p className="border-t border-warn px-4 py-2.5 text-[0.8125rem] text-ink">
         {`${plural(waiting, "file")} in this library ${one ? "is" : "are"} waiting on ${groups.length > 1 ? "these" : "this"}. Once fixed, try ${one ? "it" : "them"} again below.`}
       </p>
     </section>
@@ -483,15 +483,15 @@ function StatusChips({ library, status }: { library: Library; status: FileStatus
             title={chip.value ? FILE_STATUS_HELP[chip.value] : "Every file in this library"}
             onClick={() => updateParams({ status: chip.value, offset: null })}
             className={cn(
-              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[0.8125rem] font-medium transition-colors pointer-coarse:h-11 [&_svg]:size-3.5",
+              "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-control border px-3 text-[0.8125rem] font-medium [&_svg]:size-3.5",
               active
-                ? "border-accent-ink bg-accent-soft text-fg"
-                : "border-line-strong/50 bg-surface text-muted hover:border-line-strong hover:text-fg",
+                ? "border-accent bg-subtle text-ink"
+                : "border-line bg-surface text-muted hover:border-field hover:text-ink",
             )}
           >
-            {chip.icon ? <span className={cn(active ? "text-accent-ink" : "")}>{chip.icon}</span> : null}
+            {chip.icon ? <span className={cn(active ? "text-ink" : "")}>{chip.icon}</span> : null}
             {chip.label}
-            <span className={cn("tabular text-xs", active ? "text-fg" : "text-muted")}>{formatCount(chip.count)}</span>
+            <span className={cn("tabular text-xs", active ? "text-ink" : "text-muted")}>{formatCount(chip.count)}</span>
           </button>
         );
       })}
@@ -509,13 +509,13 @@ function SavedCell({ file }: { file: MediaFile }) {
   if (file.saved_bytes === null || file.status !== "done") return <span className="text-muted">—</span>;
   if (file.saved_bytes < 0) {
     return (
-      <span className="text-danger" title="The converted file came out larger">
+      <span className="text-ink" title="The converted file came out larger">
         +{formatBytes(-file.saved_bytes)}
         <span className="sr-only"> larger</span>
       </span>
     );
   }
-  return <span className="text-accent-ink">{formatBytes(file.saved_bytes)}</span>;
+  return <span className="text-ink">{formatBytes(file.saved_bytes)}</span>;
 }
 
 /**
@@ -555,16 +555,15 @@ function Checkbox({
   useEffect(() => {
     if (ref.current) ref.current.indeterminate = Boolean(indeterminate);
   }, [indeterminate]);
-  // On touch screens the label pads the 16px box out to a 44px target.
+  // The label pads the native 18px box out to a 44px target.
   return (
-    <label className="-m-1 inline-flex cursor-pointer p-1 pointer-coarse:-m-3.5 pointer-coarse:p-3.5">
+    <label className="-m-[13px] inline-flex cursor-pointer p-[13px]">
       <input
         ref={ref}
         type="checkbox"
         aria-label={label}
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="checkbox"
       />
     </label>
   );
@@ -592,7 +591,7 @@ function NoFilesYet({ library }: { library: Library }) {
   return (
     <EmptyState icon={<FolderSearch aria-hidden />} title="No videos found yet">
       <p>
-        Popcorn Batch looked in <span className="font-mono text-[0.8125rem] text-fg">{library.path}</span>. Files that
+        Popcorn Batch looked in <span className="text-ink">{library.path}</span>. Files that
         are still being copied are picked up once they stop changing. If nothing appears, check that the folder is
         mapped into the container, then scan again.
       </p>
@@ -667,13 +666,13 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
   let body: ReactNode;
   if (files.isPending) {
     body = (
-      <div className="divide-y divide-line rounded-lg border border-line bg-surface">
+      <div className="divide-y divide-line rounded-panel border border-line bg-surface">
         {Array.from({ length: 6 }, (_, i) => (
           <div key={i} className="flex items-center gap-4 px-4 py-3.5">
             <Skeleton className="size-4" />
             <Skeleton className="h-4 flex-1" />
             <Skeleton className="hidden h-4 w-16 sm:block" />
-            <Skeleton className="h-6 w-20 rounded-full" />
+            <Skeleton className="h-6 w-20 rounded-tag" />
           </div>
         ))}
       </div>
@@ -712,7 +711,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
     body = (
       <>
         {/* Wide screens: a table. */}
-        <div className="hidden overflow-hidden rounded-lg border border-line bg-surface md:block">
+        <div className="hidden overflow-hidden rounded-panel border border-line bg-surface md:block">
           <table className="w-full table-fixed text-sm">
             <caption className="sr-only">
               Files in {library.name}
@@ -752,18 +751,18 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                   : "";
                 const isSelected = selected.has(file.id);
                 return (
-                  <tr key={file.id} className={cn("transition-colors hover:bg-raised/50", isSelected && "bg-accent-soft/30")}>
+                  <tr key={file.id} className={cn("transition-colors hover:bg-subtle", isSelected && "bg-subtle")}>
                     <td className="py-2.5 pl-4">
                       <Checkbox checked={isSelected} onChange={(on) => toggle(file.id, on)} label={`Select ${file.file_name}`} />
                     </td>
                     <td className="py-2.5 pr-4">
                       <button type="button" onClick={() => openFile(file)} className="block max-w-full text-left">
-                        <FileName name={file.file_name} className="font-medium text-fg hover:text-accent-ink" />
+                        <FileName name={file.file_name} className="font-medium text-ink hover:underline" />
                         {folder ? <span className="block truncate text-xs text-muted">{folder}</span> : null}
                         {q && foundByEarlierName(file, q) ? <EarlierNameMatch /> : null}
                       </button>
                     </td>
-                    <td className="py-2.5 pr-4 text-right text-fg tabular">{formatBytes(file.size_bytes)}</td>
+                    <td className="py-2.5 pr-4 text-right text-ink tabular">{formatBytes(file.size_bytes)}</td>
                     <td className="truncate py-2.5 pr-4 text-[0.8125rem] text-muted">{formatLine(file) || "—"}</td>
                     <td className="py-2.5 pr-4">
                       <StatusCell file={file} />
@@ -779,7 +778,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
         </div>
 
         {/* Phones: a list. */}
-        <ul className="divide-y divide-line rounded-lg border border-line bg-surface md:hidden">
+        <ul className="divide-y divide-line rounded-panel border border-line bg-surface md:hidden">
           {items.map((file) => (
             <li key={file.id} className="flex items-start gap-3 px-3 py-3">
               <span className="pt-0.5">
@@ -790,7 +789,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                 />
               </span>
               <button type="button" onClick={() => openFile(file)} className="min-w-0 flex-1 text-left">
-                <FileName name={file.file_name} className="text-sm font-medium text-fg" />
+                <FileName name={file.file_name} className="text-sm font-medium text-ink" />
                 <span className="mt-0.5 block text-xs text-muted">
                   {formatBytes(file.size_bytes)}
                   {formatLine(file) ? ` · ${formatLine(file)}` : ""}
@@ -799,10 +798,10 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                 <span className="mt-1.5 flex items-center gap-2">
                   <StatusCell file={file} />
                   {file.status === "done" && file.saved_bytes && file.saved_bytes > 0 ? (
-                    <span className="text-xs text-accent-ink">{formatBytes(file.saved_bytes)} saved</span>
+                    <span className="text-xs text-ink">{formatBytes(file.saved_bytes)} saved</span>
                   ) : null}
                   {file.status === "done" && file.saved_bytes !== null && file.saved_bytes < 0 ? (
-                    <span className="text-xs text-danger">{formatBytes(-file.saved_bytes)} larger</span>
+                    <span className="text-xs text-ink">{formatBytes(-file.saved_bytes)} larger</span>
                   ) : null}
                 </span>
               </button>
@@ -843,7 +842,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
         <div
           className={cn(
             buttonVariants({ variant: "secondary", size: "icon" }),
-            "relative has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-ink sm:hidden",
+            "relative has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent sm:hidden",
           )}
         >
           <ArrowDownUp aria-hidden />
@@ -876,12 +875,12 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
             "max-md:mb-0 max-md:min-h-0",
           // While files are selected the actions stay in view as the list scrolls.
           selection.length > 0 &&
-            "sticky top-14 z-20 -mx-4 border-b border-line bg-bg px-4 py-2 sm:-mx-6 sm:px-6 md:top-0 md:mx-0 md:px-0",
+            "sticky top-14 z-20 -mx-4 border-b border-line bg-page px-4 py-2 sm:-mx-6 sm:px-6 md:top-0 md:mx-0 md:px-0",
         )}
       >
         {selection.length > 0 ? (
           <>
-            <p className="mr-2 text-sm font-medium text-fg tabular" role="status">
+            <p className="mr-2 text-sm font-medium text-ink tabular" role="status">
               {plural(selection.length, "file")} selected
             </p>
             <Button
@@ -1080,7 +1079,7 @@ function SettingsTab({ library }: { library: Library }) {
     <div>
       <section className="grid gap-6 border-b border-line pb-8 md:grid-cols-[14rem_1fr] md:gap-8">
         <div>
-          <h2 className="text-sm font-semibold text-fg">Library</h2>
+          <h2 className="text-sm font-semibold text-ink">Library</h2>
           <p className="mt-1 text-[0.8125rem] leading-snug text-muted">Its name, and pausing it.</p>
         </div>
         <div className="flex max-w-xl flex-col gap-5">
@@ -1097,7 +1096,7 @@ function SettingsTab({ library }: { library: Library }) {
           {/* Pausing takes effect right away: no save needed. */}
           <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
             <div className="min-w-0">
-              <p className="text-sm font-medium text-fg">{library.enabled ? "Active" : "Paused"}</p>
+              <p className="text-sm font-medium text-ink">{library.enabled ? "Active" : "Paused"}</p>
               <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted">
                 {library.enabled
                   ? "Scanned and converted as usual. Pausing stops both; nothing already converted changes."
@@ -1138,14 +1137,14 @@ function SettingsTab({ library }: { library: Library }) {
 
       <section className="mt-10 grid gap-3 border-t border-line pt-8 md:grid-cols-[14rem_1fr] md:gap-8">
         <div>
-          <h2 className="text-sm font-semibold text-fg">Remove library</h2>
+          <h2 className="text-sm font-semibold text-ink">Remove library</h2>
         </div>
         <div className="flex flex-col items-start gap-3">
           <p className="max-w-xl text-[0.8125rem] leading-relaxed text-muted">
             Stops watching this folder and forgets its files and history.{" "}
-            <span className="font-medium text-fg">Your media files are not deleted.</span>
+            <span className="font-medium text-ink">Your media files are not deleted.</span>
           </p>
-          <Button variant="danger" onClick={() => setConfirmRemove(true)} needsServer>
+          <Button variant="secondary" onClick={() => setConfirmRemove(true)} needsServer>
             <Trash2 aria-hidden />
             Remove library…
           </Button>

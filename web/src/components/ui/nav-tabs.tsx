@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { clampOffset } from "@/lib/progress";
 import { updateParams } from "@/lib/router";
 import { cn } from "@/lib/utils";
+import { Button } from "./button";
 
 export interface NavTab {
   href: string;
@@ -13,32 +14,14 @@ export interface NavTab {
 }
 
 /**
- * Tabs that are links, so each tab has its own URL and survives reloads. On
- * narrow screens the row scrolls sideways: the active tab is scrolled into
- * view and a soft fade marks the edge that has more tabs behind it.
+ * Tabs that are links, so each tab has its own URL and survives reloads. The
+ * current tab has a 2px bottom border in the main text colour. The tabs fit
+ * at 390px; should they ever not, the row scrolls sideways and keeps the
+ * current tab in view.
  */
 export function NavTabs({ tabs, label, className }: { tabs: NavTab[]; label: string; className?: string }) {
   const scroller = useRef<HTMLElement>(null);
-  const [edges, setEdges] = useState({ left: false, right: false });
   const activeHref = tabs.find((t) => t.active)?.href;
-
-  useEffect(() => {
-    const el = scroller.current;
-    if (!el) return;
-    const measure = () => {
-      const left = el.scrollLeft > 2;
-      const right = el.scrollLeft + el.clientWidth < el.scrollWidth - 2;
-      setEdges((prev) => (prev.left === left && prev.right === right ? prev : { left, right }));
-    };
-    measure();
-    el.addEventListener("scroll", measure, { passive: true });
-    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
-    observer?.observe(el);
-    return () => {
-      el.removeEventListener("scroll", measure);
-      observer?.disconnect();
-    };
-  }, []);
 
   // Keep the current tab visible when the row is wider than the screen.
   useEffect(() => {
@@ -51,21 +34,8 @@ export function NavTabs({ tabs, label, className }: { tabs: NavTab[]; label: str
     else if (end > el.scrollLeft + el.clientWidth) el.scrollLeft = end - el.clientWidth;
   }, [activeHref]);
 
-  const fade =
-    edges.left && edges.right
-      ? "[mask-image:linear-gradient(to_right,transparent,black_2rem,black_calc(100%-2rem),transparent)]"
-      : edges.right
-        ? "[mask-image:linear-gradient(to_right,black_calc(100%-2.5rem),transparent)]"
-        : edges.left
-          ? "[mask-image:linear-gradient(to_right,transparent,black_2.5rem)]"
-          : "";
-
   return (
-    <nav
-      ref={scroller}
-      aria-label={label}
-      className={cn("-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0", fade, className)}
-    >
+    <nav ref={scroller} aria-label={label} className={cn("overflow-x-auto [scrollbar-width:none]", className)}>
       <ul className="flex min-w-max gap-1 border-b border-line">
         {tabs.map((tab) => (
           <li key={tab.href}>
@@ -73,23 +43,15 @@ export function NavTabs({ tabs, label, className }: { tabs: NavTab[]; label: str
               href={tab.href}
               aria-current={tab.active ? "page" : undefined}
               className={cn(
-                "relative -mb-px flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-medium no-underline transition-colors pointer-coarse:h-11",
-                tab.active
-                  ? "border-accent-ink text-fg"
-                  : "border-transparent text-muted hover:border-line-strong hover:text-fg",
+                // The outline sits inside the tab: the scrolling row would clip it outside.
+                "relative -mb-px flex min-h-11 items-center gap-2 border-b-2 px-3 text-sm font-medium no-underline focus-visible:-outline-offset-2",
+                tab.active ? "border-ink text-ink" : "border-transparent text-muted hover:border-line hover:text-ink",
               )}
             >
               {tab.label}
               {/* A zero count says nothing the empty tab doesn't. */}
               {tab.count ? (
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 text-xs tabular",
-                    tab.active ? "bg-accent-soft text-accent-ink" : "bg-raised text-muted",
-                  )}
-                >
-                  {tab.count.toLocaleString()}
-                </span>
+                <span className="rounded-tag bg-subtle px-1.5 text-xs text-muted tabular">{tab.count.toLocaleString()}</span>
               ) : null}
             </a>
           </li>
@@ -117,27 +79,17 @@ export function Pager({
   const from = total === 0 ? 0 : offset + 1;
   const to = Math.min(total, offset + limit);
   return (
-    <div className="mt-4 flex items-center justify-between gap-3 text-[0.8125rem] text-muted">
-      <p className="tabular" aria-live="polite">
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <p className="text-[13px] text-muted tabular" aria-live="polite">
         {from.toLocaleString()}–{to.toLocaleString()} of {total.toLocaleString()} {noun}
       </p>
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => onPage(Math.max(0, offset - limit))}
-          disabled={offset === 0}
-          className="h-8 rounded-md border border-line-strong/60 bg-surface px-3 font-medium text-fg hover:bg-raised disabled:opacity-50 pointer-coarse:h-11"
-        >
+        <Button variant="secondary" size="sm" onClick={() => onPage(Math.max(0, offset - limit))} disabled={offset === 0}>
           Previous
-        </button>
-        <button
-          type="button"
-          onClick={() => onPage(offset + limit)}
-          disabled={to >= total}
-          className="h-8 rounded-md border border-line-strong/60 bg-surface px-3 font-medium text-fg hover:bg-raised disabled:opacity-50 pointer-coarse:h-11"
-        >
+        </Button>
+        <Button variant="secondary" size="sm" onClick={() => onPage(offset + limit)} disabled={to >= total}>
           Next
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ export function LibrariesScreen() {
           converting.
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
+        <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
           {list.map((library) => (
             <LibraryRow key={library.id} library={library} />
           ))}

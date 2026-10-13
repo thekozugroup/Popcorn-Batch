@@ -33,7 +33,7 @@ function StepIndicator({ step }: { step: Step }) {
             key={s}
             className={cn(
               "h-1.5 rounded-full transition-colors duration-300",
-              i === index ? "w-6 bg-accent-ink" : i < index ? "w-1.5 bg-accent-ink/60" : "w-1.5 bg-line-strong/60",
+              i === index ? "w-6 bg-accent" : i < index ? "w-1.5 bg-accent" : "w-1.5 bg-field",
             )}
           />
         ))}
@@ -59,11 +59,11 @@ export function HardwareLine({ hw, detecting }: { hw: HardwareInfo | undefined; 
 function Fact({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
   return (
     <li className="flex gap-3.5">
-      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-ink [&_svg]:size-4">
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-subtle text-ink [&_svg]:size-4">
         {icon}
       </span>
       <div className="min-w-0">
-        <p className="text-sm font-semibold text-fg">{title}</p>
+        <p className="text-sm font-semibold text-ink">{title}</p>
         <div className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted">{children}</div>
       </div>
     </li>
@@ -108,7 +108,7 @@ export function SetupScreen({ settings }: { settings: Settings }) {
               <StepHeading
                 level={1}
                 focusOnMount={moved}
-                className="font-display text-[2.75rem] leading-[1.08] text-fg outline-none sm:text-[3.5rem]"
+                className="font-semibold text-[2.75rem] leading-[1.08] text-ink outline-none sm:text-[3.5rem]"
               >
                 Make your video library smaller, safely.
               </StepHeading>
@@ -130,7 +130,7 @@ export function SetupScreen({ settings }: { settings: Settings }) {
               </ul>
               {/* Primary first in the DOM (and tab order); shown on the right from sm up. */}
               <div className="mt-12 flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
-                <Button variant="primary" size="lg" onClick={() => goTo("folder")}>
+                <Button variant="primary" onClick={() => goTo("folder")}>
                   Choose a folder
                 </Button>
                 <Button variant="quiet" onClick={() => skip.mutate()} loading={skip.isPending}>

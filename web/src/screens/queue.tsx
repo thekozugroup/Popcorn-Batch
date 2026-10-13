@@ -55,7 +55,7 @@ function useMinSavings() {
 
 function ListSkeleton() {
   return (
-    <div className="divide-y divide-line rounded-lg border border-line bg-surface">
+    <div className="divide-y divide-line rounded-panel border border-line bg-surface">
       {[0, 1, 2, 3].map((i) => (
         <div key={i} className="flex items-center gap-4 px-4 py-3.5">
           <Skeleton className="h-4 w-6" />
@@ -192,7 +192,7 @@ function UpNextTab({ offset }: { offset: number }) {
   return (
     <>
       <StaleNote show={Boolean(queued.error)} />
-      <ol className="divide-y divide-line rounded-lg border border-line bg-surface">
+      <ol className="divide-y divide-line rounded-panel border border-line bg-surface">
         {items.map((job, i) => (
           <li key={job.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-4">
             <span className="w-7 shrink-0 text-right text-[0.8125rem] text-muted tabular">
@@ -200,7 +200,7 @@ function UpNextTab({ offset }: { offset: number }) {
               {offset + i + 1}
             </span>
             <button type="button" onClick={() => openJob(job)} className="min-w-0 flex-1 text-left">
-              <FileName name={job.file_name} className="text-sm font-medium text-fg hover:text-accent-ink" />
+              <FileName name={job.file_name} className="text-sm font-medium text-ink hover:underline" />
               <span className="block truncate text-[0.8125rem] text-muted">
                 {[libraryName(job.library_id), formatBytes(job.input_size), `added ${formatRelative(job.created_at)}`]
                   .filter(Boolean)
@@ -277,7 +277,7 @@ function HistoryTab({ offset }: { offset: number }) {
           Clear history
         </Button>
       </div>
-      <ul className="divide-y divide-line rounded-lg border border-line bg-surface">
+      <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
         {items.map((job) => {
           const standing = standings.get(job.id) ?? "current";
           // Retrying a damaged original can't help; its sheet offers the fix.
@@ -292,13 +292,13 @@ function HistoryTab({ offset }: { offset: number }) {
             <li key={job.id} className="flex items-center gap-3 px-3 py-3 sm:px-4">
               <button type="button" onClick={() => openJob(job)} className="min-w-0 flex-1 text-left">
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <FileName name={renamed ?? job.file_name} className="text-sm font-medium text-fg hover:text-accent-ink" />
+                  <FileName name={renamed ?? job.file_name} className="text-sm font-medium text-ink hover:underline" />
                   <JobStateBadge job={job} standing={standing} />
                 </span>
                 {renamed ? <WasName name={job.file_name} className="mt-0.5" /> : null}
                 {/* When the note wraps, the library and time start their own line, with no stray "·". */}
                 <span className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                  <span className={cn("min-w-0 text-[0.8125rem]", job.state === "done" ? "text-fg/85" : "text-muted")}>
+                  <span className={cn("min-w-0 text-[0.8125rem]", job.state === "done" ? "text-ink" : "text-muted")}>
                     {standing === "unknown" ? (
                       <span aria-hidden className="skeleton inline-block h-3 w-40 align-middle" />
                     ) : (
@@ -352,9 +352,9 @@ function HistoryTab({ offset }: { offset: number }) {
 
 const LOG_ICON: Record<ActivityLevel, ReactNode> = {
   info: <ScanSearch className="text-muted" aria-hidden />,
-  success: <CircleCheck className="text-success" aria-hidden />,
-  warning: <TriangleAlert className="text-warning" aria-hidden />,
-  error: <CircleX className="text-danger" aria-hidden />,
+  success: <CircleCheck className="text-ok" aria-hidden />,
+  warning: <TriangleAlert className="text-warn" aria-hidden />,
+  error: <CircleX className="text-error" aria-hidden />,
 };
 
 /**
@@ -377,7 +377,7 @@ function Log() {
           <li key={entry.id} className="flex gap-2.5 text-[0.8125rem] [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0">
             {LOG_ICON[logLevel(entry)]}
             <span className="sr-only">{logLevel(entry)}:</span>
-            <span className="min-w-0 flex-1 text-fg/90">{entry.message}</span>
+            <span className="min-w-0 flex-1 text-ink">{entry.message}</span>
             <span className="shrink-0 text-xs text-muted">{formatRelative(entry.at)}</span>
           </li>
         ))}

@@ -2,8 +2,10 @@
 
 /**
  * Overlays built on Base UI (focus trapping, Escape, portals, scroll lock):
- * a detail sheet that slides from the right on desktop and up from the
- * bottom on phones, a confirmation dialog, an action menu and tooltips.
+ * a detail sheet flush with the right edge from 801px and up from the
+ * bottom below, a confirmation dialog, an action menu and tooltips. All of
+ * them are flat: a 1px divider border, and the overlay backdrop behind
+ * sheets and dialogs. No shadows, no blur.
  */
 
 import { AlertDialog } from "@base-ui/react/alert-dialog";
@@ -14,6 +16,14 @@ import { X } from "lucide-react";
 import { useRef, type ReactElement, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Button, buttonVariants } from "./button";
+
+/** The backdrop behind sheets and dialogs: the one overlay colour, fading in 160ms. */
+const BACKDROP =
+  "fixed inset-0 z-40 bg-overlay transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0";
+
+/** A confirmation's box: the dialog token, fading only. */
+const CONFIRM_POPUP =
+  "fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-panel border border-line bg-surface p-7 text-ink outline-none transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0 max-roomy:p-5";
 
 interface SheetProps {
   open: boolean;
@@ -26,7 +36,7 @@ interface SheetProps {
   headerExtra?: ReactNode;
 }
 
-/** Detail panel for a job or file. */
+/** Detail panel for a job or file: the one overlay used for reading. */
 export function Sheet({ open, onOpenChange, title, description, children, footer, headerExtra }: SheetProps) {
   // Focus lands on the title, so screen readers start at the top and no
   // focus ring appears on the close button after a mouse click.
@@ -34,42 +44,43 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
   return (
     <Dialog.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Backdrop className={BACKDROP} />
         <Dialog.Popup
           initialFocus={titleRef}
           className={cn(
-            "fixed z-50 flex flex-col bg-surface text-fg shadow-pop outline-none",
-            "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-xl border-t border-line",
-            "md:inset-y-2 md:right-2 md:left-auto md:max-h-none md:w-[min(34rem,calc(100vw-1rem))] md:rounded-xl md:border",
-            "transition-[transform,opacity] duration-250 ease-[var(--ease-out-expo)]",
-            "data-[starting-style]:translate-y-8 data-[starting-style]:opacity-0 data-[ending-style]:translate-y-8 data-[ending-style]:opacity-0",
-            "md:data-[starting-style]:translate-x-8 md:data-[starting-style]:translate-y-0 md:data-[ending-style]:translate-x-8 md:data-[ending-style]:translate-y-0",
+            "fixed z-50 flex flex-col bg-surface text-ink outline-none",
+            // A bottom sheet below 801px…
+            "inset-x-0 bottom-0 max-h-[92dvh] rounded-t-panel border-t border-line",
+            // …and flush with the right edge from 801px, with a divider on its left.
+            "wide:inset-y-0 wide:right-0 wide:left-auto wide:max-h-none wide:w-[min(34rem,100vw)] wide:rounded-none wide:border-t-0 wide:border-l",
+            "transition-[transform,opacity] duration-200 ease-out",
+            "data-[ending-style]:translate-y-2 data-[ending-style]:opacity-0 data-[starting-style]:translate-y-2 data-[starting-style]:opacity-0",
+            "wide:data-[ending-style]:translate-x-2 wide:data-[ending-style]:translate-y-0 wide:data-[starting-style]:translate-x-2 wide:data-[starting-style]:translate-y-0",
           )}
         >
-          <div className="flex items-start gap-3 border-b border-line px-5 pt-4 pb-3.5">
-            <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-3 border-b border-line px-6 pt-5 pb-4 max-roomy:px-5">
+            <div className="min-w-0 flex-1 pt-2.5">
               <Dialog.Title
                 ref={titleRef}
                 tabIndex={-1}
-                className="text-base leading-snug font-semibold break-words text-fg outline-none"
+                className="text-base leading-normal font-semibold break-words text-ink outline-none"
               >
                 {title}
               </Dialog.Title>
               {description ? (
-                <Dialog.Description className="mt-1 text-[0.8125rem] text-muted">{description}</Dialog.Description>
+                <Dialog.Description className="mt-1 text-[13px] leading-[1.5] break-words text-muted">
+                  {description}
+                </Dialog.Description>
               ) : null}
             </div>
             {headerExtra}
-            <Dialog.Close
-              className={cn(buttonVariants({ variant: "quiet", size: "icon-sm" }), "-mr-1.5")}
-              aria-label="Close"
-            >
+            <Dialog.Close className={cn(buttonVariants({ variant: "quiet", size: "icon" }), "-mr-2.5")} aria-label="Close">
               <X />
             </Dialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-6 max-roomy:px-5">{children}</div>
           {footer ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-6 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] max-roomy:px-5">
               {footer}
             </div>
           ) : null}
@@ -89,36 +100,37 @@ interface ModalProps {
   className?: string;
 }
 
-/** A centred dialog for focused tasks such as picking a folder. */
+/** A centred dialog, used only for the folder picker opened from a settings field. */
 export function Modal({ open, onOpenChange, title, description, children, footer, className }: ModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <Dialog.Portal>
-        <Dialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
+        <Dialog.Backdrop className={BACKDROP} />
         <Dialog.Popup
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 flex max-h-[min(44rem,calc(100dvh-2rem))] w-[min(40rem,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-line bg-surface text-fg shadow-pop outline-none",
-            "transition-[transform,opacity] duration-200 ease-[var(--ease-out-expo)] data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0",
+            "fixed top-1/2 left-1/2 z-50 flex max-h-[min(44rem,calc(100dvh-32px))] w-[min(40rem,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-panel border border-line bg-surface text-ink outline-none",
+            "transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0",
             className,
           )}
         >
-          <div className="flex items-start gap-3 px-5 pt-4 pb-3">
-            <div className="min-w-0 flex-1">
-              <Dialog.Title className="text-base font-semibold text-fg">{title}</Dialog.Title>
+          <div className="flex items-start gap-3 px-7 pt-6 pb-3 max-roomy:px-5">
+            <div className="min-w-0 flex-1 pt-2.5">
+              <Dialog.Title className="text-base leading-normal font-semibold [overflow-wrap:anywhere] text-ink">
+                {title}
+              </Dialog.Title>
               {description ? (
-                <Dialog.Description className="mt-1 text-[0.8125rem] text-muted">{description}</Dialog.Description>
+                <Dialog.Description className="mt-1 text-[13px] leading-[1.6] text-muted">{description}</Dialog.Description>
               ) : null}
             </div>
-            <Dialog.Close
-              className={cn(buttonVariants({ variant: "quiet", size: "icon-sm" }), "-mr-1.5")}
-              aria-label="Close"
-            >
+            <Dialog.Close className={cn(buttonVariants({ variant: "quiet", size: "icon" }), "-mr-2.5")} aria-label="Close">
               <X />
             </Dialog.Close>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-4">{children}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto px-7 pb-5 max-roomy:px-5">{children}</div>
           {footer ? (
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line px-7 py-3 max-roomy:px-5">
+              {footer}
+            </div>
           ) : null}
         </Dialog.Popup>
       </Dialog.Portal>
@@ -133,7 +145,10 @@ interface ConfirmProps {
   children: ReactNode;
   confirmLabel: string;
   onConfirm: () => void;
-  /** Destructive actions get the red confirm button. */
+  /**
+   * The action discards work or forgets data. Its exact words say so; the
+   * confirm button stays primary (the family has no red button).
+   */
   destructive?: boolean;
   loading?: boolean;
   /** Label of the button that backs out; "Cancel" unless that would be ambiguous. */
@@ -148,26 +163,27 @@ export function ConfirmDialog({
   children,
   confirmLabel,
   onConfirm,
-  destructive,
   loading,
   cancelLabel = "Cancel",
 }: ConfirmProps) {
   return (
     <AlertDialog.Root open={open} onOpenChange={(next) => onOpenChange(next)}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-surface p-5 text-fg shadow-pop outline-none transition-[transform,opacity] duration-200 ease-[var(--ease-out-expo)] data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
+        <AlertDialog.Backdrop className={BACKDROP} />
+        <AlertDialog.Popup className={CONFIRM_POPUP}>
           {/* A long dotted release name has no place to break: let it wrap anywhere, so it never runs past the dialog. */}
-          <AlertDialog.Title className="text-base font-semibold [overflow-wrap:anywhere] text-fg">{title}</AlertDialog.Title>
+          <AlertDialog.Title className="text-base leading-normal font-semibold [overflow-wrap:anywhere] text-ink">
+            {title}
+          </AlertDialog.Title>
           <AlertDialog.Description
             render={<div />}
-            className="mt-2 space-y-2 text-sm leading-relaxed [overflow-wrap:anywhere] text-muted"
+            className="mt-2 space-y-2 text-sm leading-[1.7] [overflow-wrap:anywhere] text-muted"
           >
             {children}
           </AlertDialog.Description>
-          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <div className="mt-6 flex flex-col-reverse gap-2 roomy:flex-row roomy:justify-end">
             <AlertDialog.Close className={buttonVariants({ variant: "secondary" })}>{cancelLabel}</AlertDialog.Close>
-            <Button variant={destructive ? "danger" : "primary"} onClick={onConfirm} loading={loading}>
+            <Button variant="primary" onClick={onConfirm} loading={loading}>
               {confirmLabel}
             </Button>
           </div>
@@ -190,21 +206,23 @@ export function UnsavedChangesDialog({ open, onSave, onDiscard, onStay, saving }
   return (
     <AlertDialog.Root open={open} onOpenChange={(next) => !next && onStay()}>
       <AlertDialog.Portal>
-        <AlertDialog.Backdrop className="fixed inset-0 z-40 bg-overlay transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <AlertDialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(28rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 rounded-xl border border-line bg-surface p-5 text-fg shadow-pop outline-none transition-[transform,opacity] duration-200 ease-[var(--ease-out-expo)] data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
-          <AlertDialog.Title className="text-base font-semibold text-fg">Save your changes?</AlertDialog.Title>
-          <AlertDialog.Description className="mt-2 text-sm leading-relaxed text-muted">
+        <AlertDialog.Backdrop className={BACKDROP} />
+        <AlertDialog.Popup className={CONFIRM_POPUP}>
+          <AlertDialog.Title className="text-base leading-normal font-semibold [overflow-wrap:anywhere] text-ink">
+            Save your changes?
+          </AlertDialog.Title>
+          <AlertDialog.Description className="mt-2 text-sm leading-[1.7] text-muted">
             You changed some settings on this page but haven&apos;t saved them. If you leave now without saving,
             they&apos;re lost.
           </AlertDialog.Description>
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row-reverse sm:justify-start">
+          <div className="mt-6 flex flex-col gap-2 roomy:flex-row-reverse roomy:justify-start">
             <Button variant="primary" onClick={onSave} loading={saving}>
               Save and leave
             </Button>
             <Button variant="secondary" onClick={onDiscard} disabled={saving}>
               Discard changes
             </Button>
-            <AlertDialog.Close className={cn(buttonVariants({ variant: "quiet" }), "sm:mr-auto")}>
+            <AlertDialog.Close className={cn(buttonVariants({ variant: "quiet" }), "roomy:mr-auto")}>
               Keep editing
             </AlertDialog.Close>
           </div>
@@ -222,6 +240,7 @@ export function UnsavedChangesDialog({ open, onSave, onDiscard, onStay, saving }
 export type MenuAction = {
   label: string;
   icon?: ReactNode;
+  /** It discards or forgets something; its words say so (it keeps the main text colour). */
   destructive?: boolean;
   disabled?: boolean;
 } & ({ onSelect: () => void; href?: never } | { href: string; onSelect?: never });
@@ -240,15 +259,13 @@ export function ActionMenu({ trigger, actions, align = "end" }: ActionMenuProps)
       <Menu.Trigger render={trigger} />
       <Menu.Portal>
         <Menu.Positioner side="bottom" align={align} sideOffset={6} className="z-50 outline-none">
-          <Menu.Popup className="min-w-52 origin-[var(--transform-origin)] rounded-lg border border-line bg-surface p-1 text-sm text-fg shadow-pop outline-none transition-[transform,opacity] duration-150 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0">
+          <Menu.Popup className="min-w-52 rounded-control border border-line bg-surface p-1 text-sm text-ink outline-none transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             {actions.map((action, i) => {
               if (action === "separator") {
-                return <Menu.Separator key={`sep-${i}`} className="mx-1 my-1 h-px bg-line" />;
+                return <Menu.Separator key={`sep-${i}`} className="my-1 h-px bg-line" />;
               }
-              const className = cn(
-                "flex h-9 cursor-default items-center gap-2.5 rounded-md px-2.5 no-underline outline-none select-none data-[disabled]:opacity-50 data-[highlighted]:bg-raised pointer-coarse:h-11 [&_svg]:size-4 [&_svg]:shrink-0",
-                action.destructive ? "text-danger" : "text-fg [&_svg]:text-muted",
-              );
+              const className =
+                "flex min-h-11 cursor-pointer items-center gap-2.5 rounded-tag px-3 text-sm text-ink no-underline outline-none select-none data-[disabled]:cursor-default data-[disabled]:opacity-50 data-[highlighted]:bg-subtle [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-muted";
               return action.href !== undefined ? (
                 <Menu.LinkItem key={action.label} href={action.href} closeOnClick className={className}>
                   {action.icon}
@@ -278,7 +295,7 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
       <BaseTooltip.Trigger render={children} />
       <BaseTooltip.Portal>
         <BaseTooltip.Positioner sideOffset={6} className="z-50">
-          <BaseTooltip.Popup className="max-w-72 rounded-md border border-line bg-surface px-2.5 py-1.5 text-[0.8125rem] leading-snug text-fg shadow-pop transition-opacity duration-150 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <BaseTooltip.Popup className="max-w-72 rounded-control border border-line bg-surface px-2.5 py-1.5 text-[13px] leading-snug text-ink transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             {content}
           </BaseTooltip.Popup>
         </BaseTooltip.Positioner>

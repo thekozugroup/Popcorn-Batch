@@ -8,10 +8,10 @@
  * machine can no longer produce stays visible as "(not available here)".
  */
 
-import { ChevronRight, Info } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { GoalPicker } from "@/components/goal-picker";
-import { Field, Input, Segmented, Select, SwitchRow } from "@/components/ui/controls";
+import { ErrorText, Field, Input, Segmented, Select, SwitchRow } from "@/components/ui/controls";
 import { codecSpeedHint } from "@/lib/hardware";
 import {
   AUDIO_CODEC_LABEL,
@@ -69,11 +69,7 @@ const MORE_FIELDS: readonly (keyof TranscodeProfile)[] = [
 /** An error under a control that isn't a `Field` (choice rows, switches). */
 function FieldError({ message }: { message: string | undefined }) {
   if (!message) return null;
-  return (
-    <p role="alert" className="mt-1.5 text-[0.8125rem] leading-snug font-medium text-danger">
-      {message}
-    </p>
-  );
+  return <ErrorText className="mt-2">{message}</ErrorText>;
 }
 
 /** The option for a saved value this machine doesn't offer any more. */
@@ -114,10 +110,10 @@ function Group({
 }) {
   const Heading = level === 2 ? "h2" : "h3";
   return (
-    <section className="grid gap-3 border-t border-line py-6 first:border-t-0 first:pt-0 md:grid-cols-[14rem_1fr] md:gap-8">
+    <section className="grid gap-4 border-t border-line py-6 first:border-t-0 first:pt-0 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
       <div>
-        <Heading className="text-sm font-semibold text-fg">{title}</Heading>
-        {description ? <p className="mt-1 text-[0.8125rem] leading-snug text-muted">{description}</p> : null}
+        <Heading className="text-base font-semibold text-ink">{title}</Heading>
+        {description ? <p className="mt-2 max-w-[68ch] text-sm leading-[1.7] text-muted">{description}</p> : null}
       </div>
       <div className="min-w-0">{children}</div>
     </section>
@@ -183,7 +179,6 @@ function LanguageField({
             onChange(parsed.codes);
           }
         }}
-        className="font-mono text-[0.8125rem]"
       />
     </Field>
   );
@@ -235,7 +230,7 @@ function QualityOverrideField({
             onChange(parsed.value);
           }
         }}
-        className="max-w-40 font-mono"
+        className="max-w-40"
       />
     </Field>
   );
@@ -331,11 +326,11 @@ export function ProfileEditor({
           }))}
           stackOnPhones
         />
-        <div className="mt-2 hidden justify-between text-xs text-muted sm:flex" aria-hidden>
+        <div className="mt-2 hidden justify-between text-xs text-muted roomy:flex" aria-hidden>
           <span>Smaller files</span>
           <span>Closer to the original</span>
         </div>
-        <p className="mt-2 text-[0.8125rem] text-fg/85">{QUALITY_HELP[profile.quality]}</p>
+        <p className="mt-2 text-[13px] leading-[1.6] text-muted">{QUALITY_HELP[profile.quality]}</p>
         <FieldError message={errors.quality} />
       </Group>
 
@@ -345,37 +340,39 @@ export function ProfileEditor({
           value={profile.speed}
           onChange={(speed) => update({ speed })}
           options={SPEED_PRESETS.map((s) => ({ value: s, label: SPEED_LABEL[s] }))}
-          className="sm:max-w-md"
+          className="roomy:max-w-md"
         />
-        <p className="mt-2 text-[0.8125rem] text-fg/85">{SPEED_HELP[profile.speed]}</p>
+        <p className="mt-2 text-[13px] leading-[1.6] text-muted">{SPEED_HELP[profile.speed]}</p>
         <FieldError message={errors.speed} />
       </Group>
 
-      <section className="border-t border-line pt-4">
+      {/* Styled like a disclosure's summary row; a button, so a server error can open it. */}
+      <section className="border-t border-line pt-3">
         <button
           type="button"
           aria-expanded={advancedOpen}
           aria-controls={advancedId}
           onClick={() => setAdvancedOpen((v) => !v)}
-          className="flex w-full items-center gap-2 rounded-md py-2 text-left text-sm font-semibold text-fg hover:text-accent-ink"
+          className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-[550] text-ink"
         >
           <ChevronRight
-            className={cn("size-4 text-muted transition-transform duration-200", advancedOpen && "rotate-90")}
+            className={cn("size-4 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200", advancedOpen && "rotate-90")}
             aria-hidden
           />
           More format options
-          <span className="hidden font-normal text-muted sm:inline">Formats, resolution, tracks and thresholds</span>
+          <span className="hidden font-normal text-muted roomy:inline">Formats, resolution, tracks and thresholds</span>
         </button>
 
         <div id={advancedId} hidden={!advancedOpen} className="pt-4">
           {notes.length ? (
-            <div role="status" className="mb-5 flex gap-2 rounded-md bg-info-soft px-3 py-2.5 text-[0.8125rem] text-fg">
-              <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
-              <div>
-                {notes.map((note) => (
-                  <p key={note}>{note}</p>
-                ))}
-              </div>
+            // A message: subtle fill, neutral text, no border for information.
+            <div
+              role="status"
+              className="mb-5 rounded-control bg-subtle px-[18px] py-[14px] text-sm leading-[1.6] [overflow-wrap:anywhere] text-ink"
+            >
+              {notes.map((note) => (
+                <p key={note}>{note}</p>
+              ))}
             </div>
           ) : null}
 
@@ -508,8 +505,8 @@ export function ProfileEditor({
           </div>
 
           <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <span id={`${advancedId}-subs`} className="text-sm font-medium text-fg">
+            <div className="flex flex-col gap-2">
+              <span id={`${advancedId}-subs`} className="text-sm font-[550] text-ink">
                 Subtitles
               </span>
               <Segmented
@@ -521,7 +518,7 @@ export function ProfileEditor({
                   { value: "drop", label: "Remove" },
                 ]}
               />
-              <p className="text-[0.8125rem] leading-snug text-muted">
+              <p className="text-[13px] leading-[1.6] text-muted">
                 {profile.subtitles === "keep"
                   ? "Text subtitles are converted when the container needs it. Picture subtitles MP4 can't hold are dropped."
                   : "Every subtitle track is removed."}

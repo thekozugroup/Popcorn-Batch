@@ -31,7 +31,7 @@ export function SavingsChart({ points, className }: { points: SavingsPoint[]; cl
   return (
     <figure className={cn("flex flex-col", className)} aria-labelledby={`${tableId}-caption`}>
       <figcaption id={`${tableId}-caption`} className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-semibold text-fg">Saved per day</span>
+        <span className="text-sm font-semibold text-ink">Saved per day</span>
         <span className="text-xs text-muted tabular" aria-live="off">
           {shown
             ? `${formatDay(shown.date)}: ${formatBytes(shown.saved_bytes)} · ${plural(shown.files, "file")}`
@@ -45,8 +45,8 @@ export function SavingsChart({ points, className }: { points: SavingsPoint[]; cl
         </div>
         <div className="relative h-32" onMouseLeave={() => setActive(null)}>
           <div className="absolute inset-x-0 top-0 h-px bg-line" />
-          <div className="absolute inset-x-0 top-1/2 h-px bg-line/60" />
-          <div className="absolute inset-x-0 bottom-0 h-px bg-line-strong/50" />
+          <div className="absolute inset-x-0 top-1/2 h-px bg-line" />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-line" />
           <div className="absolute inset-0 flex items-end gap-[2px]">
             {points.map((p, i) => {
               const h = p.saved_bytes > 0 ? Math.max(2, percentOf(p.saved_bytes, max)) : 0;
@@ -58,8 +58,8 @@ export function SavingsChart({ points, className }: { points: SavingsPoint[]; cl
                 >
                   <div
                     className={cn(
-                      "w-full max-w-6 rounded-t-[4px] transition-colors duration-150",
-                      active === i ? "bg-accent-hover" : "bg-meter",
+                      "w-full max-w-6 rounded-t-progress bg-accent",
+                      active === i && "brightness-[.94]",
                     )}
                     style={{ height: `${h}%` }}
                   />
