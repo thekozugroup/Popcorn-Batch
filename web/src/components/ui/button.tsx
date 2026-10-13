@@ -29,7 +29,6 @@ const buttonClasses = cva(
         md: "px-[17px] py-[11px]",
         // Icon-only buttons are 44px squares with a 16px glyph and an aria-label.
         icon: "size-11 p-0",
-        "icon-sm": "size-11 p-0",
       },
     },
     compoundVariants: [

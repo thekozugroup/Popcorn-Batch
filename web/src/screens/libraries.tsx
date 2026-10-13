@@ -1,16 +1,17 @@
 "use client";
 
 /**
- * All libraries: one panel of library rows. Screens of 800px and below land
- * here from the compact navigation; wider ones also list them in the sidebar.
+ * All libraries: one panel of library rows with the bar's legend, as on the
+ * Overview. Screens of 800px and below land here from the compact
+ * navigation; wider ones also list them in the sidebar.
  */
 
+import { LibrariesPanel } from "@/components/libraries-panel";
 import { PageHeader } from "@/components/shell";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState, Skeleton } from "@/components/ui/display";
 import { useLibraries } from "@/lib/queries";
 import { href } from "@/lib/router";
-import { LibraryRow } from "./overview";
 
 const PANEL = "overflow-hidden rounded-panel border border-line bg-surface";
 
@@ -55,11 +56,8 @@ export function LibrariesScreen() {
           </EmptyState>
         </div>
       ) : (
-        <ul className={`${PANEL} divide-y divide-line`}>
-          {list.map((library) => (
-            <LibraryRow key={library.id} library={library} />
-          ))}
-        </ul>
+        // The same panel as the Overview's, with the legend that names the bar's parts.
+        <LibrariesPanel libraries={list} />
       )}
     </div>
   );

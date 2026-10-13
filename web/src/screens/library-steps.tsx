@@ -68,7 +68,7 @@ export function StepHeading({
       ref={ref}
       tabIndex={-1}
       className={cn(
-        "text-3xl leading-[1.2] font-semibold tracking-[-0.025em] break-words text-ink outline-none max-roomy:text-[28px]",
+        "text-headline break-words text-ink outline-none",
         className,
       )}
     >
@@ -101,9 +101,9 @@ export function FolderStep({
       <StepHeading step={step} level={level}>
         Where are your videos?
       </StepHeading>
-      <p className="mt-2.5 max-w-[58ch] text-base leading-[1.6] text-muted">
+      <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
         Choose the folder that holds your movies or shows; folders inside it are included. In Docker this is the
-        path inside the container, such as <code className="font-mono text-[13px] text-ink">/media</code>.
+        path inside the container, such as <code className="font-mono text-meta text-ink">/media</code>.
       </p>
       <FolderPicker
         className="mt-8"
@@ -113,6 +113,7 @@ export function FolderStep({
         onNavigate={onNavigate}
         libraries={libraries.data}
         forLibrary
+        startInYourFolders
       />
     </div>
   );
@@ -197,7 +198,7 @@ export function GoalStep({
       <StepHeading step={step} level={level}>
         What should happen to these videos?
       </StepHeading>
-      <p className="mt-2.5 max-w-[58ch] text-base leading-[1.6] text-muted">
+      <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
         Pick what matters most. You can fine-tune quality, formats and tracks later in the library&apos;s settings.
       </p>
 
@@ -226,7 +227,7 @@ export function GoalStep({
         }
       />
       {hardware.pending ? (
-        <p className="mt-3 text-[13px] leading-[1.6] text-muted" role="status">
+        <p className="mt-3 text-meta leading-relaxed text-muted" role="status">
           Checking your hardware to see how fast each goal converts…
         </p>
       ) : null}
@@ -253,7 +254,7 @@ export function GoalStep({
         </Button>
         {secondary}
       </div>
-      <p className="mt-3 text-[13px] leading-[1.6] text-muted roomy:text-right">
+      <p className="mt-3 text-meta leading-relaxed text-muted roomy:text-right">
         {settings.data?.auto_queue === false
           ? "The folder is scanned first. Then choose which files to convert from the library."
           : "The folder is scanned first, then files convert in the background. You can pause any time."}

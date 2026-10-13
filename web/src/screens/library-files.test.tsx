@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
+import { profileForGoal } from "@/lib/profile";
 import { parseRoute } from "@/lib/router";
 import type { Library, LibraryStats, MediaFile, QueueState, Settings } from "@/lib/types";
 import { FilesTab, LibraryScreen, Summary } from "./library";
@@ -182,6 +183,37 @@ describe("a library's file list", () => {
     for (const button of within(table).getAllByRole("button")) expect(button.className).toContain("min-h-11");
   });
 
+  it("keeps a selected row's status tag visible, and never fills a row on hover", async () => {
+    mockApi([file(), LARGER, WAITING]);
+    renderWithClient(<FilesTab library={library()} route={parseRoute(`#/library/${LIB}`)} />);
+    const table = await screen.findByRole("table");
+    fireEvent.click(within(table).getByRole("checkbox", { name: "Select Waiting (2019).mkv" }));
+    const selected = within(table).getByRole("checkbox", { name: "Select Waiting (2019).mkv" }).closest("tr") as HTMLElement;
+    // The fill marks the selection; its tag is marked so globals.css turns it to the surface colour.
+    expect(selected.hasAttribute("data-selected")).toBe(true);
+    expect(selected.className).toContain("bg-subtle");
+    expect(within(selected).getByText("To convert").closest("[data-tag]")).not.toBeNull();
+    for (const row of within(table).getAllByRole("row")) expect(row.className).not.toContain("hover:bg-subtle");
+    // Hovering a row underlines its name instead.
+    const name = within(selected).getByRole("button");
+    expect(name.className).toContain("group/name");
+    expect(name.querySelector(".group-hover\\/name\\:underline")).not.toBeNull();
+    // The phone list marks its selected rows the same way.
+    const item = screen
+      .getAllByRole("checkbox", { name: "Select Waiting (2019).mkv" })
+      .map((box) => box.closest("li"))
+      .find(Boolean) as HTMLElement;
+    expect(item.hasAttribute("data-selected")).toBe(true);
+  });
+
+  it("says No space freed, as the file sheet does, for a conversion that freed nothing", async () => {
+    mockApi([file({ saved_bytes: 0 })]);
+    renderWithClient(<FilesTab library={library()} route={parseRoute(`#/library/${LIB}`)} />);
+    const table = await screen.findByRole("table");
+    await waitFor(() => expect(within(table).getAllByText("No space freed").length).toBeGreaterThan(0));
+    expect(table.textContent).not.toContain("0 bytes");
+  });
+
   it("shows an empty library's explanation inside a panel, without an icon", async () => {
     mockApi([]);
     renderWithClient(<FilesTab library={library({ stats: { file_count: 0, done: 0, pending: 0 } })} route={parseRoute(`#/library/${LIB}`)} />);
@@ -222,10 +254,28 @@ describe("a library page's header", () => {
     expect(tag?.querySelector(".bg-field")).not.toBeNull();
   });
 
-  it("says a library doesn't exist inside a panel", async () => {
+  it("says a library doesn't exist inside a panel, as the page's h1", async () => {
     mockApi([], []);
     renderWithClient(<LibraryScreen id={LIB} route={parseRoute(`#/library/${LIB}`)} />);
     const title = await screen.findByText("This library doesn't exist");
     expect(title.closest(".rounded-panel")).not.toBeNull();
+    expect(screen.getByRole("heading", { level: 1, name: "This library doesn't exist" })).toBe(title);
+  });
+
+  it("lays its settings out by the panel's width, with the controls in a size container", async () => {
+    const movies = library({ profile: profileForGoal("balanced") });
+    mockApi([], [movies]);
+    vi.spyOn(api, "presets").mockRejectedValue(new Error("not needed"));
+    vi.spyOn(api, "hardware").mockRejectedValue(new Error("not needed"));
+    renderWithClient(<LibraryScreen id={LIB} route={parseRoute(`#/library/${LIB}/settings`)} />);
+    const heading = await screen.findByRole("heading", { level: 2, name: "Library" });
+    const panel = heading.closest(".rounded-panel") as HTMLElement;
+    expect(panel.className).toContain("@container");
+    const groups = Array.from(panel.querySelectorAll("section")).filter((s) => s.querySelector(":scope > [data-settings-controls]"));
+    expect(groups.length).toBeGreaterThan(3);
+    for (const group of groups) {
+      expect(group.className).toContain("@3xl:grid-cols-[15rem_minmax(0,1fr)]");
+      expect(group.className).not.toMatch(/(^|\s)lg:/);
+    }
   });
 });

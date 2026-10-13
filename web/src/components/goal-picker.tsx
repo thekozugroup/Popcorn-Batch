@@ -40,9 +40,9 @@ function Formats({
   const Icon = speed ? SPEED_ICON[speed.tone] : null;
   return (
     <span className="mt-1.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-      <span className="text-[13px] text-muted">{profileSummary(profile)}</span>
+      <span className="text-meta text-muted">{profileSummary(profile)}</span>
       {speed && Icon ? (
-        <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted">
+        <span className="inline-flex items-center gap-1.5 text-meta font-medium text-muted">
           {/* "Can't convert here" is the one speed with a status: a red dot before the words. */}
           {speed.tone === "blocked" ? <StatusDot tone="danger" /> : null}
           <Icon className="size-3.5 shrink-0" aria-hidden />

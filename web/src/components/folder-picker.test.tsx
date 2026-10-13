@@ -285,3 +285,60 @@ describe("FolderPicker in a container", () => {
     expect(rows().filter((b) => b.tabIndex === 0)).toHaveLength(1);
   });
 });
+
+describe("FolderPicker for a library's first folder", () => {
+  function start(libraries: { name: string; path: string }[] = []) {
+    const browse = vi.spyOn(api, "browse").mockImplementation(async (path) =>
+      path === "/media"
+        ? listing("/media", { entries: [folder("Movies", { path: "/media/Movies", media_count: 4 })], user_folders: MINE, media_count: 4 })
+        : containerRoot(),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FolderPicker onSelect={() => {}} forLibrary startInYourFolders libraries={libraries} />
+      </QueryClientProvider>,
+    );
+    return browse;
+  }
+
+  it("opens in the first of Your folders, ready to use, instead of the top with a warning", async () => {
+    const browse = start();
+    await waitFor(() => expect(browse).toHaveBeenCalledWith("/media", expect.anything()));
+    await waitFor(() => expect(useButton().disabled).toBe(false));
+    expect(useButton().textContent).toContain("Use “media”");
+    expect(screen.queryByText(WHOLE_SERVER)).toBeNull();
+  });
+
+  it("stays at the top when that folder is already a library (Add library), as before", async () => {
+    const browse = start([{ name: "Movies", path: "/media/Movies" }]);
+    await screen.findByText(WHOLE_SERVER);
+    expect(browse).not.toHaveBeenCalledWith("/media", expect.anything());
+    expect(useButton().disabled).toBe(true);
+  });
+});
+
+describe("FolderPicker's rows and messages", () => {
+  it("marks a folder that is a library with a Tag, which stays visible in the highlighted row", async () => {
+    pick(containerRoot(), { libraries: [{ name: "Movies", path: "/media" }] });
+    const tag = await screen.findByText("Library");
+    expect(tag.hasAttribute("data-tag")).toBe(true);
+    expect(tag.getAttribute("title")).toBe("Already the library “Movies”");
+    // The row fills while highlighted; data-fill lets globals.css turn the tag to the surface colour.
+    expect(tag.closest("button")?.hasAttribute("data-fill")).toBe(true);
+  });
+
+  it("says why a folder can't be used in an ordinary message", async () => {
+    pick(listing("/media/movies"), { forLibrary: true, libraries: [{ name: "Movies", path: "/media/movies" }] });
+    const reason = await screen.findByText("This folder is already the library “Movies”.");
+    expect(reason.getAttribute("role")).toBe("status");
+    expect(reason.className).toContain("border-warn");
+    expect(reason.className).toContain("rounded-control");
+  });
+
+  it("says a folder is empty without an icon", async () => {
+    pick(listing("/media/empty"));
+    const note = await screen.findByText("No folders inside");
+    expect(note.parentElement?.querySelector("svg")).toBeNull();
+  });
+});

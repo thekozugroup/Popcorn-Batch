@@ -288,7 +288,7 @@ The palette is neutral Tailwind zinc with a single Tailwind blue action and focu
 
 ### Primary
 
-- **Action Blue** (`accent`): primary task buttons, focus outlines, checked checkboxes, radios and switches, the selected goal card and segmented option, job progress, the converted part of a library bar, and the bars of the savings chart. Text on it is Zinc Black in both themes (5.4:1).
+- **Action Blue** (`accent`): primary task buttons, focus outlines, checked checkboxes, radios and switches, the selected goal card and segmented option, job progress, the converted part of a library bar, and the bars of the savings chart. Text on it is Zinc Black in both themes (5.29:1, measured).
 
 ### Neutral
 
@@ -357,6 +357,8 @@ Connected emerald, warning amber and error red are indicators, not action colour
 
 Supporting paragraphs use relaxed leading (1.6 to 1.7). Page subtitles are limited to 58ch, settings prose to 68ch, empty-state text to 42ch.
 
+In the code the repeated values are tokens in `globals.css`: `text-meta` (13px, no line height of its own), `font-label` (550), `leading-relaxed` (1.6), and the `text-headline` and `text-title` utilities, which carry size, weight, leading and tracking (and the headline's 28px at 520px and below).
+
 The Overview's saved amount ("612 GB saved") is a local composition, not a token: the number and unit at 48px, weight 600, line height 1.1, tracking -0.025em (40px at 520px and below), and the word "saved" at the title size in supporting text. The brand wordmark keeps Popcorn SR's own measurements (19px, weight 650, tracking -0.6px; the product word at 12px, weight 500, tracking 0.02em) and is outside the type ramp.
 
 **The Readable Hierarchy Rule.** Reserve headline and title emphasis for task structure; keep paths, formats, sizes and status in the supporting text hierarchy.
@@ -367,7 +369,7 @@ The desktop shell pairs a sticky sidebar (228px) with flexible main content, as 
 
 At the compact-navigation breakpoint (maximum 800px) the sidebar becomes a top block that scrolls away with the page: the wordmark and the queue status on one line, then four equal navigation columns (12px text, 10px 2px padding, 44px minimum height). The library list and the sidebar footer are hidden; the Libraries screen lists every library. There is no bottom tab bar. Main padding becomes 24px 20px 48px.
 
-At the stacked-controls breakpoint (maximum 520px) page headers, row actions, field grids and dialog buttons stack; padded panels use 20px; rows use 18px. These are Popcorn SR's breakpoints, not Tailwind's default scale, and they govern the shell and all stacking. Content grids keep their own column breakpoints where the content needs them: goal cards go to two columns at 640px, the settings section navigation becomes a column at 1024px, the Overview's chart moves beside the saved amount at 1024px, and Libraries and Recently finished sit side by side at 1280px.
+At the stacked-controls breakpoint (maximum 520px) page headers, row actions, field grids and dialog buttons stack; padded panels use 20px; rows use 18px. These are Popcorn SR's breakpoints, not Tailwind's default scale, and they govern the shell and the stacking of headers, rows and dialogs. Content grids keep their own column breakpoints where the content needs them: the settings section navigation becomes a column at 1280px, the Overview's chart moves beside the saved amount at 1024px, and Libraries and Recently finished sit side by side at 1280px. Where the room a component has depends on what sits beside it, the component follows its container instead of the screen (container queries): goal cards go to two columns once the picker is 512px wide, a settings group lays its heading beside its controls once the settings panel's content is 768px wide, and the quality and speed options sit side by side once their column is 512px wide.
 
 Pages are a page header (headline, optional subtitle, actions on the right) followed by sections separated by the major gap (40px). A section is a title row and one panel. Rows inside a panel are separated by thin dividers; a panel never holds nested cards.
 
@@ -383,7 +385,7 @@ No box shadows are defined. Tonal differences, 1px borders, whitespace and the c
 
 ## Shapes
 
-Controls, messages, goal cards, menus, tooltips, toasts and code blocks use the control radius (8px). Panels, sheets (their top corners on phones), dialogs and the save bar use the panel radius (16px). Tags and segmented options use the tag radius (6px). Progress tracks, library bars and chart bars use the progress radius (4px). Status dots and the radio indicator are circles; the switch track is the only fully rounded control. There are no pill-shaped buttons, chips or badges.
+Controls, messages, goal cards, menus, tooltips, toasts and code blocks use the control radius (8px). Panels, sheets (their top corners on phones), dialogs and the save bar use the panel radius (16px). Tags and segmented options use the tag radius (6px). Progress tracks, library bars, chart bars and the library-bar legend's swatches use the progress radius (4px). Status dots and the radio indicator are circles; the switch track is the only fully rounded control. There are no pill-shaped buttons, chips or badges.
 
 **The Familiar Controls Rule.** Every button, link styled as a button, navigation item, tab, filter, segmented option, input, select, folder row, menu item and disclosure summary is at least 44px tall at every width and with every pointer; checkbox, radio and switch labels give the same 44px target. Inline text links inside a sentence are the only exception.
 
@@ -399,11 +401,13 @@ Sizes keep one height: `sm` narrows the horizontal padding to 12px; icon buttons
 
 ### Tags and status
 
-Tags describe a state; they are never clickable. They use subtle fill, supporting text, tag type and tag radius, with no border and no icon. A status tag starts with a 7px status dot (see the status table); a descriptive tag (Best fit, Recommended, Default, Forced, a goal name, NVIDIA GPU, CPU) has no dot.
+Tags describe a state; they are never clickable. They use subtle fill, supporting text, tag type and tag radius, with no border and no icon. A status tag starts with a 7px status dot (see the status table); a descriptive tag (Best fit, Recommended, Default, Forced, a goal name, NVIDIA GPU, CPU, Library in the folder picker) has no dot. Inside a filled row (a selected file, the highlighted folder) a tag, like the library bar's empty track, takes the surface colour, so it never disappears into the row's subtle fill. A last-known state (the live connection is down) has a hollow 7px ring in Zinc Status instead of a dot.
 
 ### Cards / Containers
 
-Flat panels have the theme surface, a 1px divider border and the panel radius. Padded panels use 28px (20px at 520px and below). Rows (20px 24px; 18px at 520px and below) sit inside panels with a 1px divider between them, place content beside actions, and let long paths wrap. File names in dense lists keep the existing `FileName` behaviour: one line, cut before a late episode number so it stays visible, with the whole name in the tooltip and for screen readers.
+Flat panels have the theme surface, a 1px divider border and the panel radius. Padded panels use 28px (20px at 520px and below). Rows (20px 24px; 18px at 520px and below) sit inside panels with a 1px divider between them, place content beside actions, and let long paths wrap.
+
+**Row hover.** As in Popcorn SR, a row never changes its fill on hover: a row that opens something (a library, a job, a file, a history entry) underlines its name while hovered. The subtle fill means a state, as on SR's current navigation item: a selected file row, and the highlighted item of a navigable list (sidebar items, settings sections, menu items, folder rows, under the pointer or the arrow keys). File names in dense lists keep the existing `FileName` behaviour: one line, cut before a late episode number so it stays visible, with the whole name in the tooltip and for screen readers.
 
 ### Inputs / Fields
 
@@ -415,7 +419,7 @@ Sidebar items are rounded, neutral, text-only buttons (navigation token, 44px). 
 
 Tabs (Queue: Running, Up next, History; a library: Files, Settings) are links with a 2px bottom border: Zinc Ink (light) or Zinc Paper (dark) for the current tab, transparent otherwise. A count follows the label as a tag. Tabs fit at 390px and do not fade at the edges.
 
-Settings sections (Processing, Output, Hardware, Advanced) are a vertical navigation list in a 176px column from 1024px, and a wrapping row of the same navigation items below.
+Settings sections (Processing, Output, Hardware, Advanced) are a vertical navigation list in a 176px column from 1280px, and a wrapping row of the same navigation items below, so that at laptop widths the settings panel keeps the main column's full width.
 
 View changes move focus to the main region, and a keyboard skip link reaches it first.
 
@@ -427,11 +431,11 @@ Progress is a 5px track in the subtle fill with an Action Blue fill and the prog
 
 ### Library rows and the library bar
 
-A library row is a link that covers the whole row: the name (body, 550) with the space saved on the right (metadata, main text), a status line (metadata, supporting text, "56 files to go · 6 to review", "60% finished"), and the library bar. The bar is a 5px track: converted files in Action Blue, skipped files in Zinc Status, files that couldn't be converted as an amber mark at the end, and the rest as the empty track. Files in the queue are part of the empty track; they are named in the legend. The legend lists every part in words with its count (tag type), with a 10px square swatch for the drawn parts and an outlined swatch for the empty ones. The bar has `role="img"` and a sentence as its label.
+A library row is a link that covers the whole row: the name (body, 550) with the space saved on the right (metadata, main text), a status line (metadata, supporting text, "56 files to go · 6 to review", "60% finished") that wraps rather than being cut, and the library bar. "6 to review" is its own underlined link above the covering one, 27px tall with its padding, so its focus outline shows whole. The Overview and the Libraries screen show the same panel of rows with the legend under it (from 521px). The bar is a 5px track: converted files in Action Blue, skipped files in Zinc Status, files that couldn't be converted as an amber mark at the end, and the rest as the empty track. Files in the queue are part of the empty track; they are named in the legend. The legend lists every part in words with its count (tag type), with a 10px swatch in the progress radius for the drawn parts and an outlined swatch for the empty ones. The bar has `role="img"` and a sentence as its label.
 
 ### File rows and track lists
 
-The file list is a table from 801px (checkbox, Name, Size, Format, Status, Saved) and a list of file rows below (checkbox, then name, size and format in metadata, then the status tag). Table headers use tag type, weight 500. A selected row uses the subtle fill. Status filters above the list are toggle buttons (`aria-pressed`) with a count: filter token, 44px, a 1px Zinc Status border on the pressed filter so the state is not shown by fill alone.
+The file list is a table from 801px (checkbox, Name, Size, Format, Status, Saved) and a list of file rows below (checkbox, then name, size and format in metadata, then the status tag). Table headers use tag type, weight 500. A selected row uses the subtle fill; hovering a row underlines the file's name. The Saved column says "No space freed" for a conversion that freed nothing, in the file sheet's words. Status filters above the list are toggle buttons (`aria-pressed`) with a count: filter token, 44px, a 1px Zinc Status border on the pressed filter so the state is not shown by fill alone.
 
 A file's tracks are a list of track rows with a top divider and dividers between: a 16px kind icon in supporting text (video, audio, subtitles), the track title (label), its details in full on their own line (metadata: codec, resolution or channels, language), the release's own track title as one shortened line with a tooltip, and Default or Forced as descriptive tags on the right.
 
@@ -447,17 +451,17 @@ The attempt history uses the same row: a 16px icon (emerald check for the attemp
 
 ### Goal cards
 
-Goal cards are large radio options in a two-column grid from 640px: the goal card token, a 1px divider border, hover with a Zinc Status border, and the selected card with an Action Blue border and an Action Blue radio. Inside: a 16px radio circle, the title (section), the outcome sentence (14px, supporting text), the formats ("AV1 · Opus · MKV", metadata, sans) and the speed on this machine on the right ("Fast here", metadata, supporting text, with its 14px icon in supporting text; "Can't convert here" adds a red status dot). Best fit is a descriptive tag. The radio is named by the title and described by the rest.
+Goal cards are large radio options in a two-column grid once the picker is 512px wide (a container query): the goal card token, a 1px divider border, hover with a Zinc Status border, and the selected card with an Action Blue border and an Action Blue radio. Inside: a 16px radio circle, the title (section), the outcome sentence (14px, supporting text), the formats ("AV1 · Opus · MKV", metadata, sans) and the speed on this machine on the right ("Fast here", metadata, supporting text, with its 14px icon in supporting text; "Can't convert here" adds a red status dot). Best fit is a descriptive tag. The radio is named by the title and described by the rest.
 
 ### Folder picker
 
-The folder picker is one panel: a toolbar (Up one folder icon button, the folder path as a breadcrumb of quiet buttons, and Type a path), the "Your folders" row of filter buttons for the mounted folders (pressed while the current folder is inside one), the folder list, an "Other folders" group heading in metadata, the System folders disclosure, any message about the current folder (amber border for a conflict, red for an error), and a footer toolbar with the current folder (metadata in sans, wraps) and the primary "Use “Movies”" button. Folder rows are 44px list items with a 16px folder or drive icon in supporting text, the name (label), the video count on the right (metadata) and a chevron; the highlighted row has the subtle fill. Arrow keys, Enter and Backspace keep working, and the hidden "Current folder:" prefix stays for screen readers.
+The folder picker is one panel: a toolbar (Up one folder icon button, the folder path as a breadcrumb of quiet buttons, and Type a path), the "Your folders" row of filter buttons for the mounted folders (pressed while the current folder is inside one), the folder list (a library's folder step opens in the first of Your folders when it isn't a library already, not at the top, which can't be one), an "Other folders" group heading in metadata, the System folders disclosure, any message about the current folder (amber border for a conflict, red for an error), and a footer toolbar with the current folder (metadata in sans, wraps) and the primary "Use “Movies”" button. Folder rows are 44px list items with a 16px folder or drive icon in supporting text, the name (label), a "Library" descriptive tag when the folder is one, the video count on the right (metadata) and a chevron; the highlighted row has the subtle fill. The messages are ordinary messages (an amber or red border), and an empty folder says "No folders inside" without an icon. Arrow keys, Enter and Backspace keep working, and the hidden "Current folder:" prefix stays for screen readers.
 
 ### Settings sections
 
-Settings live in one padded panel per section page. Each setting group is a settings section: on 1024px and wider, a 240px column with the heading (section type) and its explanation (14px, supporting text, 1.7 leading), and the controls in a column of up to 672px; below, the heading sits above the controls. Groups are separated by a 1px divider. Choice lists (Finished files, Work folder, Checks before replacing) use goal cards in one column. Changes collect in one draft; the save bar appears at the bottom of the viewport while there are unsaved changes.
+Settings live in one padded panel per section page (a library's Settings tab too). Each setting group is a settings section: once the panel's content is 768px wide (a container query, so the sidebar and the settings navigation are accounted for), a 240px column with the heading (section type) and its explanation (14px, supporting text, 1.7 leading), and the controls in a column of up to 672px that is never narrower than 488px; before that, the heading sits above the controls. Segmented options and labels wrap rather than being cut short. Groups are separated by a 1px divider. Choice lists (Finished files, Work folder, Checks before replacing) use goal cards in one column. Changes collect in one draft; the save bar appears at the bottom of the viewport while there are unsaved changes.
 
-The save bar is a sticky bar 16px above the bottom of the viewport: the save-bar token, a 1px divider border (red while saving failed), "You have unsaved changes." or the error, then Discard (quiet) and Save changes (primary).
+The save bar is a sticky bar 16px above the bottom of the viewport: the save-bar token, a 1px divider border (Zinc Status in the dark theme, where the divider is 1.19:1 against the page; red while saving failed), "You have unsaved changes." or the error, then Discard (quiet) and Save changes (primary).
 
 ### Queue controls
 
@@ -465,7 +469,7 @@ Pause is a secondary button, Resume a primary button (it is the next processing 
 
 ### Hardware summary
 
-The hardware summary is the This machine panel, shaped like Popcorn SR's worker panel: the heading with a Check again secondary button, "Checked 3 h ago · running in a container" (metadata), the summary sentence from the test encodes ("NVIDIA GeForce RTX 3060 converts HEVC and H.264. The rest converts on the CPU.", body), detail rows (Processor, Memory, one row per graphics card: label in metadata supporting text, value in 14px weight 550 main text, extra facts in metadata below), and one descriptive tag per format whose test encode passed ("HEVC · NVIDIA GPU", "AV1 · CPU"). Setup tips are messages. The encoder table stays under the "Details: encoders and ffmpeg" disclosure, with a status icon and a word in each cell.
+Settings › Hardware is one panel like the other sections: This machine first, then Setup tips and Preferences as settings sections, then the "Details: encoders and ffmpeg" disclosure. This machine is shaped like Popcorn SR's worker panel: the heading with a Check again secondary button, "Checked 3 h ago · running in a container" (metadata), the summary sentence from the test encodes ("NVIDIA GeForce RTX 3060 converts HEVC and H.264. The rest converts on the CPU.", body), detail rows (Processor, Memory, one row per graphics card: label in metadata supporting text, value in 14px weight 550 main text, extra facts in metadata below), and one descriptive tag per format whose test encode passed ("HEVC · NVIDIA GPU", "AV1 · CPU"). Setup tips are messages. The encoder table stays under the "Details: encoders and ffmpeg" disclosure, with a status icon and a word in each cell.
 
 ### Savings chart
 
@@ -477,7 +481,7 @@ Sheets: the sheet token, full height and flush with the right edge from 801px wi
 
 Dialogs: the dialog token with a 1px divider border, the title (section, wraps anywhere), the body (14px, supporting text, 1.7) and the actions on the right (Cancel secondary, confirm primary), stacked at 520px and below.
 
-Menus: a popup with the control radius, 1px divider border, 4px padding and 44px items; the highlighted item has the subtle fill. Tooltips: control radius, 1px divider border, 13px text; never the only place information lives. Toasts: control radius, 1px divider border, 14px text, a 1px emerald or red border for success or error, bottom right with a 16px offset.
+Menus: a popup with the control radius, 1px divider border, 4px padding and 44px items; the highlighted item has the subtle fill. Tooltips: control radius, 1px divider border, 13px text; never the only place information lives. Toasts: control radius, 1px divider border, 14px text, a 1px emerald or red border for success or error, bottom right with a 16px offset; no icon, no shadow and no close button (they go on their own), and the 2px Action Blue focus outline with a 4px offset when focused.
 
 ### Code blocks and bug-report copy
 

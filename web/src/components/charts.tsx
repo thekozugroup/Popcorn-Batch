@@ -37,10 +37,10 @@ export function SavingsChart({ points, className }: { points: SavingsPoint[]; cl
   return (
     <figure className={cn("flex min-w-0 flex-col", CHART_PANEL, className)} aria-labelledby={`${id}-caption`}>
       <figcaption className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <span id={`${id}-caption`} className="text-xl leading-[1.4] font-semibold tracking-[-0.025em] text-ink">
+        <span id={`${id}-caption`} className="text-title text-ink">
           Saved per day
         </span>
-        <span className="text-[13px] text-muted tabular" aria-live="off">
+        <span className="text-meta text-muted tabular" aria-live="off">
           {shown
             ? `${formatDay(shown.date)}: ${formatBytes(shown.saved_bytes)} · ${plural(shown.files, "file")}`
             : `Last 30 days · ${formatBytes(total)}`}
@@ -83,7 +83,7 @@ export function SavingsChart({ points, className }: { points: SavingsPoint[]; cl
       </div>
       <Disclosure title="Show the daily numbers" className="mt-5">
         <table className="w-full text-sm">
-          <caption className="pb-2 text-left text-[13px] text-muted">Space saved per day, last 30 days</caption>
+          <caption className="pb-2 text-left text-meta text-muted">Space saved per day, last 30 days</caption>
           <thead>
             <tr className="border-b border-line text-left text-xs text-muted">
               <th scope="col" className="py-2 pr-3 font-medium">

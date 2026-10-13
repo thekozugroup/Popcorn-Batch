@@ -2,10 +2,10 @@
 
 /**
  * Settings, in four plain sections, each one padded panel of setting groups
- * separated by dividers (Hardware: the This machine panel, then its
- * preferences). Edits collect in a draft shared by all sections; the save
- * bar sends only what changed, and API errors land on the field they are
- * about (including one inside the default profile).
+ * separated by dividers (Hardware: This machine first). Edits collect in a
+ * draft shared by all sections; the save bar sends only what changed, and
+ * API errors land on the field they are about (including one inside the
+ * default profile).
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import { UseDriveButton, UseDriveConfirm } from "@/components/drive-change";
 import { FolderField } from "@/components/folder-field";
 import { ProfileEditor } from "@/components/profile-editor";
 import { SaveBar } from "@/components/save-bar";
+import { SETTINGS_PANEL, SettingsSection } from "@/components/settings-section";
 import { PageHeader, PopcornSrLink } from "@/components/shell";
 import { Button } from "@/components/ui/button";
 import { ChoiceCard, ErrorText, Field, Input, Select, SwitchRow, Textarea } from "@/components/ui/controls";
@@ -52,7 +53,6 @@ import {
 } from "@/lib/settings-form";
 import type { FolderSetting, Goal, QueueState, Settings, SystemInfo, ValidationLevel } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Block, SETTINGS_PANEL } from "./settings-block";
 import { HardwareSection } from "./settings-hardware";
 
 const SECTIONS: { id: SectionId; label: string; description: string }[] = [
@@ -151,7 +151,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
   const hours = draft.active_hours;
   return (
     <>
-      <Block title="Files at once" description="How many conversions run side by side.">
+      <SettingsSection title="Files at once" description="How many conversions run side by side.">
         <fieldset className="flex flex-col gap-3">
           <legend className="sr-only">Files at once</legend>
           <ChoiceCard
@@ -181,16 +181,16 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
               <span className="mt-3 flex items-center gap-3">
                 <Stepper value={draft.max_jobs} onChange={(max_jobs) => onChange({ max_jobs })} min={1} max={32} label="Files at once" />
                 {auto.count !== null && draft.max_jobs > auto.count * 2 ? (
-                  <span className="text-[13px] text-ink">Much more than recommended ({auto.count}).</span>
+                  <span className="text-meta text-ink">Much more than recommended ({auto.count}).</span>
                 ) : null}
               </span>
             ) : null}
           </ChoiceCard>
           {errors.max_jobs ? <ErrorText>{errors.max_jobs}</ErrorText> : null}
         </fieldset>
-      </Block>
+      </SettingsSection>
 
-      <Block title="When to convert" description="Saved changes apply right away. Running files always finish.">
+      <SettingsSection title="When to convert" description="Saved changes apply right away. Running files always finish.">
         <SwitchRow
           label="Only start new conversions during certain hours"
           description="Handy for keeping evenings free for streaming. Uses the server's time zone."
@@ -217,7 +217,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
                 ))}
               </Select>
             </Field>
-            <p className="pb-3 text-[13px] text-muted">
+            <p className="pb-3 text-meta text-muted">
               {hours.start === hours.end
                 ? "Same start and end means all day."
                 : hours.start > hours.end
@@ -233,9 +233,9 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
           checked={draft.low_priority}
           onCheckedChange={(low_priority) => onChange({ low_priority })}
         />
-      </Block>
+      </SettingsSection>
 
-      <Block title="Finding files" description="How new and changed files are picked up.">
+      <SettingsSection title="Finding files" description="How new and changed files are picked up.">
         <SwitchRow
           label="Convert new files automatically"
           description="When off, new files wait in their library until you queue them."
@@ -264,7 +264,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
             ))}
           </Select>
         </Field>
-      </Block>
+      </SettingsSection>
     </>
   );
 }
@@ -414,7 +414,7 @@ function OutputSection({
   useFocusSetting(focus);
   return (
     <>
-      <Block
+      <SettingsSection
         title="Finished files"
         description="Nothing is written anywhere until the new file has passed its checks."
         anchor="output_folder"
@@ -445,7 +445,7 @@ function OutputSection({
             {/* The folder belongs to this choice, so it is chosen inside the selected card. */}
             {draft.output_mode === "folder" ? (
               <span className="mt-3 block">
-                <span id={`${name}-label`} className="mb-2 block text-sm font-[550] text-ink">
+                <span id={`${name}-label`} className="mb-2 block text-sm font-label text-ink">
                   Output folder
                 </span>
                 <FolderField
@@ -467,11 +467,11 @@ function OutputSection({
           checked={draft.keep_file_dates}
           onCheckedChange={(keep_file_dates) => onChange({ keep_file_dates })}
         />
-      </Block>
+      </SettingsSection>
 
       <ChecksBlock draft={draft} onChange={onChange} />
 
-      <Block
+      <SettingsSection
         title="Work folder"
         description="Where files are written while they're being converted. A fast SSD or cache pool speeds things up."
         anchor="temp_dir"
@@ -510,7 +510,7 @@ function OutputSection({
             ) : null}
           </ChoiceCard>
         </fieldset>
-      </Block>
+      </SettingsSection>
     </>
   );
 }
@@ -529,7 +529,7 @@ function ChecksBlock({ draft, onChange }: Pick<SectionProps, "draft" | "onChange
   );
   if (draft.validation !== "off" && draft.validation !== level) setLevel(draft.validation);
   return (
-    <Block
+    <SettingsSection
       title="Checks before replacing"
       description="Each finished file is compared with its original. If a check fails, the original is kept and you're told why."
     >
@@ -560,7 +560,7 @@ function ChecksBlock({ draft, onChange }: Pick<SectionProps, "draft" | "onChange
           A file damaged during conversion would replace a good one. Keep checks on unless you have backups.
         </Callout>
       ) : null}
-    </Block>
+    </SettingsSection>
   );
 }
 
@@ -603,7 +603,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
   }
   return (
     <>
-      <Block title="Ignored files" description="Files matching these are never scanned or converted.">
+      <SettingsSection title="Ignored files" description="Files matching these are never scanned or converted.">
         <Field
           label="Your ignore patterns"
           description={[
@@ -619,7 +619,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
             rows={4}
             spellCheck={false}
             placeholder="**/Extras/**"
-            className="font-mono text-[13px]"
+            className="font-mono text-meta"
             onChange={(e) => {
               setPatternsText(e.target.value);
               const patterns = e.target.value
@@ -652,7 +652,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
             <span className="text-sm text-muted">MB</span>
           </div>
         </Field>
-      </Block>
+      </SettingsSection>
 
       <section className="border-t border-line py-6">
         <h2 className="text-base font-semibold text-ink">Defaults for new libraries</h2>
@@ -701,7 +701,7 @@ function PopcornSrBlock({
   }
   const problem = error ?? (touched ? popcornSrUrlError(draft.popcorn_sr_url) : null);
   return (
-    <Block title="Popcorn SR" description="Link to the Popcorn SR manager on your network.">
+    <SettingsSection title="Popcorn SR" description="Link to the Popcorn SR manager on your network.">
       <Field
         label="Popcorn SR address"
         description="Optional. The address you open Popcorn SR at, starting with http:// or https://. Popcorn Batch only shows a link to it and never connects to it."
@@ -719,7 +719,7 @@ function PopcornSrBlock({
           onBlur={() => setTouched(true)}
         />
       </Field>
-    </Block>
+    </SettingsSection>
   );
 }
 
@@ -886,7 +886,7 @@ function About() {
         <h2 id="about-heading" className="text-base font-semibold text-ink">
           About
         </h2>
-        <p className="mt-1 text-[13px] text-muted">
+        <p className="mt-1 text-meta text-muted">
           Popcorn Batch <span className="text-ink">{info.version}</span>
           {info.build ? (
             <>
@@ -912,10 +912,13 @@ export function SettingsScreen({ route }: { route: Route }) {
   return (
     <div>
       <PageHeader title="Settings" description={current.description} />
-      <div className="lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-10">
-        {/* From 1024px a column of navigation items that stays in view; below, the same items in a wrapping row. */}
-        <nav aria-label="Settings sections" className="mb-8 lg:mb-0">
-          <ul className="flex flex-wrap gap-1.5 lg:sticky lg:top-8 lg:flex-col lg:gap-1">
+      <div className="xl:grid xl:grid-cols-[11rem_minmax(0,1fr)] xl:gap-10">
+        {/*
+          From 1280px a column of navigation items that stays in view; below, the same items in a
+          wrapping row, so a laptop screen leaves the settings panel its full width.
+        */}
+        <nav aria-label="Settings sections" className="mb-8 xl:mb-0">
+          <ul className="flex flex-wrap gap-1.5 xl:sticky xl:top-8 xl:flex-col xl:gap-1">
             {SECTIONS.map((s) => (
               <li key={s.id}>
                 <a

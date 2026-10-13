@@ -10,6 +10,7 @@
 import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { StatusDot } from "./display";
 
 // The border is what shows a field's edge (its fill is the surface), so it
 // uses Zinc Status: 3:1 or more against both surfaces (WCAG 1.4.11).
@@ -78,8 +79,8 @@ export function useField(): {
  */
 export function ErrorText({ id, children, className }: { id?: string; children: ReactNode; className?: string }) {
   return (
-    <p id={id} role="alert" className={cn("flex items-baseline gap-2 text-[13px] leading-[1.6] font-[550] text-ink", className)}>
-      <span aria-hidden className="size-[7px] shrink-0 translate-y-[-1px] rounded-full bg-error" />
+    <p id={id} role="alert" className={cn("flex items-baseline gap-2 text-meta leading-relaxed font-label text-ink", className)}>
+      <StatusDot tone="danger" className="translate-y-[-1px]" />
       <span className="min-w-0">{children}</span>
     </p>
   );
@@ -108,12 +109,12 @@ export function Field({ label, description, error, children, className, hideLabe
   return (
     <FieldContext.Provider value={value}>
       <div className={cn("grid min-w-0 gap-2", className)}>
-        <label htmlFor={value.id} className={cn("text-sm font-[550] text-ink", hideLabel && "sr-only")}>
+        <label htmlFor={value.id} className={cn("text-sm font-label text-ink", hideLabel && "sr-only")}>
           {label}
         </label>
         {children}
         {description ? (
-          <p id={value.descriptionId} className="text-[13px] leading-[1.6] text-muted">
+          <p id={value.descriptionId} className="text-meta leading-relaxed text-muted">
             {description}
           </p>
         ) : null}
@@ -138,11 +139,11 @@ export function SwitchRow({ checked, onCheckedChange, label, description, disabl
   return (
     <div className={cn("flex min-h-11 items-start justify-between gap-6", className)}>
       <div className="min-w-0 pt-2.5">
-        <label id={`${id}-label`} htmlFor={`${id}-switch`} className="text-sm font-[550] text-ink">
+        <label id={`${id}-label`} htmlFor={`${id}-switch`} className="text-sm font-label text-ink">
           {label}
         </label>
         {description ? (
-          <p id={`${id}-description`} className="mt-1 text-[13px] leading-[1.6] text-muted">
+          <p id={`${id}-description`} className="mt-1 text-meta leading-relaxed text-muted">
             {description}
           </p>
         ) : null}
@@ -217,7 +218,13 @@ interface SegmentedProps<T extends string> {
   label: string;
   className?: string;
   disabled?: boolean;
-  /** Stack the options below 521px, for rows with more choices than fit side by side at 390px. */
+  /**
+   * Stack the options while the column holding them (the nearest size
+   * container, such as a settings section's controls) is under 32rem
+   * (512px): for rows with more choices than fit side by side there. The
+   * room the control has decides, not the screen: beside a settings heading
+   * a laptop screen leaves it less room than a phone.
+   */
   stackOnPhones?: boolean;
 }
 
@@ -242,7 +249,7 @@ export function Segmented<T extends string>({
       aria-label={label}
       className={cn(
         "w-full gap-[3px] rounded-control border border-field bg-surface p-[3px]",
-        stackOnPhones ? "flex flex-col roomy:inline-flex roomy:flex-row" : "inline-flex",
+        stackOnPhones ? "flex flex-col @lg:inline-flex @lg:flex-row" : "inline-flex",
         disabled && "opacity-50",
         className,
       )}
@@ -253,10 +260,10 @@ export function Segmented<T extends string>({
           <label
             key={option.value}
             className={cn(
-              "relative flex min-h-11 min-w-0 cursor-pointer items-center rounded-tag border px-3 text-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-solid",
+              "relative flex min-h-11 min-w-0 cursor-pointer items-center rounded-tag border px-3 py-1.5 text-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-solid",
               // Stacked, a zero flex basis would squash each option to its text height.
               stackOnPhones
-                ? "flex-none justify-start roomy:flex-1 roomy:justify-center roomy:text-center"
+                ? "flex-none justify-start @lg:flex-1 @lg:justify-center @lg:text-center"
                 : "flex-1 justify-center text-center",
               selected
                 ? "border-accent bg-subtle font-semibold text-ink"
@@ -274,7 +281,8 @@ export function Segmented<T extends string>({
               aria-label={option.ariaLabel}
               className="sr-only"
             />
-            <span className="truncate">{option.label}</span>
+            {/* Wraps rather than being cut short ("F…") when a column is narrow. */}
+            <span className="min-w-0 [overflow-wrap:anywhere]">{option.label}</span>
           </label>
         );
       })}
@@ -360,7 +368,7 @@ export function ChoiceCard({
         {badge ? <span id={`${id}-badge`}>{badge}</span> : null}
       </span>
       {description ? (
-        <span id={`${id}-description`} className="pl-[26px] text-sm leading-[1.6] text-muted">
+        <span id={`${id}-description`} className="pl-[26px] text-sm leading-relaxed text-muted">
           {description}
         </span>
       ) : null}

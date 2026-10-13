@@ -27,7 +27,7 @@ const STEPS: Step[] = ["welcome", "folder", "goal"];
  */
 function StepIndicator({ step }: { step: Step }) {
   return (
-    <p className="text-[13px] text-muted tabular">
+    <p className="text-meta text-muted tabular">
       Step {STEPS.indexOf(step) + 1} of {STEPS.length}
     </p>
   );
@@ -52,7 +52,7 @@ function Fact({ title, children }: { title: string; children: ReactNode }) {
   return (
     <li className="min-w-0 border-t border-line pt-5">
       <p className="text-base font-semibold text-ink">{title}</p>
-      <div className="mt-2 text-sm leading-[1.6] text-muted">{children}</div>
+      <div className="mt-2 text-sm leading-relaxed text-muted">{children}</div>
     </li>
   );
 }
@@ -96,7 +96,7 @@ export function SetupScreen({ settings }: { settings: Settings }) {
               <StepHeading level={1} focusOnMount={moved}>
                 Make your video library smaller, safely.
               </StepHeading>
-              <p className="mt-2.5 max-w-[58ch] text-base leading-[1.6] text-muted">
+              <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
                 Point Popcorn Batch at a folder and choose a goal. It converts files in the background, checks each
                 result against the original, and only then replaces it.
               </p>

@@ -227,9 +227,9 @@ describe("the app frame", () => {
   it("titles each screen with the headline token in system sans, never a display face", () => {
     showShell("#/");
     const h1 = screen.getByRole("heading", { level: 1, name: "A screen" });
-    expect(h1.className).toContain("font-semibold");
-    expect(h1.className).toContain("text-3xl");
-    expect(h1.className).toContain("tracking-[-0.025em]");
+    // One utility holds the token's size, weight, leading and tracking (globals.css).
+    expect(h1.className).toContain("text-headline");
+    expect(h1.className).not.toContain("font-display");
   });
 });
 

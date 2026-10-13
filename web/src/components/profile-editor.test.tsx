@@ -79,12 +79,27 @@ describe("ProfileEditor", () => {
     expect(state()).toBe("valid dirty");
   });
 
-  it("stacks the quality and speed options below 521px, so none is cut short inside a panel", () => {
+  it("stacks the quality and speed options while their column is under 32rem, so none is cut short beside a heading or inside a panel", () => {
     render(<Form saved={profileForGoal("balanced")} />);
     for (const name of ["Quality", "Speed"]) {
       const group = screen.getByRole("radiogroup", { name });
       expect(group.className).toContain("flex-col");
-      expect(group.className).toContain("roomy:flex-row");
+      // The room the column has decides (a size container query), not the screen: at 1024px the
+      // column beside a settings heading was narrower than a phone.
+      expect(group.className).toContain("@lg:flex-row");
+      expect(group.className).not.toMatch(/(^|\s)roomy:/);
+      expect(group.closest("[data-settings-controls]")?.className).toContain("@container");
+      for (const label of Array.from(group.querySelectorAll("label span"))) expect(label.className).not.toContain("truncate");
+    }
+  });
+
+  it("lays each group's heading beside its controls by the settings panel's width, not the screen's", () => {
+    const { container } = render(<Form saved={profileForGoal("balanced")} />);
+    const groups = Array.from(container.querySelectorAll("section")).filter((s) => s.querySelector("[data-settings-controls]"));
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(group.className).toContain("@3xl:grid-cols-[15rem_minmax(0,1fr)]");
+      expect(group.className).not.toMatch(/(^|\s)lg:/);
     }
   });
 

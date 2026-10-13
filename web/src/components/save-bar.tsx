@@ -67,11 +67,13 @@ export function SaveBar({
         aria-label="Unsaved changes"
         className={cn(
           "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-panel border bg-surface px-4 py-3 roomy:flex-row roomy:items-center",
-          failed ? "border-error" : "border-line",
+          // It floats over the page's content: in the dark theme the divider colour (1.19:1 against the
+          // page) would lose its edge, so it takes the field border's Zinc Status there.
+          failed ? "border-error" : "border-line dark:border-field",
         )}
       >
         <p
-          className={cn("min-w-0 flex-1 text-sm text-ink", error && "font-[550]")}
+          className={cn("min-w-0 flex-1 text-sm text-ink", error && "font-label")}
           role={error ? errorRole : "status"}
         >
           {error ?? "You have unsaved changes."}

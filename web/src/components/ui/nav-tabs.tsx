@@ -80,7 +80,7 @@ export function Pager({
   const to = Math.min(total, offset + limit);
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-      <p className="text-[13px] text-muted tabular" aria-live="polite">
+      <p className="text-meta text-muted tabular" aria-live="polite">
         {from.toLocaleString()}–{to.toLocaleString()} of {total.toLocaleString()} {noun}
       </p>
       <div className="flex gap-2">

@@ -9,8 +9,9 @@
  */
 
 import { ChevronRight } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { GoalPicker } from "@/components/goal-picker";
+import { SettingsSection } from "@/components/settings-section";
 import { ErrorText, Field, Input, Segmented, Select, SwitchRow } from "@/components/ui/controls";
 import { codecSpeedHint } from "@/lib/hardware";
 import {
@@ -98,36 +99,10 @@ interface ProfileEditorProps {
 }
 
 /**
- * A settings section (DESIGN.md): from 1024px a 240px column with the
- * heading and its explanation beside the controls; below, the heading sits
- * above them. A divider separates it from the section before; the first in
- * its parent has none and the last no bottom padding, so a panel's own
- * padding frames them. The library's Settings tab uses it for its own groups.
+ * The editor's groups are settings sections (DESIGN.md): the heading beside
+ * the controls once the settings panel has room, above them before. Each
+ * group's controls are one block, so their own spacing holds.
  */
-export function SettingsSection({
-  title,
-  description,
-  children,
-  level,
-}: {
-  title: string;
-  description?: ReactNode;
-  children: ReactNode;
-  level: 2 | 3;
-}) {
-  const Heading = level === 2 ? "h2" : "h3";
-  return (
-    <section className="grid gap-4 border-t border-line py-6 first:border-t-0 first:pt-0 last:pb-0 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
-      <div>
-        <Heading className="text-base font-semibold text-ink">{title}</Heading>
-        {description ? <p className="mt-2 max-w-[68ch] text-sm leading-[1.7] text-muted">{description}</p> : null}
-      </div>
-      {/* A size container, so field grids inside take as many columns as the room beside the heading allows. */}
-      <div className="@container min-w-0">{children}</div>
-    </section>
-  );
-}
-
 const Group = SettingsSection;
 
 /** Calls `report` whenever `valid` changes (and once on mount). */
@@ -307,17 +282,19 @@ export function ProfileEditor({
   return (
     <div>
       <Group level={headingLevel} title="Goal" description="What matters most. You can change it any time.">
-        <GoalPicker
-          label="Goal"
-          value={profile.goal}
-          onChange={pickGoal}
-          presets={presets}
-          hardware={hardware}
-          hardwarePending={hardwarePending}
-          preference={preference}
-          profile={profile}
-        />
-        <FieldError message={errors.goal} />
+        <div>
+          <GoalPicker
+            label="Goal"
+            value={profile.goal}
+            onChange={pickGoal}
+            presets={presets}
+            hardware={hardware}
+            hardwarePending={hardwarePending}
+            preference={preference}
+            profile={profile}
+          />
+          <FieldError message={errors.goal} />
+        </div>
       </Group>
 
       <Group
@@ -325,37 +302,42 @@ export function ProfileEditor({
         title="Quality"
         description={`How closely the new file matches the original. ${QUALITY_LABEL[RECOMMENDED_QUALITY]} suits most libraries.`}
       >
-        <Segmented<QualityLevel>
-          label="Quality"
-          value={profile.quality}
-          onChange={(quality) => update({ quality })}
-          options={QUALITY_LEVELS.map((q) => ({
-            value: q,
-            label: QUALITY_LABEL[q],
-            ariaLabel: q === RECOMMENDED_QUALITY ? `${QUALITY_LABEL[q]} (recommended)` : undefined,
-          }))}
-          stackOnPhones
-        />
-        <div className="mt-2 hidden justify-between text-xs text-muted roomy:flex" aria-hidden>
-          <span>Smaller files</span>
-          <span>Closer to the original</span>
+        <div>
+          <Segmented<QualityLevel>
+            label="Quality"
+            value={profile.quality}
+            onChange={(quality) => update({ quality })}
+            options={QUALITY_LEVELS.map((q) => ({
+              value: q,
+              label: QUALITY_LABEL[q],
+              ariaLabel: q === RECOMMENDED_QUALITY ? `${QUALITY_LABEL[q]} (recommended)` : undefined,
+            }))}
+            stackOnPhones
+          />
+          {/* Beside the options only while they sit side by side (the same container rule as theirs). */}
+          <div className="mt-2 hidden justify-between text-xs text-muted @lg:flex" aria-hidden>
+            <span>Smaller files</span>
+            <span>Closer to the original</span>
+          </div>
+          <p className="mt-2 text-meta leading-relaxed text-muted">{QUALITY_HELP[profile.quality]}</p>
+          <FieldError message={errors.quality} />
         </div>
-        <p className="mt-2 text-[13px] leading-[1.6] text-muted">{QUALITY_HELP[profile.quality]}</p>
-        <FieldError message={errors.quality} />
       </Group>
 
       <Group level={headingLevel} title="Speed" description="Encoder effort. Slower settings squeeze files a little more.">
-        <Segmented<SpeedPreset>
-          label="Speed"
-          value={profile.speed}
-          onChange={(speed) => update({ speed })}
-          options={SPEED_PRESETS.map((s) => ({ value: s, label: SPEED_LABEL[s] }))}
-          className="roomy:max-w-md"
-          // Inside a padded panel at 390px, "Slower, smaller" would be cut short side by side.
-          stackOnPhones
-        />
-        <p className="mt-2 text-[13px] leading-[1.6] text-muted">{SPEED_HELP[profile.speed]}</p>
-        <FieldError message={errors.speed} />
+        <div>
+          <Segmented<SpeedPreset>
+            label="Speed"
+            value={profile.speed}
+            onChange={(speed) => update({ speed })}
+            options={SPEED_PRESETS.map((s) => ({ value: s, label: SPEED_LABEL[s] }))}
+            className="@lg:max-w-md"
+            // In a narrow column (a phone, or beside a settings heading), "Slower, smaller" would be cut short side by side.
+            stackOnPhones
+          />
+          <p className="mt-2 text-meta leading-relaxed text-muted">{SPEED_HELP[profile.speed]}</p>
+          <FieldError message={errors.speed} />
+        </div>
       </Group>
 
       {/* Styled like a disclosure's summary row; a button, so a server error can open it. */}
@@ -365,7 +347,7 @@ export function ProfileEditor({
           aria-expanded={advancedOpen}
           aria-controls={advancedId}
           onClick={() => setAdvancedOpen((v) => !v)}
-          className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-[550] text-ink"
+          className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-label text-ink"
         >
           <ChevronRight
             className={cn("size-4 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200", advancedOpen && "rotate-90")}
@@ -380,7 +362,7 @@ export function ProfileEditor({
             // A message: subtle fill, neutral text, no border for information.
             <div
               role="status"
-              className="mb-5 rounded-control bg-subtle px-[18px] py-[14px] text-sm leading-[1.6] [overflow-wrap:anywhere] text-ink"
+              className="mb-5 rounded-control bg-subtle px-[18px] py-[14px] text-sm leading-relaxed [overflow-wrap:anywhere] text-ink"
             >
               {notes.map((note) => (
                 <p key={note}>{note}</p>
@@ -522,7 +504,7 @@ export function ProfileEditor({
 
           <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
             <div className="flex flex-col gap-2">
-              <span id={`${advancedId}-subs`} className="text-sm font-[550] text-ink">
+              <span id={`${advancedId}-subs`} className="text-sm font-label text-ink">
                 Subtitles
               </span>
               <Segmented
@@ -534,7 +516,7 @@ export function ProfileEditor({
                   { value: "drop", label: "Remove" },
                 ]}
               />
-              <p className="text-[13px] leading-[1.6] text-muted">
+              <p className="text-meta leading-relaxed text-muted">
                 {profile.subtitles === "keep"
                   ? "Text subtitles are converted when the container needs it. Picture subtitles MP4 can't hold are dropped."
                   : "Every subtitle track is removed."}

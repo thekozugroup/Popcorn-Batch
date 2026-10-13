@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, buttonVariants } from "./button";
 import { ChoiceCard, Field, Input, Segmented, Switch } from "./controls";
-import { Badge, Callout, CopyButton, Disclosure, EmptyState, Meter, Tag } from "./display";
+import { Callout, CopyButton, Disclosure, EmptyState, Meter, StatusDot, Tag } from "./display";
 import { NavTabs, Pager } from "./nav-tabs";
 import { ConfirmDialog } from "./overlays";
 
@@ -83,15 +83,18 @@ describe("Tag", () => {
     }
   });
 
-  it("ignores an icon, and Badge is the same component", () => {
-    const { container } = render(
-      <Badge tone="success" icon={<svg data-testid="icon" />}>
-        Verified
-      </Badge>,
-    );
-    expect(Badge).toBe(Tag);
+  it("has no icon: a status tag's only mark is its dot", () => {
+    const { container } = render(<Tag tone="success">Verified</Tag>);
     expect(container.querySelector("svg")).toBeNull();
     expect(container.textContent).toBe("Verified");
+    expect(container.querySelector("span[aria-hidden]")?.className).toContain("bg-ok");
+  });
+
+  it("marks itself, so a filled row can keep it visible (globals.css), and takes a tooltip", () => {
+    const { container } = render(<Tag title="Already the library “Movies”">Library</Tag>);
+    const tag = container.firstElementChild;
+    expect(tag?.hasAttribute("data-tag")).toBe(true);
+    expect(tag?.getAttribute("title")).toBe("Already the library “Movies”");
   });
 });
 
@@ -111,6 +114,35 @@ describe("Callout (a message)", () => {
       expect(classes(m)).toEqual(expect.arrayContaining(["bg-subtle", "text-ink", "rounded-control"]));
       expect(m.querySelector("svg")).toBeNull();
     }
+  });
+
+  it("can be just its words, with the role and id a caller needs", () => {
+    const { container } = render(
+      <Callout tone="warning" role="status" id="why">
+        This folder is already the library “Movies”.
+      </Callout>,
+    );
+    const message = screen.getByRole("status");
+    expect(message.id).toBe("why");
+    expect(classes(message)).toContain("border-warn");
+    expect(container.querySelector(".font-semibold")).toBeNull();
+    expect(message.textContent).toBe("This folder is already the library “Movies”.");
+  });
+});
+
+describe("StatusDot", () => {
+  it("is a filled 7px dot in its tone, or a hollow Zinc Status ring for a last known state", () => {
+    const { container } = render(
+      <>
+        <StatusDot tone="warning" />
+        <StatusDot hollow />
+      </>,
+    );
+    const [filled, hollow] = Array.from(container.children);
+    expect(classes(filled)).toEqual(expect.arrayContaining(["size-[7px]", "rounded-full", "bg-warn"]));
+    expect(classes(hollow)).toEqual(expect.arrayContaining(["size-[7px]", "rounded-full", "border", "border-field"]));
+    expect(classes(hollow).some((c) => c.startsWith("bg-"))).toBe(false);
+    expect(hollow.getAttribute("aria-hidden")).toBe("true");
   });
 });
 
@@ -184,6 +216,30 @@ describe("form controls", () => {
     expect((screen.getByRole("radio", { name: "Normal" }) as HTMLInputElement).checked).toBe(true);
   });
 
+  it("wraps a long option instead of cutting it short, and stacks by its column's width, not the screen's", () => {
+    render(
+      <Segmented
+        label="Speed"
+        value="normal"
+        onChange={() => {}}
+        options={[
+          { value: "fast", label: "Faster" },
+          { value: "slow", label: "Slower, smaller" },
+        ]}
+        stackOnPhones
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: "Speed" });
+    // Stacked until the nearest size container (a settings column) is 32rem wide.
+    expect(classes(group)).toEqual(expect.arrayContaining(["flex-col", "@lg:flex-row"]));
+    expect(classes(group).some((c) => c.startsWith("roomy:"))).toBe(false);
+    for (const label of Array.from(group.querySelectorAll("label"))) {
+      const words = label.querySelector("span");
+      expect(classes(words)).not.toContain("truncate");
+      expect(words?.className).toContain("[overflow-wrap:anywhere]");
+    }
+  });
+
   it("lets a choice card's tag wrap under a long title instead of running past the card", () => {
     render(
       <ChoiceCard name="goal" value="balanced" checked onChange={() => {}} title="Balanced" badge={<Tag>Best fit</Tag>}>
@@ -211,12 +267,21 @@ describe("display pieces", () => {
 
   it("keeps empty states free of icons and boxes (the caller's panel is the box)", () => {
     const { container } = render(
-      <EmptyState icon={<svg />} title="No history yet">
+      <EmptyState title="No history yet">
         Finished files appear here.
       </EmptyState>,
     );
     expect(container.querySelector("svg")).toBeNull();
     expect(container.firstElementChild?.className).not.toMatch(/border|rounded/);
+  });
+
+  it("titles a screen that is only an empty state with its h1, in the section size", () => {
+    render(<EmptyState as="h1" title="This page doesn't exist" />);
+    const heading = screen.getByRole("heading", { level: 1, name: "This page doesn't exist" });
+    expect(classes(heading)).toEqual(expect.arrayContaining(["text-base", "font-semibold"]));
+    cleanup();
+    render(<EmptyState title="No history yet" />);
+    expect(screen.queryByRole("heading")).toBeNull();
   });
 
   it("opens a disclosure from a 44px summary row under a divider", () => {
@@ -256,7 +321,7 @@ describe("tabs and pages", () => {
 describe("ConfirmDialog", () => {
   it("keeps the confirm button primary for a destructive action (there is no red button)", async () => {
     render(
-      <ConfirmDialog open onOpenChange={() => {}} title="Remove Movies?" confirmLabel="Remove library" onConfirm={() => {}} destructive>
+      <ConfirmDialog open onOpenChange={() => {}} title="Remove Movies?" confirmLabel="Remove library" onConfirm={() => {}}>
         <p>Its files stay where they are.</p>
       </ConfirmDialog>,
     );

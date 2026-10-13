@@ -93,11 +93,11 @@ function StageSteps({ stage }: { stage: JobStage }) {
   const current = JOB_STAGES.indexOf(stage);
   return (
     <>
-      <p className="text-[13px] text-muted roomy:hidden">
+      <p className="text-meta text-muted roomy:hidden">
         <span className="font-semibold text-ink">{JOB_STAGE_LABEL[stage]}</span>
         {current >= 0 ? ` · step ${current + 1} of ${JOB_STAGES.length}` : ""}
       </p>
-      <ol className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] roomy:flex" aria-label="Steps">
+      <ol className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 text-meta roomy:flex" aria-label="Steps">
         {JOB_STAGES.map((s, i) => {
           const done = current > i;
           const active = current === i;
@@ -194,7 +194,6 @@ export function StopJobButton({
         title={`Stop converting ${middleTruncate(job.file_name, 60)}?`}
         confirmLabel="Stop converting"
         cancelLabel="Keep converting"
-        destructive
         loading={cancel.isPending}
         onConfirm={() => cancel.mutate(job, { onSettled: () => setConfirm(false) })}
       >
@@ -252,7 +251,7 @@ function JobProgressBlock({ job, label, lineClassName }: { job: Job; label: stri
         valueText={reading.kind === "measured" ? undefined : said}
         label={label}
       />
-      <p className={cn("text-[13px] text-ink", lineClassName)}>
+      <p className={cn("text-meta text-ink", lineClassName)}>
         <span className="font-semibold tabular">{words.lead}</span>
         {words.detail ? <span className="text-muted"> · {words.detail}</span> : null}
         {words.eta ? <span className="text-muted"> · {words.eta}</span> : null}
@@ -309,11 +308,11 @@ export function JobCard({
               id={titleId}
               type="button"
               onClick={() => onOpen(job)}
-              className="flex min-h-11 max-w-full items-center text-left text-base leading-normal font-[550] text-ink hover:underline"
+              className="flex min-h-11 max-w-full items-center text-left text-base leading-normal font-label text-ink hover:underline"
             >
               <FileName name={job.file_name} />
             </button>
-            <p className="truncate text-[13px] text-muted">
+            <p className="truncate text-meta text-muted">
               {libraryName ? `${libraryName} · ` : ""}
               {formatBytes(job.input_size)}
             </p>
@@ -328,7 +327,7 @@ export function JobCard({
         <div>
           <JobProgressBlock job={job} label={`${job.file_name}: whole file`} lineClassName="mt-2" />
           {job.attempt > 1 ? (
-            <p className="mt-2 flex items-baseline gap-2 text-[13px] text-muted">
+            <p className="mt-2 flex items-baseline gap-2 text-meta text-muted">
               <StatusDot tone="warning" className="translate-y-[-1px]" />
               <span className="min-w-0">{attemptLine(job)}</span>
             </p>
@@ -442,7 +441,7 @@ export function historyNote(job: Job, minSavingsPct?: number | null, standing: J
 export function SheetSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mt-6 first:mt-0">
-      <h3 className="mb-2 text-sm font-[550] text-ink">{title}</h3>
+      <h3 className="mb-2 text-sm font-label text-ink">{title}</h3>
       {children}
     </section>
   );
@@ -456,12 +455,12 @@ function BeforeAfter({ job, output }: { job: Job; output: number }) {
     <div>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[13px] text-muted">Before</p>
+          <p className="text-meta text-muted">Before</p>
           <p className="mt-0.5 text-base font-semibold text-ink tabular">{formatBytes(job.input_size)}</p>
         </div>
         <ArrowRight className="size-4 shrink-0 text-muted" aria-label="became" />
         <div className="text-right">
-          <p className="text-[13px] text-muted">{kept ? "After" : "New file (not kept)"}</p>
+          <p className="text-meta text-muted">{kept ? "After" : "New file (not kept)"}</p>
           <p className="mt-0.5 text-base font-semibold text-ink tabular">{formatBytes(output)}</p>
         </div>
       </div>
@@ -474,11 +473,11 @@ function BeforeAfter({ job, output }: { job: Job; output: number }) {
             tone={!kept ? "muted" : savings.saved ? "accent" : "danger"}
           />
           {/* A kept original's outcome above already says by how much and why. */}
-          {kept ? <p className="mt-2 text-sm font-[550] text-ink">{savings.text}</p> : null}
+          {kept ? <p className="mt-2 text-sm font-label text-ink">{savings.text}</p> : null}
         </>
       ) : kept && noSpaceFreed(job) ? (
         // The server's figure beats the two sizes: a hard-linked original's data stays on disk.
-        <p className="mt-3 text-sm font-[550] text-muted">No space was freed.</p>
+        <p className="mt-3 text-sm font-label text-muted">No space was freed.</p>
       ) : null}
     </div>
   );
@@ -527,7 +526,7 @@ export function checksLead(report: ValidationReport): string {
 function Checks({ report }: { report: ValidationReport }) {
   return (
     <div>
-      <p className="mb-3 text-sm font-[550] text-ink">{checksLead(report)}</p>
+      <p className="mb-3 text-sm font-label text-ink">{checksLead(report)}</p>
       <ul className={ROWS}>
         {report.checks.map((check) => {
           const value = checkValueText(check);
@@ -535,15 +534,15 @@ function Checks({ report }: { report: ValidationReport }) {
             <li key={check.id} className="flex gap-3 py-3">
               <CheckIcon status={check.status} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-[550] text-ink">{check.label}</p>
-                <p className="mt-0.5 text-[13px] leading-[1.5] text-muted">{check.detail}</p>
+                <p className="text-sm font-label text-ink">{check.label}</p>
+                <p className="mt-0.5 text-meta leading-[1.5] text-muted">{check.detail}</p>
               </div>
               {value ? <span className="shrink-0 text-xs text-muted tabular">{value}</span> : null}
             </li>
           );
         })}
       </ul>
-      <p className="border-t border-line pt-3 text-[13px] text-muted">
+      <p className="border-t border-line pt-3 text-meta text-muted">
         {VALIDATION_LABEL[report.level]} checks · took {formatDuration(report.elapsed_secs)}
       </p>
     </div>
@@ -729,7 +728,7 @@ function Outcome({ job, standing, renamed }: { job: Job; standing: JobStanding; 
         {renamed ? (
           // Another format, another extension: say so, or the old name is searched for in vain.
           <p className="mt-1.5">
-            It&apos;s now called <span className="font-[550] break-all">{renamed}</span>.
+            It&apos;s now called <span className="font-label break-all">{renamed}</span>.
           </p>
         ) : null}
       </Callout>
@@ -759,16 +758,16 @@ export function Attempts({ job, gpus }: { job: Job; gpus: readonly GpuDevice[] }
                 <CircleX className="mt-0.5 size-4 shrink-0 text-error" aria-hidden />
               )}
               <div className="min-w-0">
-                <p className="text-sm font-[550] text-ink">{attemptHeading(attempt, gpus)}</p>
-                <p className="mt-0.5 text-[13px] leading-[1.5] break-words text-muted">{attemptOutcome(attempt)}</p>
+                <p className="text-sm font-label text-ink">{attemptHeading(attempt, gpus)}</p>
+                <p className="mt-0.5 text-meta leading-[1.5] break-words text-muted">{attemptOutcome(attempt)}</p>
               </div>
             </li>
           ) : running ? (
             <li key={`running-${running.attempt}`} className="flex gap-3 py-3">
               <LoaderCircle className="spin mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <div className="min-w-0">
-                <p className="text-sm font-[550] text-ink">{`Attempt ${running.attempt} · ${running.device}`}</p>
-                <p className="mt-0.5 text-[13px] leading-[1.5] text-muted">Converting now</p>
+                <p className="text-sm font-label text-ink">{`Attempt ${running.attempt} · ${running.device}`}</p>
+                <p className="mt-0.5 text-meta leading-[1.5] text-muted">Converting now</p>
               </div>
             </li>
           ) : null,
@@ -822,7 +821,7 @@ function JobTechnical({ job, gpus }: { job: Job; gpus: readonly GpuDevice[] }) {
     <Disclosure className="mt-6">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <CopyButton text={jobReportText(job, gpus)} label="Copy for a bug report" />
-        <p className="text-[13px] text-muted">Everything below, with every attempt, in one piece of text.</p>
+        <p className="text-meta text-muted">Everything below, with every attempt, in one piece of text.</p>
       </div>
       {rows.length ? <dl className="divide-y divide-line">{rows}</dl> : null}
       {log?.errors ? <CodeBlock code={log.errors} label="What ffmpeg reported" /> : null}
@@ -830,11 +829,11 @@ function JobTechnical({ job, gpus }: { job: Job; gpus: readonly GpuDevice[] }) {
       {log ? <CodeBlock code={log.rest} label="Last lines from ffmpeg" maxHeight="20rem" /> : null}
       {attempts.map((attempt) => (
         <section key={attempt.attempt} aria-label={`Attempt ${attempt.attempt}`} className="flex flex-col gap-2">
-          <p className="text-[13px] font-[550] text-ink">
+          <p className="text-meta font-label text-ink">
             {attemptHeading(attempt, gpus)}
             <span className="font-normal text-muted">
               {" "}
-              · <span className="font-mono text-xs">{attempt.encoder}</span> · {attemptOutcome(attempt)}
+              · <span className="font-mono text-meta">{attempt.encoder}</span> · {attemptOutcome(attempt)}
             </span>
           </p>
           {attempt.command ? <CodeBlock code={attempt.command} label={`Attempt ${attempt.attempt}: ffmpeg command`} /> : null}
@@ -867,7 +866,7 @@ function JobSheetBody({ job: baseJob }: { job: Job }) {
     <>
       <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
         <JobStateBadge job={job} standing={standing} />
-        <span className="text-[13px] text-muted">
+        <span className="text-meta text-muted">
           {job.finished_at
             ? `Finished ${formatRelative(job.finished_at)}`
             : job.started_at

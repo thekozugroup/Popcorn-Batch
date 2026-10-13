@@ -7,7 +7,7 @@
  * needs the user, red for failed. The words stay neutral.
  */
 
-import { CircleCheck, CircleDashed, CircleMinus, CircleX, Clock, LoaderCircle, TriangleAlert } from "lucide-react";
+import { CircleCheck, CircleMinus, CircleX, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import { Tag, type Tone } from "@/components/ui/display";
 import { CHECK_STATUS_LABEL, FILE_STATUS_LABEL, HW_API_LABEL, JOB_STAGE_LABEL, JOB_STATE_LABEL } from "@/lib/labels";
@@ -15,32 +15,15 @@ import { KEPT_CONVERTED, failureGroup, setupProblem, type Failure, type JobStand
 import type { CheckStatus, FileStatus, HwApi, Job, JobState } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
-/** `info` is the Zinc Status dot of a waiting, skipped or kept state. */
+/** `info` is the Zinc Status dot of a waiting ("To convert", "In queue"), skipped or kept state. */
 const FILE_STATUS_TONE: Record<FileStatus, Tone> = {
-  pending: "neutral",
+  pending: "info",
   queued: "info",
   processing: "accent",
   done: "success",
   skipped: "info",
   failed: "danger",
 };
-
-const FILE_STATUS_ICON: Record<FileStatus, ReactNode> = {
-  pending: <CircleDashed aria-hidden />,
-  queued: <Clock aria-hidden />,
-  processing: <LoaderCircle aria-hidden />,
-  done: <CircleCheck aria-hidden />,
-  skipped: <CircleMinus aria-hidden />,
-  failed: <CircleX aria-hidden />,
-};
-
-/**
- * Icon for a file status.
- * @deprecated Filters and tags carry no icons in the Popcorn design; remove it at the call site.
- */
-export function fileStatusIcon(status: FileStatus): ReactNode {
-  return FILE_STATUS_ICON[status];
-}
 
 /**
  * A failure that isn't a failed conversion gets its own tag: a damaged
@@ -154,7 +137,7 @@ export function CheckIcon({ status }: { status: CheckStatus }) {
  * Where a job runs, as a descriptive tag ("NVIDIA GPU", "CPU"). The encoder
  * itself is named in the job's Technical details.
  */
-export function EncoderBadge({ api }: { api: HwApi | null; encoder?: string | null }) {
+export function EncoderBadge({ api }: { api: HwApi | null }) {
   if (!api) return null;
   return <Tag>{HW_API_LABEL[api]}</Tag>;
 }

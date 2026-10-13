@@ -60,8 +60,8 @@ describe("first-run setup", () => {
     const { container } = show();
     const heading = screen.getByRole("heading", { level: 1, name: "Make your video library smaller, safely." });
     // The headline token, not a display face.
-    expect(heading.className).toContain("text-3xl");
-    expect(heading.className).toContain("max-roomy:text-[28px]");
+    expect(heading.className).toContain("text-headline");
+    expect(heading.className).not.toContain("font-display");
     const facts = container.querySelectorAll("main ul > li");
     expect([...facts].map((li) => li.querySelector("p")?.textContent)).toEqual([
       "Nothing is replaced until it passes its checks",

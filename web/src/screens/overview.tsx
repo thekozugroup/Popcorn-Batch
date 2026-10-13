@@ -9,11 +9,10 @@
  * rows, and status as a dot beside neutral words.
  */
 
-import type { ReactNode } from "react";
 import { SavingsChart, worthCharting } from "@/components/charts";
 import { FileName, WasName } from "@/components/file-name";
 import { JobCard, JobCardSkeleton, historyNote } from "@/components/jobs";
-import { LibraryBar, LibraryLegend, finishedText, remainingCount } from "@/components/library-bar";
+import { LibrariesPanel } from "@/components/libraries-panel";
 import { QueueControls } from "@/components/queue-controls";
 import { JobStateBadge } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -175,13 +174,13 @@ function StatusLine({ queue, failed }: { queue: QueueState; failed: number }) {
     <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
       <p role="status" className={cn("flex min-w-0 items-start gap-2.5 text-base", down ? "text-muted" : "text-ink")}>
         {down ? (
-          <span aria-hidden className="mt-[8.5px] size-[7px] shrink-0 rounded-full border border-field" />
+          <StatusDot hollow className="mt-[8.5px]" />
         ) : (
           <StatusDot tone={status.dot} className="mt-[8.5px]" />
         )}
         <span className="min-w-0">
           {down ? <span>Last known: </span> : null}
-          <span className={down ? undefined : "font-[550]"}>{down ? lowerFirst(status.text) : status.text}</span>
+          <span className={down ? undefined : "font-label"}>{down ? lowerFirst(status.text) : status.text}</span>
           {status.detail ? <span className="text-muted"> · {status.detail}</span> : null}
         </span>
       </p>
@@ -223,7 +222,7 @@ function SavedHero({ overview }: { overview: Overview }) {
   const remaining = totals.pending + totals.queued + totals.processing;
   const holdings =
     totals.total_bytes > 0 ? (
-      <p className="mt-3 text-[13px] text-muted">
+      <p className="mt-3 text-meta text-muted">
         Your libraries hold {formatBytes(totals.total_bytes)} across {plural(totals.file_count, "file")}.
       </p>
     ) : null;
@@ -264,10 +263,10 @@ function SavedHero({ overview }: { overview: Overview }) {
               : "Once a library is scanned and files are converted, the space you get back shows up here.";
     return (
       <div className="min-w-0">
-        <h1 className="text-3xl leading-[1.2] font-semibold tracking-[-0.025em] text-ink max-roomy:text-[28px]">
+        <h1 className="text-headline text-ink">
           {title}
         </h1>
-        <p className="mt-3 max-w-[58ch] text-base leading-[1.6] text-muted">{detail}</p>
+        <p className="mt-3 max-w-[58ch] text-base leading-relaxed text-muted">{detail}</p>
         <StatusLine queue={overview.queue} failed={totals.failed} />
         {holdings}
       </div>
@@ -283,7 +282,7 @@ function SavedHero({ overview }: { overview: Overview }) {
         </span>{" "}
         <span className="text-xl font-semibold text-muted">saved</span>
       </h1>
-      <p className="mt-3 max-w-[58ch] text-base leading-[1.6] text-muted">
+      <p className="mt-3 max-w-[58ch] text-base leading-relaxed text-muted">
         <SavedFrom totals={totals} />
         {projected && projected > 0 && remaining > 0 ? (
           <>
@@ -554,11 +553,11 @@ function NeedsAttention() {
               {/* Red for conversions that failed; amber for the rest, where nothing was lost. */}
               <StatusDot tone={p.tone === "danger" ? "danger" : "warning"} className="mt-[8.5px]" />
               <div className="min-w-0 flex-1">
-                <p className="text-base font-[550] text-ink">{p.title}</p>
-                <p className="mt-1 max-w-[62ch] text-[13px] leading-[1.6] text-muted">{p.detail}</p>
+                <p className="text-base font-label text-ink">{p.title}</p>
+                <p className="mt-1 max-w-[62ch] text-meta leading-relaxed text-muted">{p.detail}</p>
                 {p.reasons?.length ? (
                   // The server's own words: the exact cause and what to do about it.
-                  <ul className="mt-2 max-w-[62ch] space-y-1.5 border-l border-line pl-3 text-[13px] leading-[1.6] text-ink">
+                  <ul className="mt-2 max-w-[62ch] space-y-1.5 border-l border-line pl-3 text-meta leading-relaxed text-ink">
                     {p.reasons.map((reason) => (
                       <li key={reason} className="break-words">
                         {reason}
@@ -627,110 +626,8 @@ function NowConverting({ queue }: { queue: QueueState }) {
   );
 }
 
-export function LibraryRow({ library }: { library: Library }) {
-  const scan = useLive((s) => s.scans[library.id]);
-  const failures = useFailures();
-  const copying = library.stats.settling;
-  const stats = library.stats;
-  const unreadable = failures.byLibrary[library.id]?.unreadable ?? 0;
-  const scanning = library.scanning || (scan && scan.phase !== "done");
-  const left = remainingCount(stats);
-  // "100% finished" only once nothing more is on its way (see `finishedText`).
-  const finished = finishedText(stats, unreadable, Boolean(scanning));
-  let status: ReactNode;
-  // Files being copied in get their own line, unless that's the whole story.
-  let settling = copying > 0 && Boolean(library.enabled && !library.path_error);
-  if (library.path_error) {
-    status = <span className="text-ink">{library.path_error}</span>;
-  } else if (!library.enabled) {
-    status = "Paused. Not scanned or converted.";
-  } else if (scanning) {
-    status = scan
-      ? scan.phase === "discovering"
-        ? `Looking for videos · ${formatCount(scan.discovered)} found`
-        : `Checking ${formatCount(scan.analyzed)} of ${formatCount(scan.to_analyze)}`
-      : "Scanning";
-  } else if (left > 0) {
-    status = `${plural(left, "file")} to go`;
-  } else if (copying > 0) {
-    // Not "everything is finished" while a file is still arriving.
-    status = settlingText(copying);
-    settling = false;
-  } else if (stats.file_count === 0) {
-    status = "No videos found yet";
-  } else {
-    // Failed files aren't finished; "to review" follows.
-    status =
-      stats.failed > 0
-        ? stats.done + stats.skipped === 0
-          ? "Nothing converted yet"
-          : "Everything else is finished"
-        : "Everything is finished";
-  }
-  return (
-    <li className="group relative p-[18px] hover:bg-subtle roomy:px-6 roomy:py-5">
-      <div className="flex items-baseline justify-between gap-4">
-        {/* The name's link covers the whole row; "to review" sits above it. */}
-        <a
-          href={href(`/library/${library.id}`)}
-          className="min-w-0 truncate text-base font-[550] text-ink no-underline outline-none group-hover:underline after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-accent focus-visible:after:outline-solid"
-        >
-          {library.name}
-        </a>
-        <span className="shrink-0 text-sm text-ink tabular">
-          {stats.saved_bytes > 0 ? `${formatBytes(stats.saved_bytes)} saved` : null}
-        </span>
-      </div>
-      <div className="mt-1 flex items-baseline justify-between gap-4 text-[13px] text-muted">
-        <span className="min-w-0 truncate">
-          {status}
-          {stats.failed > 0 ? (
-            <>
-              {" · "}
-              <a href={href(`/library/${library.id}`, { status: "failed" })} className="relative z-10 text-ink underline">
-                {formatCount(stats.failed)} to review
-              </a>
-            </>
-          ) : null}
-        </span>
-        {stats.file_count > 0 && finished ? <span className="shrink-0 tabular">{finished}</span> : null}
-      </div>
-      {settling ? <p className="mt-1 text-[13px] text-muted">{settlingText(copying)}</p> : null}
-      <LibraryBar stats={stats} unreadable={unreadable} className="mt-3" />
-    </li>
-  );
-}
-
 function Libraries() {
   const libraries = useLibraries();
-  const failures = useFailures();
-  const list = libraries.data ?? [];
-  const totals = list.reduce(
-    (acc, l) => ({
-      file_count: acc.file_count + l.stats.file_count,
-      total_bytes: acc.total_bytes + l.stats.total_bytes,
-      pending: acc.pending + l.stats.pending,
-      queued: acc.queued + l.stats.queued,
-      processing: acc.processing + l.stats.processing,
-      done: acc.done + l.stats.done,
-      skipped: acc.skipped + l.stats.skipped,
-      failed: acc.failed + l.stats.failed,
-      saved_bytes: acc.saved_bytes + l.stats.saved_bytes,
-      settling: acc.settling + l.stats.settling,
-    }),
-    {
-      file_count: 0,
-      total_bytes: 0,
-      pending: 0,
-      queued: 0,
-      processing: 0,
-      done: 0,
-      skipped: 0,
-      failed: 0,
-      saved_bytes: 0,
-      settling: 0,
-    },
-  );
   return (
     <section aria-labelledby="libraries-heading">
       <SectionHeading
@@ -742,18 +639,7 @@ function Libraries() {
           </a>
         }
       />
-      <div className={PANEL}>
-        <ul className="divide-y divide-line">
-          {list.map((library) => (
-            <LibraryRow key={library.id} library={library} />
-          ))}
-        </ul>
-        {totals.file_count > 0 ? (
-          <div className="hidden border-t border-line px-6 py-3.5 roomy:block">
-            <LibraryLegend stats={totals} unreadable={failures.total.unreadable} />
-          </div>
-        ) : null}
-      </div>
+      <LibrariesPanel libraries={libraries.data ?? []} />
     </section>
   );
 }
@@ -799,17 +685,18 @@ export function RecentResults() {
                 <button
                   type="button"
                   onClick={() => openSheet({ job: job.id })}
-                  // Full width inside the panel: the focus outline sits inside so it isn't clipped.
-                  className="flex w-full flex-col gap-1.5 px-[18px] py-4 text-left -outline-offset-2 hover:bg-subtle roomy:px-6"
+                  // Full width inside the panel: the focus outline sits inside so it isn't clipped. Hovered,
+                  // the name underlines and the row keeps its fill (as every row does), so the tag stays visible.
+                  className="group flex w-full flex-col gap-1.5 px-[18px] py-4 text-left -outline-offset-2 roomy:px-6"
                 >
                   <span className="flex w-full items-center justify-between gap-3">
                     <span className="min-w-0 flex-1">
-                      <FileName name={renamed ?? job.file_name} className="text-sm font-[550] text-ink" />
+                      <FileName name={renamed ?? job.file_name} className="text-sm font-label text-ink group-hover:underline" />
                       {renamed ? <WasName name={job.file_name} className="mt-0.5" /> : null}
                     </span>
                     <JobStateBadge job={job} standing={standing} />
                   </span>
-                  <span className="flex w-full items-baseline justify-between gap-3 text-[13px]">
+                  <span className="flex w-full items-baseline justify-between gap-3 text-meta">
                     {standing === "unknown" ? (
                       <span aria-hidden className="skeleton inline-block h-3 w-40" />
                     ) : (
@@ -859,17 +746,17 @@ function Welcome() {
   const problems = problemsFrom(libraries.data ?? [], failures, hardware.hw, settings.data, kept);
   return (
     <div className="max-w-3xl">
-      <h1 className="text-3xl leading-[1.2] font-semibold tracking-[-0.025em] text-ink max-roomy:text-[28px]">
+      <h1 className="text-headline text-ink">
         Make your video library smaller, safely.
       </h1>
-      <p className="mt-2.5 max-w-[58ch] text-base leading-[1.6] text-muted">
+      <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
         Point Popcorn Batch at a folder and choose a goal. It converts files in the background, checks each result
         against the original, and only then replaces it.
       </p>
       <a href={href("/libraries/new")} className={cn(buttonVariants({ variant: "primary" }), "mt-8")}>
         Choose a folder
       </a>
-      <div className="mt-5 text-[13px] text-muted">
+      <div className="mt-5 text-meta text-muted">
         <HardwareLine hw={hardware.hw} detecting={hardware.detecting} />
       </div>
       {problems.length ? (

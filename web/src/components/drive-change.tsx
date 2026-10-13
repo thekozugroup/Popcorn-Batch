@@ -47,7 +47,7 @@ export function UseDriveConfirm({
         Popcorn Batch will take the drive mounted at <span className="text-ink">{mount}</span> as the usual one from now
         on: it reads files from it and saves new files to it.
       </p>
-      <p className="font-[550] text-ink">
+      <p className="font-label text-ink">
         Only do this if you replaced the drive or share on purpose. If the usual one just isn&apos;t connected yet,
         reconnect it instead: files saved now would end up on the drive that&apos;s there now.
       </p>

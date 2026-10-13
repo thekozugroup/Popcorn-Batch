@@ -68,7 +68,7 @@ export function Sheet({ open, onOpenChange, title, description, children, footer
                 {title}
               </Dialog.Title>
               {description ? (
-                <Dialog.Description className="mt-1 text-[13px] leading-[1.5] break-words text-muted">
+                <Dialog.Description className="mt-1 text-meta leading-[1.5] break-words text-muted">
                   {description}
                 </Dialog.Description>
               ) : null}
@@ -119,7 +119,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
                 {title}
               </Dialog.Title>
               {description ? (
-                <Dialog.Description className="mt-1 text-[13px] leading-[1.6] text-muted">{description}</Dialog.Description>
+                <Dialog.Description className="mt-1 text-meta leading-relaxed text-muted">{description}</Dialog.Description>
               ) : null}
             </div>
             <Dialog.Close className={cn(buttonVariants({ variant: "quiet", size: "icon" }), "-mr-2.5")} aria-label="Close">
@@ -145,17 +145,16 @@ interface ConfirmProps {
   children: ReactNode;
   confirmLabel: string;
   onConfirm: () => void;
-  /**
-   * The action discards work or forgets data. Its exact words say so; the
-   * confirm button stays primary (the family has no red button).
-   */
-  destructive?: boolean;
   loading?: boolean;
   /** Label of the button that backs out; "Cancel" unless that would be ambiguous. */
   cancelLabel?: string;
 }
 
-/** "Are you sure?" for actions that can't be undone. */
+/**
+ * "Are you sure?" for actions that can't be undone. The confirm button is
+ * primary even when the action discards work or forgets data: its exact
+ * words say so (the family has no red button).
+ */
 export function ConfirmDialog({
   open,
   onOpenChange,
@@ -240,8 +239,6 @@ export function UnsavedChangesDialog({ open, onSave, onDiscard, onStay, saving }
 export type MenuAction = {
   label: string;
   icon?: ReactNode;
-  /** It discards or forgets something; its words say so (it keeps the main text colour). */
-  destructive?: boolean;
   disabled?: boolean;
 } & ({ onSelect: () => void; href?: never } | { href: string; onSelect?: never });
 
@@ -295,7 +292,7 @@ export function Tooltip({ content, children }: { content: ReactNode; children: R
       <BaseTooltip.Trigger render={children} />
       <BaseTooltip.Portal>
         <BaseTooltip.Positioner sideOffset={6} className="z-50">
-          <BaseTooltip.Popup className="max-w-72 rounded-control border border-line bg-surface px-2.5 py-1.5 text-[13px] leading-snug text-ink transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
+          <BaseTooltip.Popup className="max-w-72 rounded-control border border-line bg-surface px-2.5 py-1.5 text-meta leading-snug text-ink transition-opacity duration-150 ease-out data-[ending-style]:opacity-0 data-[starting-style]:opacity-0">
             {content}
           </BaseTooltip.Popup>
         </BaseTooltip.Positioner>

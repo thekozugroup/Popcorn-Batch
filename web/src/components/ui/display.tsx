@@ -85,49 +85,71 @@ const toneDot: Record<Tone, string | null> = {
   danger: "bg-error",
 };
 
-/** A 7px status dot, the only place a status colour appears beside words. */
-export function StatusDot({ tone, className }: { tone: Exclude<Tone, "neutral">; className?: string }) {
-  return <span aria-hidden className={cn("inline-block size-[7px] shrink-0 rounded-full", toneDot[tone], className)} />;
+/**
+ * A 7px status dot, the only place a status colour appears beside words.
+ * `hollow` is a ring in Zinc Status: a state that is only the last one
+ * known (the live connection is down), so it can't pass for a live one.
+ */
+export function StatusDot({
+  tone = "info",
+  hollow = false,
+  className,
+}: {
+  tone?: Exclude<Tone, "neutral">;
+  hollow?: boolean;
+  className?: string;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "inline-block size-[7px] shrink-0 rounded-full",
+        hollow ? "border border-field" : toneDot[tone],
+        className,
+      )}
+    />
+  );
 }
 
 /**
  * A tag: describes a state, never clickable. Subtle fill, supporting text,
  * the tag radius; a status tag starts with a 7px dot (its `tone`), a
  * descriptive one (Best fit, Default, NVIDIA GPU) has none. The words carry
- * the meaning; the dot only repeats it.
+ * the meaning; the dot only repeats it. Inside a filled row (`data-selected`,
+ * `data-fill`) its fill turns to the surface so it stays visible (globals.css).
  */
 export function Tag({
   tone = "neutral",
   children,
   className,
+  title,
 }: {
   tone?: Tone;
-  /** @deprecated Tags have no icon; it is ignored. Remove it at the call site. */
-  icon?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** A tooltip with more than the words say ("Already the library “Movies”"). */
+  title?: string;
 }) {
-  const dot = toneDot[tone];
   return (
     <span
+      data-tag=""
+      title={title}
       className={cn(
         "inline-flex shrink-0 items-center gap-[7px] rounded-tag bg-subtle px-[9px] py-[5px] text-xs leading-[1.4] whitespace-nowrap text-muted",
         className,
       )}
     >
-      {dot ? <span aria-hidden className={cn("size-[7px] shrink-0 rounded-full", dot)} /> : null}
+      {tone !== "neutral" ? <StatusDot tone={tone} /> : null}
       {children}
     </span>
   );
 }
 
-/** The former name of `Tag`, kept until every call site uses `Tag`. */
-export const Badge = Tag;
-
 /**
  * A message: setup hints, failures, notes. Subtle fill, neutral text, and
  * its tone as a 1px border only (none for information, emerald for success,
- * amber for a warning, red for an error). No icon.
+ * amber for a warning, red for an error). No icon. Without a title it is
+ * just its words (a short note, such as why a folder can't be chosen).
  */
 export function Callout({
   tone = "info",
@@ -135,17 +157,19 @@ export function Callout({
   children,
   action,
   className,
+  ...props
 }: {
   tone?: "info" | "warning" | "danger" | "success";
-  title: ReactNode;
+  title?: ReactNode;
   children?: ReactNode;
   action?: ReactNode;
   className?: string;
-}) {
+} & Pick<ComponentProps<"div">, "id" | "role">) {
   return (
     <div
+      {...props}
       className={cn(
-        "rounded-control border bg-subtle px-[18px] py-[14px] text-sm leading-[1.6] [overflow-wrap:anywhere] text-ink",
+        "rounded-control border bg-subtle px-[18px] py-[14px] text-sm leading-relaxed [overflow-wrap:anywhere] text-ink",
         tone === "info" && "border-transparent",
         tone === "warning" && "border-warn",
         tone === "danger" && "border-error",
@@ -153,8 +177,8 @@ export function Callout({
         className,
       )}
     >
-      <p className="font-semibold">{title}</p>
-      {children ? <div className="mt-1">{children}</div> : null}
+      {title ? <p className="font-semibold">{title}</p> : null}
+      {children && title ? <div className="mt-1">{children}</div> : children}
       {action ? <div className="mt-3">{action}</div> : null}
     </div>
   );
@@ -219,7 +243,7 @@ export function CodeBlock({
         tabIndex={0}
         aria-label={label}
         className={cn(
-          "overflow-auto px-3.5 py-3 font-mono text-[13px] leading-[1.6] text-ink -outline-offset-2",
+          "overflow-auto px-3.5 py-3 font-mono text-meta leading-relaxed text-ink -outline-offset-2",
           wrap ? "break-all whitespace-pre-wrap" : "whitespace-pre",
         )}
         style={{ maxHeight }}
@@ -232,25 +256,28 @@ export function CodeBlock({
 
 /**
  * Teaches what belongs in an empty area and the next step. It has no box of
- * its own: callers put it inside a panel.
+ * its own: callers put it inside a panel. When it is all a screen shows (a
+ * page that doesn't exist), its title is the page's heading: `as="h1"`. The
+ * title keeps the section size either way.
  */
 export function EmptyState({
   title,
   children,
   action,
   className,
+  as: Title = "p",
 }: {
-  /** @deprecated Empty states have no icon; it is ignored. Remove it at the call site. */
-  icon?: ReactNode;
   title: ReactNode;
   children?: ReactNode;
   action?: ReactNode;
   className?: string;
+  /** The title's element: a paragraph inside a page, or the page's own `h1`. */
+  as?: "p" | "h1" | "h2";
 }) {
   return (
     <div className={cn("px-6 py-11 text-center", className)}>
-      <p className="text-base font-semibold text-ink">{title}</p>
-      {children ? <div className="mx-auto mt-2 max-w-[42ch] text-sm leading-[1.6] text-muted">{children}</div> : null}
+      <Title className="text-base font-semibold text-ink">{title}</Title>
+      {children ? <div className="mx-auto mt-2 max-w-[42ch] text-sm leading-relaxed text-muted">{children}</div> : null}
       {action ? <div className="mt-5 flex flex-wrap justify-center gap-2">{action}</div> : null}
     </div>
   );
@@ -282,7 +309,7 @@ export function SectionHeading({
   return (
     <div className={cn("mt-0 mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2", className)}>
       <div className="min-w-0">
-        <h2 id={id} className="text-xl leading-[1.4] font-semibold tracking-[-0.025em] text-ink">
+        <h2 id={id} className="text-title text-ink">
           {title}
         </h2>
         {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
@@ -313,7 +340,7 @@ export function Disclosure({
 }) {
   return (
     <details className={cn("group mt-6 border-t border-line pt-3", className)}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-[550] text-ink select-none [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-label text-ink select-none [&::-webkit-details-marker]:hidden">
         {/* Turns with its own disclosure only, so one inside an open one still looks closed. */}
         <ChevronRight
           className="size-4 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200 [details[open]>summary>&]:rotate-90"
@@ -330,11 +357,11 @@ export function Disclosure({
 export function Detail({ label, children, mono }: { label: ReactNode; children: ReactNode; mono?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-4 py-2.5">
-      <dt className="shrink-0 text-[13px] text-muted">{label}</dt>
+      <dt className="shrink-0 text-meta text-muted">{label}</dt>
       <dd
         className={cn(
-          "min-w-0 text-right text-sm font-[550] break-words text-ink",
-          mono && "font-mono text-[13px] font-normal",
+          "min-w-0 text-right text-sm font-label break-words text-ink",
+          mono && "font-mono text-meta font-normal",
         )}
       >
         {children}

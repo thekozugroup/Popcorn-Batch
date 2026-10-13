@@ -13,8 +13,9 @@ import { toast } from "sonner";
 import { UseDriveButton, UseDriveConfirm } from "@/components/drive-change";
 import { FileName } from "@/components/file-name";
 import { LibraryBar, LibraryLegend, countedFiles, isWaiting } from "@/components/library-bar";
-import { ProfileEditor, SettingsSection } from "@/components/profile-editor";
+import { ProfileEditor } from "@/components/profile-editor";
 import { SaveBar } from "@/components/save-bar";
+import { SETTINGS_PANEL, SettingsSection } from "@/components/settings-section";
 import { PageHeader } from "@/components/shell";
 import { FileStatusBadge } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -141,7 +142,6 @@ export function FolderProblem({ library }: { library: Library }) {
       <Callout
         tone="warning"
         title={mount ? "A different drive is mounted" : "Popcorn Batch can't read this folder"}
-        className="mb-6"
         action={mount ? <UseDriveButton onClick={() => setConfirming(true)} /> : null}
       >
         {/* The server's sentence says what to check for this kind of problem. */}
@@ -212,7 +212,7 @@ function Header({ library }: { library: Library }) {
     >
       {/* The folder in full (it wraps), the goal as a descriptive tag, a paused state, the last scan. */}
       <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span className="min-w-0 text-[13px] leading-[1.5] text-muted [overflow-wrap:anywhere]">{library.path}</span>
+        <span className="min-w-0 text-meta leading-[1.5] text-muted [overflow-wrap:anywhere]">{library.path}</span>
         <Tag>{GOAL_LABEL[library.profile.goal]}</Tag>
         {!library.enabled ? <Tag tone="info">Paused</Tag> : null}
         {library.last_scan_at ? (
@@ -242,7 +242,6 @@ function RemoveLibraryDialog({
       onOpenChange={onOpenChange}
       title={`Remove ${library.name}?`}
       confirmLabel="Remove library"
-      destructive
       loading={loading}
       onConfirm={onConfirm}
     >
@@ -250,7 +249,7 @@ function RemoveLibraryDialog({
         Popcorn Batch stops watching <span className="text-ink [overflow-wrap:anywhere]">{library.path}</span> and
         forgets its files and history. Anything converting in it is cancelled.
       </p>
-      <p className="font-[550] text-ink">Your media files are not deleted or changed.</p>
+      <p className="font-label text-ink">Your media files are not deleted or changed.</p>
     </ConfirmDialog>
   );
 }
@@ -291,7 +290,7 @@ export function Summary({ library }: { library: Library }) {
       </div>
       {copying > 0 ? (
         // Added once they stop changing, so they aren't in the counts yet.
-        <p className="mt-2 text-[13px] leading-[1.6] text-muted">{settlingText(copying)}</p>
+        <p className="mt-2 text-meta leading-relaxed text-muted">{settlingText(copying)}</p>
       ) : null}
       <LibraryBar stats={stats} unreadable={unreadable} className="mt-4" />
       <LibraryLegend stats={stats} unreadable={unreadable} className="mt-3 hidden roomy:flex" />
@@ -362,7 +361,7 @@ function SetupNotice({ library }: { library: Library }) {
   // One message per cause (amber border, neutral words, no icon), the
   // setting that fixes it as its action, then what waits on them.
   return (
-    <section aria-label="Needs a fix in the setup" className="mt-6 flex flex-col gap-3">
+    <section aria-label="Needs a fix in the setup" className="flex flex-col gap-3">
       {groups.map(({ kind, files }) => {
         const fix = setupFix(kind, settings.data?.output_mode);
         const { reasons, rest } = reasonsFor(files, 2);
@@ -396,7 +395,7 @@ function SetupNotice({ library }: { library: Library }) {
           </Callout>
         );
       })}
-      <p className="text-[13px] leading-[1.6] text-muted">
+      <p className="text-meta leading-relaxed text-muted">
         {`${plural(waiting, "file")} in this library ${one ? "is" : "are"} waiting on ${groups.length > 1 ? "these" : "this"}. Once fixed, try ${one ? "it" : "them"} again below.`}
       </p>
     </section>
@@ -489,16 +488,19 @@ function Larger({ bytes, words }: { bytes: number; words?: boolean }) {
 function SavedCell({ file }: { file: MediaFile }) {
   if (file.saved_bytes === null || file.status !== "done") return <span className="text-muted">—</span>;
   if (file.saved_bytes < 0) return <Larger bytes={-file.saved_bytes} />;
+  // The file sheet's words for a conversion that freed nothing (a hard-linked original), not "0 bytes".
+  if (file.saved_bytes === 0) return <span className="text-meta text-muted">No space freed</span>;
   return <span className="text-ink">{formatBytes(file.saved_bytes)}</span>;
 }
 
 /**
  * What a converted file saved, for a row without a Saved column (the phone
- * list, and the table below 1024px): "1.2 GB saved", or how much larger it
- * came out.
+ * list, and the table below 1024px): "1.2 GB saved", how much larger it
+ * came out, or "No space freed" (the file sheet's words) when it freed none.
  */
 function SavedNote({ file }: { file: MediaFile }) {
-  if (file.status !== "done" || file.saved_bytes === null || file.saved_bytes === 0) return null;
+  if (file.status !== "done" || file.saved_bytes === null) return null;
+  if (file.saved_bytes === 0) return <span className="text-xs text-muted">No space freed</span>;
   if (file.saved_bytes < 0) {
     return (
       <span className="text-xs">
@@ -587,7 +589,7 @@ function NoFilesYet({ library }: { library: Library }) {
         mapped into the container, then scan again.
       </p>
       {latest ? (
-        <p className="mt-3 text-[13px] [overflow-wrap:anywhere]">
+        <p className="mt-3 text-meta [overflow-wrap:anywhere]">
           Latest: {latest.message} · {formatRelative(latest.at)}
         </p>
       ) : null}
@@ -749,7 +751,9 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                 const format = formatLine(file);
                 const isSelected = selected.has(file.id);
                 return (
-                  <tr key={file.id} className={cn("hover:bg-subtle", isSelected && "bg-subtle")}>
+                  // A selected row has the subtle fill (its tag turns to the surface, see globals.css);
+                  // hovering underlines the name, as on every row, and never fills it.
+                  <tr key={file.id} data-selected={isSelected || undefined} className={cn(isSelected && "bg-subtle")}>
                     <td className="py-3 pl-6">
                       <Checkbox checked={isSelected} onChange={(on) => toggle(file.id, on)} label={`Select ${file.file_name}`} />
                     </td>
@@ -757,9 +761,9 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                       <button
                         type="button"
                         onClick={() => openFile(file)}
-                        className="flex min-h-11 w-full min-w-0 flex-col justify-center text-left"
+                        className="group/name flex min-h-11 w-full min-w-0 flex-col justify-center text-left"
                       >
-                        <FileName name={file.file_name} className="font-[550] text-ink hover:underline" />
+                        <FileName name={file.file_name} className="font-label text-ink group-hover/name:underline" />
                         <span className="block text-xs leading-[1.5] text-muted [overflow-wrap:anywhere]">
                           {/* Below 1024px: the size and format, which have no column yet. */}
                           <span className="lg:hidden">{[formatBytes(file.size_bytes), format].filter(Boolean).join(" · ")}</span>
@@ -778,7 +782,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                       </button>
                     </td>
                     <td className="hidden py-3 pl-6 text-right text-ink tabular lg:table-cell">{formatBytes(file.size_bytes)}</td>
-                    <td className="hidden truncate py-3 pl-6 text-[13px] text-muted xl:table-cell">{format || "—"}</td>
+                    <td className="hidden truncate py-3 pl-6 text-meta text-muted xl:table-cell">{format || "—"}</td>
                     <td className="py-3 pr-6 pl-6 lg:pr-0">
                       <span className="flex flex-col items-start gap-1">
                         <StatusCell file={file} />
@@ -800,7 +804,11 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
         {/* Below 801px: a list of file rows in one panel. */}
         <ul className={cn(PANEL, "divide-y divide-line wide:hidden")}>
           {items.map((file) => (
-            <li key={file.id} className={cn("flex items-start gap-3 px-4 py-3", selected.has(file.id) && "bg-subtle")}>
+            <li
+              key={file.id}
+              data-selected={selected.has(file.id) || undefined}
+              className={cn("flex items-start gap-3 px-4 py-3", selected.has(file.id) && "bg-subtle")}
+            >
               <span className="pt-0.5">
                 <Checkbox
                   checked={selected.has(file.id)}
@@ -808,8 +816,8 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
                   label={`Select ${file.file_name}`}
                 />
               </span>
-              <button type="button" onClick={() => openFile(file)} className="min-h-11 min-w-0 flex-1 text-left">
-                <FileName name={file.file_name} className="text-sm font-[550] text-ink" />
+              <button type="button" onClick={() => openFile(file)} className="group/name min-h-11 min-w-0 flex-1 text-left">
+                <FileName name={file.file_name} className="text-sm font-label text-ink group-hover/name:underline" />
                 <span className="mt-0.5 block text-xs text-muted">
                   {formatBytes(file.size_bytes)}
                   {formatLine(file) ? ` · ${formatLine(file)}` : ""}
@@ -842,7 +850,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
       <div className="mb-4 flex items-center gap-2 roomy:justify-between roomy:gap-3">
         <SearchBox key={library.id} initial={q} />
         <div className="hidden items-center gap-2 roomy:flex">
-          <label htmlFor="file-sort" className="text-[13px] whitespace-nowrap text-muted">
+          <label htmlFor="file-sort" className="text-meta whitespace-nowrap text-muted">
             Sort by
           </label>
           <Select id="file-sort" value={sort} onChange={(e) => onSort(e.target.value)} className="w-44">
@@ -897,7 +905,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
       >
         {selection.length > 0 ? (
           <>
-            <p className="mr-2 text-sm font-[550] text-ink tabular" role="status">
+            <p className="mr-2 text-sm font-label text-ink tabular" role="status">
               {plural(selection.length, "file")} selected
             </p>
             <Button
@@ -919,7 +927,7 @@ export function FilesTab({ library, route }: { library: Library; route: Route })
               Clear selection
             </Button>
             {convertPlan.ids.length === 0 ? (
-              <p id="bulk-convert-why" className="basis-full text-[13px] leading-[1.6] text-muted">
+              <p id="bulk-convert-why" className="basis-full text-meta leading-relaxed text-muted">
                 {nothingToConvertText(convertPlan)}
               </p>
             ) : null}
@@ -1090,38 +1098,36 @@ function SettingsTab({ library }: { library: Library }) {
   // groups, then removing it. The save bar sits below the panel.
   return (
     <div>
-      <div className="rounded-panel border border-line bg-surface p-7 max-roomy:p-5">
-        <SettingsSection level={2} title="Library" description="Its name, and pausing it.">
-          <div className="flex max-w-2xl flex-col gap-5">
-            <Field label="Name" error={nameError} className="max-w-sm">
-              <Input
-                value={draft.name}
-                maxLength={80}
-                onChange={(e) => {
-                  setNameError(null);
-                  setDraft((d) => ({ ...d, name: e.target.value }));
-                }}
-              />
-            </Field>
-            {/* Pausing takes effect right away: no save needed. */}
-            <div className="flex flex-col items-start gap-3 roomy:flex-row roomy:items-center roomy:justify-between roomy:gap-6">
-              <div className="min-w-0">
-                <p className="text-sm font-[550] text-ink">{library.enabled ? "Active" : "Paused"}</p>
-                <p className="mt-1 text-[13px] leading-[1.6] text-muted">
-                  {library.enabled
-                    ? "Scanned and converted as usual. Pausing stops both; nothing already converted changes."
-                    : "Not scanned or converted until you resume it. Nothing already converted changed."}
-                </p>
-              </div>
-              <Button
-                variant="secondary"
-                onClick={() => setEnabled.mutate(!library.enabled)}
-                loading={setEnabled.isPending}
-                needsServer
-              >
-                {library.enabled ? "Pause library" : "Resume library"}
-              </Button>
+      <div className={SETTINGS_PANEL}>
+        <SettingsSection title="Library" description="Its name, and pausing it.">
+          <Field label="Name" error={nameError} className="max-w-sm">
+            <Input
+              value={draft.name}
+              maxLength={80}
+              onChange={(e) => {
+                setNameError(null);
+                setDraft((d) => ({ ...d, name: e.target.value }));
+              }}
+            />
+          </Field>
+          {/* Pausing takes effect right away: no save needed. */}
+          <div className="flex flex-col items-start gap-3 @md:flex-row @md:items-center @md:justify-between @md:gap-6">
+            <div className="min-w-0">
+              <p className="text-sm font-label text-ink">{library.enabled ? "Active" : "Paused"}</p>
+              <p className="mt-1 text-meta leading-relaxed text-muted">
+                {library.enabled
+                  ? "Scanned and converted as usual. Pausing stops both; nothing already converted changes."
+                  : "Not scanned or converted until you resume it. Nothing already converted changed."}
+              </p>
             </div>
+            <Button
+              variant="secondary"
+              onClick={() => setEnabled.mutate(!library.enabled)}
+              loading={setEnabled.isPending}
+              needsServer
+            >
+              {library.enabled ? "Pause library" : "Resume library"}
+            </Button>
           </div>
         </SettingsSection>
 
@@ -1145,18 +1151,20 @@ function SettingsTab({ library }: { library: Library }) {
         </div>
 
         <SettingsSection
-          level={2}
           title="Remove library"
           description={
             <>
               Stops watching this folder and forgets its files and history.{" "}
-              <span className="font-[550] text-ink">Your media files are not deleted.</span>
+              <span className="font-label text-ink">Your media files are not deleted.</span>
             </>
           }
         >
-          <Button variant="secondary" onClick={() => setConfirmRemove(true)} needsServer>
-            Remove library…
-          </Button>
+          {/* Its own width, not the column's. */}
+          <div>
+            <Button variant="secondary" onClick={() => setConfirmRemove(true)} needsServer>
+              Remove library…
+            </Button>
+          </div>
         </SettingsSection>
       </div>
 
@@ -1211,7 +1219,9 @@ export function LibraryScreen({ id, route }: { id: string; route: Route }) {
   if (!library) {
     return (
       <div className={PANEL}>
+        {/* The page's one heading: nothing else is on it. */}
         <EmptyState
+          as="h1"
           title="This library doesn't exist"
           action={
             <a href={href("/")} className={buttonVariants({ variant: "primary" })}>
@@ -1228,10 +1238,13 @@ export function LibraryScreen({ id, route }: { id: string; route: Route }) {
   return (
     <div>
       <Header library={library} />
-      <FolderProblem library={library} />
+      {/* What needs a fix, in one place above the progress: the folder, then the setup problems files wait on. */}
+      <div className="mb-6 flex flex-col gap-3 empty:hidden">
+        <FolderProblem library={library} />
+        <SetupNotice library={library} />
+      </div>
       <Summary library={library} />
       <ScanBanner library={library} />
-      <SetupNotice library={library} />
       <NavTabs
         label="Library views"
         className="mt-8 mb-6"

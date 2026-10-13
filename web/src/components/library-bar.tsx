@@ -115,6 +115,8 @@ export function LibraryBar({
     <div
       role="img"
       aria-label={statsSentence(stats, unreadable)}
+      // The empty track: inside a filled row it turns to the surface colour (globals.css).
+      data-track=""
       className={cn("flex h-[5px] w-full gap-px overflow-hidden rounded-progress bg-subtle", className)}
     >
       {total > 0
@@ -152,7 +154,7 @@ export function LibraryLegend({
             {/* A filled swatch for a drawn part, an outlined one for the empty track. */}
             <span
               aria-hidden
-              className={cn("size-2.5 shrink-0 rounded-[2px]", s.fill ?? "border border-field bg-subtle")}
+              className={cn("size-2.5 shrink-0 rounded-progress", s.fill ?? "border border-field bg-subtle")}
             />
             <span>
               {s.label} <span className="font-medium text-ink tabular">{formatCount(s.count)}</span>

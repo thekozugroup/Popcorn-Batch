@@ -74,10 +74,10 @@ function StreamRow({
     <li className="flex gap-3 py-3">
       <span className="mt-0.5 shrink-0 text-muted [&_svg]:size-4">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-[550] text-ink">{title}</p>
-        {meta ? <p className="mt-0.5 text-[13px] leading-[1.5] text-muted">{meta}</p> : null}
+        <p className="text-sm font-label text-ink">{title}</p>
+        {meta ? <p className="mt-0.5 text-meta leading-[1.5] text-muted">{meta}</p> : null}
         {note ? (
-          <p className="mt-0.5 truncate text-[13px] leading-[1.5] text-muted" title={note}>
+          <p className="mt-0.5 truncate text-meta leading-[1.5] text-muted" title={note}>
             {note}
           </p>
         ) : null}
@@ -232,7 +232,7 @@ function FileTechnical({ file }: { file: MediaFile }) {
         ) : null}
       </dl>
       {streams.length ? (
-        <ul className="flex flex-col gap-1.5 font-mono text-xs leading-[1.6] text-muted" aria-label="Streams">
+        <ul className="flex flex-col gap-1.5 font-mono text-meta leading-relaxed text-muted" aria-label="Streams">
           {streams.map((s) => (
             <li key={s.index} className="break-words">
               <span className="text-ink">
@@ -297,12 +297,12 @@ function StatusExplanation({ file, jobs }: { file: MediaFile; jobs: Job[] }) {
               valueText={live.reading.kind === "unknown" ? fileProgressText(live) : undefined}
               label="Conversion progress, whole file"
             />
-            <p className="mt-2 text-[13px] text-muted tabular">
+            <p className="mt-2 text-meta text-muted tabular">
               {fileProgressText(live)} · {JOB_STAGE_LABEL[live.stage]}
             </p>
           </>
         ) : (
-          <p className="text-[13px] text-muted">Progress appears here in a moment.</p>
+          <p className="text-meta text-muted">Progress appears here in a moment.</p>
         )}
       </Callout>
     );
@@ -449,7 +449,7 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
         <>
           <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
             <SheetStatus file={file} />
-            <span className="text-[13px] text-muted">Updated {formatRelative(file.updated_at)}</span>
+            <span className="text-meta text-muted">Updated {formatRelative(file.updated_at)}</span>
           </div>
           <StatusExplanation file={file} jobs={detail.jobs} />
 
@@ -486,16 +486,17 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
                       <button
                         type="button"
                         onClick={() => openSheet({ file: null, job: job.id })}
-                        className="flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 py-3 text-left -outline-offset-2 hover:bg-subtle"
+                        // Hovered, its time underlines; the row keeps its fill, so the tag stays visible.
+                        className="group flex min-h-11 w-full flex-wrap items-center gap-x-3 gap-y-1 py-3 text-left -outline-offset-2"
                       >
                         <JobStateBadge job={job} standing={jobStanding(job, detail)} />
-                        <span className="text-[13px] text-muted">
+                        <span className="text-meta text-muted group-hover:text-ink group-hover:underline">
                           {formatRelative(job.finished_at ?? job.started_at ?? job.created_at)}
                         </span>
                         {savings && job.state === "done" ? (
-                          <span className="ml-auto text-[13px] text-ink tabular">{savings.text}</span>
+                          <span className="ml-auto text-meta text-ink tabular">{savings.text}</span>
                         ) : job.state === "done" && noSpaceFreed(job) ? (
-                          <span className="ml-auto text-[13px] text-muted">No space freed</span>
+                          <span className="ml-auto text-meta text-muted">No space freed</span>
                         ) : null}
                         {renamed ? <WasName name={job.file_name} className="w-full" /> : null}
                       </button>

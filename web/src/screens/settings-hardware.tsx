@@ -1,11 +1,12 @@
 "use client";
 
 /**
- * Settings › Hardware: the This machine panel, shaped like Popcorn SR's
- * worker panel (when it was checked, one sentence about what does the
- * converting, the processor, memory and graphics as detail rows, and a tag
- * for each format whose test encode passed), fix tips, the preference for
- * which to use, and, closed, the encoder table and ffmpeg details.
+ * Settings › Hardware, one panel like every settings page: This machine,
+ * shaped like Popcorn SR's worker panel (when it was checked, one sentence
+ * about what does the converting, the processor, memory and graphics as
+ * detail rows, and a tag for each format whose test encode passed), then
+ * the setup tips and the preference for which to use as setting groups,
+ * and, closed, the encoder table and ffmpeg details.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,9 +14,10 @@ import { CircleCheck, CircleDashed, CircleMinus, CircleX } from "lucide-react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { SetupHints } from "@/components/hints";
+import { SETTINGS_PANEL, SettingsSection } from "@/components/settings-section";
 import { Button } from "@/components/ui/button";
 import { Field, Select, SwitchRow } from "@/components/ui/controls";
-import { Callout, CodeBlock, Disclosure, SectionHeading, Skeleton, Tag } from "@/components/ui/display";
+import { Callout, CodeBlock, Disclosure, Skeleton, Tag } from "@/components/ui/display";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { ffmpegVersionLabel, formatBytes, formatRelative } from "@/lib/format";
 import { encoderCell, isDetecting, machineSummary, matrixApis, preferenceChoices } from "@/lib/hardware";
@@ -31,15 +33,14 @@ import { keys, useHardware } from "@/lib/queries";
 import type { EncoderStatus, HardwareInfo, HwApi, HwPreference, Settings, VideoCodec } from "@/lib/types";
 import { VIDEO_CODECS } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { Block, SETTINGS_PANEL } from "./settings-block";
 
 /** One fact about the machine: the label on the left, the value (and more about it below) on the right. */
 function DetailRow({ label, value, extra }: { label: string; value: ReactNode; extra?: ReactNode }) {
   return (
-    <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 border-t border-line pt-4 text-[13px] text-muted">
+    <div className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1 border-t border-line pt-4 text-meta text-muted">
       <dt>{label}</dt>
       <dd className="min-w-0 text-right">
-        <span className="block text-sm font-[550] break-words text-ink">{value}</span>
+        <span className="block text-sm font-label break-words text-ink">{value}</span>
         {extra ? <span className="mt-0.5 block break-words">{extra}</span> : null}
       </dd>
     </div>
@@ -123,8 +124,8 @@ function EncoderReasons({ title, encoders }: { title: string; encoders: EncoderS
       <ul className="divide-y divide-line border-t border-line">
         {encoders.map((e) => (
           <li key={e.name} className="py-3">
-            <p className="font-mono text-[13px] text-ink">{e.name}</p>
-            <p className="mt-1 text-[13px] leading-[1.6] break-words whitespace-pre-wrap text-muted">{e.error}</p>
+            <p className="font-mono text-meta text-ink">{e.name}</p>
+            <p className="mt-1 text-meta leading-relaxed break-words whitespace-pre-wrap text-muted">{e.error}</p>
           </li>
         ))}
       </ul>
@@ -167,7 +168,7 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
         tabIndex={0}
         role="region"
         aria-labelledby="encoder-table-heading"
-        className="overflow-x-auto rounded-panel border border-line bg-surface -outline-offset-2"
+        className="overflow-x-auto rounded-control border border-line bg-surface -outline-offset-2"
       >
         <table className={cn("w-full text-sm", apis.length > 2 && "min-w-[32rem]")}>
           <caption className="sr-only">Which video formats each device can encode</caption>
@@ -179,7 +180,7 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
               {apis.map((api) => (
                 <th key={api} scope="col" className="px-3 py-3 font-medium">
                   {HW_API_LABEL[api]}
-                  {api !== "software" ? <span className="ml-1 font-mono text-xs">{HW_API_TECH[api]}</span> : null}
+                  {api !== "software" ? <span className="ml-1 font-mono text-meta">{HW_API_TECH[api]}</span> : null}
                 </th>
               ))}
             </tr>
@@ -187,17 +188,17 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
           <tbody className="divide-y divide-line">
             {VIDEO_CODECS.map((codec) => (
               <tr key={codec}>
-                <th scope="row" className="py-3 pr-3 pl-5 text-left text-sm font-[550] text-ink">
+                <th scope="row" className="py-3 pr-3 pl-5 text-left text-sm font-label text-ink">
                   {VIDEO_CODEC_LABEL[codec]}
                 </th>
                 {apis.map((api) => {
                   const e = cellFor(hw.encoders, codec, api);
                   const cell = encoderCell(hw, e);
                   return (
-                    <td key={api} className="px-3 py-3 text-[13px] whitespace-nowrap">
+                    <td key={api} className="px-3 py-3 text-meta whitespace-nowrap">
                       <Cell cell={cell} />
                       {e && cell !== "unavailable" ? (
-                        <span className="mt-0.5 block font-mono text-xs text-muted">{e.name}</span>
+                        <span className="mt-0.5 block font-mono text-meta text-muted">{e.name}</span>
                       ) : null}
                     </td>
                   );
@@ -207,7 +208,7 @@ function EncoderMatrix({ hw }: { hw: HardwareInfo }) {
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-[13px] leading-[1.6] text-muted">
+      <p className="mt-3 text-meta leading-relaxed text-muted">
         Hardware encoders are listed as working only after a short test encode succeeds on this machine.
         {notSetUp ? " “Not set up” means the device isn't passed to the container; the setup tips above show how." : ""}
       </p>
@@ -249,16 +250,18 @@ export function HardwareSection({
     detectingFirst || (hardware.error instanceof ApiError && hardware.error.status === 503);
   const tags = hw && hw.ffmpeg.found ? formatTags(hw) : [];
 
+  // One panel, like every settings page: This machine, then the setup tips and the preferences
+  // as setting groups under dividers, then the encoder details.
   return (
-    <div className="flex flex-col gap-10">
-      <section aria-labelledby="this-machine-heading" className={SETTINGS_PANEL}>
+    <div className={SETTINGS_PANEL}>
+      <section aria-labelledby="this-machine-heading" className="pb-6">
         <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
           <div className="min-w-0">
-            <h2 id="this-machine-heading" className="text-xl leading-[1.4] font-semibold tracking-[-0.025em] text-ink">
+            <h2 id="this-machine-heading" className="text-title text-ink">
               This machine
             </h2>
             {hw ? (
-              <p className="mt-1 text-[13px] text-muted">
+              <p className="mt-1 text-meta text-muted">
                 {`Checked ${formatRelative(hw.detected_at)}${hw.in_container ? " · running in a container" : ""}.`}
               </p>
             ) : null}
@@ -268,13 +271,13 @@ export function HardwareSection({
           </Button>
         </div>
         {detecting ? (
-          <p role="status" className="mt-4 text-[13px] text-muted">
+          <p role="status" className="mt-4 text-meta text-muted">
             Testing each encoder with a short encode. This takes up to 15 seconds.
           </p>
         ) : null}
         {hw ? (
           <div className={cn("mt-5", detecting && "opacity-60")}>
-            <p className="text-base leading-[1.6] text-ink">{machineSummary(hw, draft.hardware)}</p>
+            <p className="text-base leading-relaxed text-ink">{machineSummary(hw, draft.hardware)}</p>
             <Devices hw={hw} />
             {tags.length ? (
               <ul aria-label="Formats that passed their test encode" className="mt-5 flex flex-wrap gap-1.5">
@@ -292,7 +295,7 @@ export function HardwareSection({
           </Callout>
         ) : (
           <div role="status" aria-label="Checking your hardware" className="mt-5">
-            <p className="text-[13px] text-muted">Checking your hardware… this takes a few seconds.</p>
+            <p className="text-meta text-muted">Checking your hardware… this takes a few seconds.</p>
             <div className="mt-5 flex flex-col gap-4">
               {[0, 1, 2].map((i) => (
                 <div key={i} className="flex justify-between gap-5 border-t border-line pt-4">
@@ -303,76 +306,73 @@ export function HardwareSection({
             </div>
           </div>
         )}
+        {hw && !hw.ffmpeg.found ? (
+          <Callout tone="danger" title="ffmpeg wasn't found" className="mt-5">
+            <p>Nothing can be converted until ffmpeg is available. The official image includes it.</p>
+            <CodeBlock className="mt-3" code={`FFMPEG_PATH=${hw.ffmpeg.ffmpeg_path}`} label="Path Popcorn Batch tried" />
+          </Callout>
+        ) : null}
       </section>
 
       {hw && hw.hints.length ? (
-        <section>
-          <SectionHeading title="Setup tips" description="Plain-language fixes for anything that's slowing things down." />
+        <SettingsSection title="Setup tips" description="Plain-language fixes for anything that's slowing things down.">
           <SetupHints hints={hw.hints} />
-        </section>
+        </SettingsSection>
       ) : null}
 
-      <div className={SETTINGS_PANEL}>
-        <Block title="Preferences">
-          <Field
-            label="Use for converting"
-            description={
-              draft.hardware === "auto"
-                ? "Uses the fastest encoder that passed its test, and the CPU when none did."
-                : draft.hardware === "cpu"
-                  ? "Always uses the CPU, even when a GPU could do it faster."
-                  : "Only uses this hardware. Formats it can't encode fall back to the CPU if allowed below."
-            }
-          >
-            <Select value={draft.hardware} onChange={(e) => onChange({ hardware: e.target.value as HwPreference })}>
-              {preferenceChoices(hw, draft.hardware, HW_PREFERENCE_API).map((choice) => (
-                <option key={choice.value} value={choice.value} disabled={choice.disabled}>
-                  {HW_PREFERENCE_LABEL[choice.value]}
-                  {choice.disabled ? " (not working on this machine)" : ""}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          {/* Only matters with a GPU; on a CPU-only machine it would do nothing. */}
-          {!hw || matrixApis(hw).length > 0 ? (
-            <SwitchRow
-              label="If the GPU fails, try the CPU"
-              description="A file that the GPU can't convert is retried on the CPU instead of being marked failed."
-              checked={draft.cpu_fallback}
-              onCheckedChange={(cpu_fallback) => onChange({ cpu_fallback })}
-            />
-          ) : null}
-        </Block>
-      </div>
-
-      {hw && !hw.ffmpeg.found ? (
-        <Callout tone="danger" title="ffmpeg wasn't found">
-          <p>Nothing can be converted until ffmpeg is available. The official image includes it.</p>
-          <CodeBlock className="mt-3" code={`FFMPEG_PATH=${hw.ffmpeg.ffmpeg_path}`} label="Path Popcorn Batch tried" />
-        </Callout>
-      ) : null}
+      <SettingsSection title="Preferences">
+        <Field
+          label="Use for converting"
+          description={
+            draft.hardware === "auto"
+              ? "Uses the fastest encoder that passed its test, and the CPU when none did."
+              : draft.hardware === "cpu"
+                ? "Always uses the CPU, even when a GPU could do it faster."
+                : "Only uses this hardware. Formats it can't encode fall back to the CPU if allowed below."
+          }
+        >
+          <Select value={draft.hardware} onChange={(e) => onChange({ hardware: e.target.value as HwPreference })}>
+            {preferenceChoices(hw, draft.hardware, HW_PREFERENCE_API).map((choice) => (
+              <option key={choice.value} value={choice.value} disabled={choice.disabled}>
+                {HW_PREFERENCE_LABEL[choice.value]}
+                {choice.disabled ? " (not working on this machine)" : ""}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {/* Only matters with a GPU; on a CPU-only machine it would do nothing. */}
+        {!hw || matrixApis(hw).length > 0 ? (
+          <SwitchRow
+            label="If the GPU fails, try the CPU"
+            description="A file that the GPU can't convert is retried on the CPU instead of being marked failed."
+            checked={draft.cpu_fallback}
+            onCheckedChange={(cpu_fallback) => onChange({ cpu_fallback })}
+          />
+        ) : null}
+      </SettingsSection>
 
       {hw ? (
+        // The last group's bottom padding is the gap above this one's divider.
         <Disclosure title="Details: encoders and ffmpeg" className="mt-0">
           <section aria-labelledby="encoder-table-heading">
-            <h3 id="encoder-table-heading" className="mb-3 text-sm font-[550] text-ink">
+            <h3 id="encoder-table-heading" className="mb-3 text-sm font-label text-ink">
               What can encode what
             </h3>
             <EncoderMatrix hw={hw} />
           </section>
           {hw.ffmpeg.found ? (
             <section aria-labelledby="ffmpeg-heading" className="flex flex-col gap-1.5">
-              <h3 id="ffmpeg-heading" className="text-sm font-[550] text-ink">
+              <h3 id="ffmpeg-heading" className="text-sm font-label text-ink">
                 ffmpeg
               </h3>
               <p className="text-sm text-ink">{ffmpegVersionLabel(hw.ffmpeg.version)}</p>
-              <p className="font-mono text-xs break-all text-muted">
+              <p className="font-mono text-meta break-all text-muted">
                 {hw.ffmpeg.ffmpeg_path} · {hw.ffmpeg.ffprobe_path}
                 {hw.ffmpeg.ffprobe_found ? "" : " (ffprobe not found)"}
               </p>
               {hw.filters.length ? (
-                <p className="text-[13px] text-muted">
-                  Filters used for checks: <span className="font-mono text-xs">{hw.filters.join(", ")}</span>
+                <p className="text-meta text-muted">
+                  Filters used for checks: <span className="font-mono text-meta">{hw.filters.join(", ")}</span>
                 </p>
               ) : null}
             </section>

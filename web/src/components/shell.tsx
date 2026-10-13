@@ -114,13 +114,13 @@ function QueueStatusLink({ className }: { className?: string }) {
       href={summary.tone === "blocked" ? href("/") : href("/queue")}
       title={stale ? lastKnown : undefined}
       className={cn(
-        "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-control px-3.5 py-3 text-[13px] whitespace-nowrap text-muted no-underline hover:bg-subtle hover:text-ink",
+        "inline-flex min-h-11 min-w-0 items-center gap-2 rounded-control px-3.5 py-3 text-meta whitespace-nowrap text-muted no-underline hover:bg-subtle hover:text-ink",
         className,
       )}
     >
       {/* Stale: a hollow dot, so it can't be mistaken for a live state. */}
       {stale ? (
-        <span aria-hidden className="size-[7px] shrink-0 rounded-full border border-field" />
+        <StatusDot hollow />
       ) : (
         <StatusDot tone={summary.dot} />
       )}
@@ -156,7 +156,7 @@ function ConnectionNotice({ className, compact = false }: { className?: string; 
       : undefined;
   if (!compact) {
     return (
-      <p role="status" className={cn("px-3.5 py-1 text-[13px] leading-[1.5] text-muted", className)}>
+      <p role="status" className={cn("px-3.5 py-1 text-meta leading-[1.5] text-muted", className)}>
         {text}
         {detail ? <span className="block text-xs">{detail}</span> : null}
       </p>
@@ -425,10 +425,10 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0">
-        <h1 className="text-3xl leading-[1.2] font-semibold tracking-[-0.025em] break-words text-ink max-roomy:text-[28px]">
+        <h1 className="text-headline break-words text-ink">
           {title}
         </h1>
-        {description ? <div className="mt-2.5 max-w-[58ch] text-base leading-[1.6] text-muted">{description}</div> : null}
+        {description ? <div className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">{description}</div> : null}
         {children}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2 roomy:shrink-0">{actions}</div> : null}

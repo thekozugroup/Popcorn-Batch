@@ -6,7 +6,8 @@ import { LibraryLink } from "@/components/shell";
 import { api } from "@/lib/api";
 import type { Library, LibraryStats, QueueState } from "@/lib/types";
 import { Summary } from "./library";
-import { LibraryRow, copyingFiles, overviewStatus } from "./overview";
+import { LibraryRow } from "@/components/libraries-panel";
+import { copyingFiles, overviewStatus } from "./overview";
 
 /**
  * A library is only "finished" once nothing more is on its way: files still

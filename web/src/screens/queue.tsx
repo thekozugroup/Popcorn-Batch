@@ -99,7 +99,7 @@ function LoadFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
 function StaleNote({ show }: { show: boolean }) {
   if (!show) return null;
   return (
-    <p role="status" className="mb-3 text-[13px] text-muted">
+    <p role="status" className="mb-3 text-meta text-muted">
       Showing the last known state. Couldn&apos;t refresh just now; trying again shortly.
     </p>
   );
@@ -205,7 +205,7 @@ function UpNextTab({ offset }: { offset: number }) {
       <ol className={cn(PANEL, "divide-y divide-line")}>
         {items.map((job, i) => (
           <li key={job.id} className={cn(ROW, "flex flex-wrap items-center gap-x-4 gap-y-2 roomy:flex-nowrap")}>
-            <span className="w-7 shrink-0 text-right text-[13px] text-muted tabular">
+            <span className="w-7 shrink-0 text-right text-meta text-muted tabular">
               <span className="sr-only">Position </span>
               {offset + i + 1}
             </span>
@@ -214,8 +214,8 @@ function UpNextTab({ offset }: { offset: number }) {
               onClick={() => openJob(job)}
               className="group/name flex min-h-11 min-w-0 flex-1 flex-col justify-center text-left"
             >
-              <FileName name={job.file_name} className="text-sm font-[550] text-ink group-hover/name:underline" />
-              <span className="block truncate text-[13px] text-muted">
+              <FileName name={job.file_name} className="text-sm font-label text-ink group-hover/name:underline" />
+              <span className="block truncate text-meta text-muted">
                 {[libraryName(job.library_id), formatBytes(job.input_size), `added ${formatRelative(job.created_at)}`]
                   .filter(Boolean)
                   .join(" · ")}
@@ -313,14 +313,14 @@ function HistoryTab({ offset }: { offset: number }) {
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
                   <FileName
                     name={renamed ?? job.file_name}
-                    className="text-sm font-[550] text-ink group-hover/name:underline"
+                    className="text-sm font-label text-ink group-hover/name:underline"
                   />
                   <JobStateBadge job={job} standing={standing} />
                 </span>
                 {renamed ? <WasName name={job.file_name} className="mt-0.5" /> : null}
                 {/* When the note wraps, the library and time start their own line, with no stray "·". */}
                 <span className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                  <span className={cn("min-w-0 text-[13px]", job.state === "done" ? "text-ink" : "text-muted")}>
+                  <span className={cn("min-w-0 text-meta", job.state === "done" ? "text-ink" : "text-muted")}>
                     {standing === "unknown" ? (
                       <span aria-hidden className="skeleton inline-block h-3 w-40 align-middle" />
                     ) : (
@@ -360,7 +360,6 @@ function HistoryTab({ offset }: { offset: number }) {
         onOpenChange={setConfirmClear}
         title="Clear the history?"
         confirmLabel="Clear history"
-        destructive
         loading={clearHistory.isPending}
         onConfirm={() => clearHistory.mutate(undefined, { onSettled: () => setConfirmClear(false) })}
       >
