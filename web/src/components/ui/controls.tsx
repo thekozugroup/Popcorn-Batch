@@ -279,7 +279,9 @@ export function Segmented<T extends string>({
               disabled={disabled}
               onChange={() => onChange(option.value)}
               aria-label={option.ariaLabel}
-              className="sr-only"
+              // Placed inside the option: a tap at its centre (mobile screen
+              // readers activate controls that way) lands on the label.
+              className="sr-only top-1/2 left-1/2"
             />
             {/* Wraps rather than being cut short ("F…") when a column is narrow. */}
             <span className="min-w-0 [overflow-wrap:anywhere]">{option.label}</span>
@@ -349,7 +351,10 @@ export function ChoiceCard({
         disabled={disabled}
         aria-labelledby={`${id}-title`}
         aria-describedby={describedBy || undefined}
-        className="sr-only"
+        // On the drawn radio circle, not the card's rounded corner: a tap at
+        // the input's centre (mobile screen readers activate controls that
+        // way) must land on the card, or it selects nothing.
+        className="sr-only top-7 left-7"
       />
       {/* Wraps, so a tag beside a long title never runs past a narrow card. */}
       <span className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">

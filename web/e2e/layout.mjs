@@ -280,6 +280,22 @@ async function main() {
           if (fit.cut.length) fail(`${where}: cut short: ${fit.cut.join(", ")}`);
           if (fit.narrow.length) fail(`${where}: controls beside their heading under 320px: ${fit.narrow.join(", ")}`);
         }
+        // A visually hidden radio must sit inside its label: mobile screen readers (and Playwright's
+        // check) activate it with a tap at its centre, which has to land on the card or option.
+        const missed = await page.evaluate(() =>
+          [...document.querySelectorAll("label > input.sr-only")].flatMap((input) => {
+            const label = input.closest("label");
+            const box = input.getBoundingClientRect();
+            const shown = label.getBoundingClientRect();
+            if (!shown.width || !shown.height) return [];
+            const x = box.left + box.width / 2;
+            const y = box.top + box.height / 2;
+            if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) return [];
+            const hit = document.elementFromPoint(x, y);
+            return hit && label.contains(hit) ? [] : [label.textContent?.trim().slice(0, 40) ?? "?"];
+          }),
+        );
+        if (missed.length) fail(`${where}: a tap on a hidden radio misses its label: ${missed.join(", ")}`);
         if (screen === "#/queue") {
           const cards = await page.locator("article").evaluateAll((articles) =>
             articles.map((a) =>
