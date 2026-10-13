@@ -64,7 +64,7 @@ pub fn test_media() -> &'static Path {
             h.finish()
         };
         let dir = root.join(format!("worker-media-{CLIP_SECS}s-{version:016x}"));
-        if dir.join(".complete").exists() {
+        if media_is_complete(&dir) {
             return dir;
         }
         let staging = tempfile::Builder::new()
@@ -78,14 +78,52 @@ pub fn test_media() -> &'static Path {
             .status()
             .expect("run make-test-media.sh");
         assert!(status.success(), "make-test-media.sh failed");
-        std::fs::write(staging.path().join(".complete"), b"").expect("marker");
+        let mut files = Vec::new();
+        list_files(staging.path(), Path::new(""), &mut files);
+        std::fs::write(staging.path().join(".complete"), files.join("\n")).expect("marker");
         let staged = staging.keep();
-        // Another test binary may have finished first; either copy is fine.
         if std::fs::rename(&staged, &dir).is_err() {
-            let _ = std::fs::remove_dir_all(&staged);
+            if media_is_complete(&dir) {
+                // Another test binary finished first; either copy is fine.
+                let _ = std::fs::remove_dir_all(&staged);
+            } else {
+                // A leftover that is missing files (a run cut short, or a CI
+                // cache that restored part of it) is replaced, never used.
+                let _ = std::fs::remove_dir_all(&dir);
+                std::fs::rename(&staged, &dir).expect("replace incomplete test media");
+            }
         }
+        assert!(
+            media_is_complete(&dir),
+            "test media at {} is incomplete",
+            dir.display()
+        );
         dir
     })
+}
+
+/// Whether `dir` holds every file its `.complete` marker lists. The marker
+/// is written last, so a folder without it, or missing any listed file, is
+/// a leftover to replace.
+fn media_is_complete(dir: &Path) -> bool {
+    let Ok(listed) = std::fs::read_to_string(dir.join(".complete")) else {
+        return false;
+    };
+    let mut files = listed.lines().filter(|l| !l.is_empty()).peekable();
+    files.peek().is_some() && files.all(|f| dir.join(f).is_file())
+}
+
+/// Every file below `dir`, as paths relative to it (`rel` is where `dir` is).
+fn list_files(dir: &Path, rel: &Path, out: &mut Vec<String>) {
+    for entry in std::fs::read_dir(dir).expect("read test media").flatten() {
+        let path = entry.path();
+        let name = rel.join(entry.file_name());
+        if path.is_dir() {
+            list_files(&path, &name, out);
+        } else {
+            out.push(name.to_string_lossy().into_owned());
+        }
+    }
 }
 
 /// Copy one test clip into `dir` (tests modify their copies freely).
