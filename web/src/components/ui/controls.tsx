@@ -3,46 +3,38 @@
 /**
  * Form controls. Native elements wherever the platform already does the job
  * (text inputs, selects, radios), so keyboard, screen reader and phone
- * behaviour come for free; only the look is ours.
+ * behaviour come for free; only the look is ours. Every control is at least
+ * 44px tall.
  */
 
 import { ChevronDown } from "lucide-react";
 import { createContext, useContext, useId, type ComponentProps, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { StatusDot } from "./display";
 
-// The border is what shows a field's edge (its fill is close to the page), so
-// it is full strength: 3:1 or more against both surfaces (WCAG 1.4.11).
+// The border is what shows a field's edge (its fill is the surface), so it
+// uses Zinc Status: 3:1 or more against both surfaces (WCAG 1.4.11).
 const fieldBase =
-  "w-full rounded-md border border-line-strong bg-surface text-fg shadow-card transition-[border-color,box-shadow] duration-150 hover:border-muted focus-visible:border-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ink/40 disabled:cursor-not-allowed disabled:opacity-60 aria-invalid:border-danger aria-invalid:ring-2 aria-invalid:ring-danger/25";
+  "w-full min-w-0 min-h-11 rounded-control border border-field bg-surface px-3 py-2.5 text-base leading-normal text-ink disabled:cursor-default disabled:opacity-50 aria-invalid:border-error";
 
 /** Single-line text input. */
 export function Input({ className, ...props }: ComponentProps<"input">) {
   const field = useField();
-  return <input {...field} className={cn(fieldBase, "h-9 px-3 text-sm pointer-coarse:h-11", className)} {...props} />;
+  return <input {...field} className={cn(fieldBase, className)} {...props} />;
 }
 
 /** Multi-line text input. */
 export function Textarea({ className, ...props }: ComponentProps<"textarea">) {
   const field = useField();
-  return (
-    <textarea
-      {...field}
-      className={cn(fieldBase, "min-h-24 px-3 py-2 text-sm leading-relaxed", className)}
-      {...props}
-    />
-  );
+  return <textarea {...field} className={cn(fieldBase, "min-h-24 leading-relaxed", className)} {...props} />;
 }
 
 /** Native select with our styling. */
 export function Select({ className, children, ...props }: ComponentProps<"select">) {
   const field = useField();
   return (
-    <div className={cn("relative", className)}>
-      <select
-        {...field}
-        className={cn(fieldBase, "h-9 cursor-pointer appearance-none pr-9 pl-3 text-sm pointer-coarse:h-11")}
-        {...props}
-      >
+    <div className={cn("relative min-w-0", className)}>
+      <select {...field} className={cn(fieldBase, "cursor-pointer appearance-none pr-10")} {...props}>
         {children}
       </select>
       <ChevronDown
@@ -81,6 +73,19 @@ export function useField(): {
   };
 }
 
+/**
+ * An error line under a control: 13px, weight 550, main text, after a red
+ * status dot. The red is the dot only; the words stay neutral.
+ */
+export function ErrorText({ id, children, className }: { id?: string; children: ReactNode; className?: string }) {
+  return (
+    <p id={id} role="alert" className={cn("flex items-baseline gap-2 text-meta leading-relaxed font-label text-ink", className)}>
+      <StatusDot tone="danger" className="translate-y-[-1px]" />
+      <span className="min-w-0">{children}</span>
+    </p>
+  );
+}
+
 interface FieldProps {
   label: ReactNode;
   description?: ReactNode;
@@ -103,21 +108,17 @@ export function Field({ label, description, error, children, className, hideLabe
   };
   return (
     <FieldContext.Provider value={value}>
-      <div className={cn("flex flex-col gap-1.5", className)}>
-        <label htmlFor={value.id} className={cn("text-sm font-medium text-fg", hideLabel && "sr-only")}>
+      <div className={cn("grid min-w-0 gap-2", className)}>
+        <label htmlFor={value.id} className={cn("text-sm font-label text-ink", hideLabel && "sr-only")}>
           {label}
         </label>
         {children}
         {description ? (
-          <p id={value.descriptionId} className="text-[0.8125rem] leading-snug text-muted">
+          <p id={value.descriptionId} className="text-meta leading-relaxed text-muted">
             {description}
           </p>
         ) : null}
-        {error ? (
-          <p id={value.errorId} role="alert" className="text-[0.8125rem] leading-snug font-medium text-danger">
-            {error}
-          </p>
-        ) : null}
+        {error ? <ErrorText id={value.errorId}>{error}</ErrorText> : null}
       </div>
     </FieldContext.Provider>
   );
@@ -136,13 +137,13 @@ interface SwitchProps {
 export function SwitchRow({ checked, onCheckedChange, label, description, disabled, className }: SwitchProps) {
   const id = useId();
   return (
-    <div className={cn("flex items-start justify-between gap-6", className)}>
-      <div className="min-w-0">
-        <label id={`${id}-label`} htmlFor={`${id}-switch`} className="text-sm font-medium text-fg">
+    <div className={cn("flex min-h-11 items-start justify-between gap-6", className)}>
+      <div className="min-w-0 pt-2.5">
+        <label id={`${id}-label`} htmlFor={`${id}-switch`} className="text-sm font-label text-ink">
           {label}
         </label>
         {description ? (
-          <p id={`${id}-description`} className="mt-0.5 text-[0.8125rem] leading-snug text-muted">
+          <p id={`${id}-description`} className="mt-1 text-meta leading-relaxed text-muted">
             {description}
           </p>
         ) : null}
@@ -158,7 +159,11 @@ export function SwitchRow({ checked, onCheckedChange, label, description, disabl
   );
 }
 
-/** The toggle itself. Use `SwitchRow` for a labelled setting. */
+/**
+ * The toggle itself: a 40×24 track inside a 44×44 target. Off is the subtle
+ * fill with a Zinc Status border and knob; on is Action Blue with a white
+ * knob. Use `SwitchRow` for a labelled setting.
+ */
 export function Switch({
   checked,
   onCheckedChange,
@@ -175,8 +180,7 @@ export function Switch({
       aria-checked={checked}
       onClick={() => onCheckedChange(!checked)}
       className={cn(
-        "relative mt-0.5 inline-flex h-6 w-10 shrink-0 cursor-pointer items-center rounded-full border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "border-transparent bg-accent" : "border-line-strong bg-raised",
+        "group grid size-11 shrink-0 place-items-center rounded-control disabled:cursor-default disabled:opacity-50",
         className,
       )}
       {...props}
@@ -184,10 +188,17 @@ export function Switch({
       <span
         aria-hidden
         className={cn(
-          "absolute top-1/2 left-[2px] size-[1.125rem] -translate-y-1/2 rounded-full shadow-card transition-[translate,background-color] duration-200 ease-[var(--ease-out-expo)]",
-          checked ? "translate-x-4 bg-on-accent" : "translate-x-0 bg-muted",
+          "relative flex h-6 w-10 items-center rounded-full border",
+          checked ? "border-accent bg-accent" : "border-field bg-subtle",
         )}
-      />
+      >
+        <span
+          className={cn(
+            "absolute left-[2px] size-[18px] rounded-full motion-safe:transition-transform motion-safe:duration-150 motion-safe:ease-out",
+            checked ? "translate-x-4 bg-white" : "translate-x-0 bg-field",
+          )}
+        />
+      </span>
     </button>
   );
 }
@@ -206,18 +217,21 @@ interface SegmentedProps<T extends string> {
   /** Group label for assistive tech (shown by the surrounding `legend`/heading). */
   label: string;
   className?: string;
-  size?: "sm" | "md";
   disabled?: boolean;
   /**
-   * Stack the options vertically on phones, for rows with more choices than
-   * fit side by side at 390px. Each option may then show `description`.
+   * Stack the options while the column holding them (the nearest size
+   * container, such as a settings section's controls) is under 32rem
+   * (512px): for rows with more choices than fit side by side there. The
+   * room the control has decides, not the screen: beside a settings heading
+   * a laptop screen leaves it less room than a phone.
    */
   stackOnPhones?: boolean;
 }
 
 /**
  * A row of mutually exclusive choices built on native radios, so arrow keys
- * move the selection and screen readers announce "1 of 5".
+ * move the selection and screen readers announce "1 of 5". The selected
+ * option has the subtle fill and an Action Blue border.
  */
 export function Segmented<T extends string>({
   value,
@@ -225,7 +239,6 @@ export function Segmented<T extends string>({
   options,
   label,
   className,
-  size = "md",
   disabled,
   stackOnPhones,
 }: SegmentedProps<T>) {
@@ -235,9 +248,9 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "w-full rounded-md border border-line-strong/60 bg-sunken p-0.5",
-        stackOnPhones ? "flex flex-col gap-0.5 sm:inline-flex sm:flex-row sm:gap-0" : "inline-flex",
-        disabled && "opacity-60",
+        "w-full gap-[3px] rounded-control border border-field bg-surface p-[3px]",
+        stackOnPhones ? "flex flex-col @lg:inline-flex @lg:flex-row" : "inline-flex",
+        disabled && "opacity-50",
         className,
       )}
     >
@@ -247,20 +260,15 @@ export function Segmented<T extends string>({
           <label
             key={option.value}
             className={cn(
-              "relative flex min-w-0 cursor-pointer items-center rounded-[5px] px-2 font-medium transition-[background-color,color,box-shadow] duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-accent-ink",
-              // Stacked, a zero flex basis would squash each option to its text
-              // height; the height below applies only while they don't grow.
+              "relative flex min-h-11 min-w-0 cursor-pointer items-center rounded-tag border px-3 py-1.5 text-sm has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-solid",
+              // Stacked, a zero flex basis would squash each option to its text height.
               stackOnPhones
-                ? "flex-none justify-start px-3 sm:flex-1 sm:justify-center sm:px-2 sm:text-center"
+                ? "flex-none justify-start @lg:flex-1 @lg:justify-center @lg:text-center"
                 : "flex-1 justify-center text-center",
-              size === "sm" ? "h-7 text-[0.8125rem]" : stackOnPhones ? "h-10 text-sm sm:h-8" : "h-8 text-sm",
-              "pointer-coarse:h-11",
-              // The selected option carries a 1.5px gold ring (≥3:1 against the
-              // track in both themes), like a selected choice card.
               selected
-                ? "bg-surface text-fg shadow-card ring-[1.5px] ring-accent-ink ring-inset dark:bg-raised"
-                : "text-muted hover:text-fg",
-              disabled && "cursor-not-allowed",
+                ? "border-accent bg-subtle font-semibold text-ink"
+                : "border-transparent font-medium text-muted hover:text-ink",
+              disabled && "cursor-default",
             )}
           >
             <input
@@ -271,9 +279,12 @@ export function Segmented<T extends string>({
               disabled={disabled}
               onChange={() => onChange(option.value)}
               aria-label={option.ariaLabel}
-              className="sr-only"
+              // Placed inside the option: a tap at its centre (mobile screen
+              // readers activate controls that way) lands on the label.
+              className="sr-only top-1/2 left-1/2"
             />
-            <span className="truncate">{option.label}</span>
+            {/* Wraps rather than being cut short ("F…") when a column is narrow. */}
+            <span className="min-w-0 [overflow-wrap:anywhere]">{option.label}</span>
           </label>
         );
       })}
@@ -295,9 +306,12 @@ interface ChoiceCardProps {
 }
 
 /**
- * A large radio option: title, one-line explanation, optional detail. The
- * radio is named by its title alone and described by the rest, so screen
- * readers don't read the whole card on every arrow key.
+ * A large radio option (a goal card): title, one-line explanation, optional
+ * detail. The selected card has an Action Blue border and radio. The radio
+ * is named by its title alone and described by the rest, so screen readers
+ * don't read the whole card on every arrow key. The card's outline follows
+ * its own radio's focus only, so a control inside it (the files-at-once
+ * stepper, a folder field) shows just its own outline.
  */
 export function ChoiceCard({
   name,
@@ -322,11 +336,9 @@ export function ChoiceCard({
   return (
     <label
       className={cn(
-        "group relative flex cursor-pointer flex-col gap-1 rounded-lg border bg-surface p-4 text-left transition-[border-color,background-color,box-shadow] duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent-ink",
-        checked
-          ? "border-accent-ink bg-accent-soft/40 shadow-card ring-1 ring-accent-ink"
-          : "border-line hover:border-line-strong",
-        disabled && "cursor-not-allowed opacity-60",
+        "relative grid min-w-0 cursor-pointer content-start gap-1 rounded-control border bg-surface p-5 text-left has-[>input:focus-visible]:outline-2 has-[>input:focus-visible]:outline-offset-4 has-[>input:focus-visible]:outline-accent has-[>input:focus-visible]:outline-solid",
+        checked ? "border-accent" : "border-line hover:border-field",
+        disabled && "cursor-default opacity-50",
         className,
       )}
     >
@@ -339,30 +351,34 @@ export function ChoiceCard({
         disabled={disabled}
         aria-labelledby={`${id}-title`}
         aria-describedby={describedBy || undefined}
-        className="sr-only"
+        // On the drawn radio circle, not the card's rounded corner: a tap at
+        // the input's centre (mobile screen readers activate controls that
+        // way) must land on the card, or it selects nothing.
+        className="sr-only top-7 left-7"
       />
-      <span className="flex items-start justify-between gap-3">
-        <span className="flex items-center gap-2.5 text-[0.9375rem] font-semibold text-fg">
+      {/* Wraps, so a tag beside a long title never runs past a narrow card. */}
+      <span className="flex min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <span className="flex min-w-0 items-center gap-2.5 text-base leading-normal font-semibold text-ink">
           <span
             aria-hidden
             className={cn(
-              "grid size-4 shrink-0 place-items-center rounded-full border transition-colors",
-              checked ? "border-accent-ink bg-accent-ink" : "border-line-strong bg-surface",
+              "size-4 shrink-0 rounded-full bg-surface",
+              checked ? "border-[5px] border-accent" : "border border-field",
             )}
-          >
-            <span className={cn("size-1.5 rounded-full", checked ? "bg-surface" : "bg-transparent")} />
+          />
+          <span id={`${id}-title`} className="min-w-0">
+            {title}
           </span>
-          <span id={`${id}-title`}>{title}</span>
         </span>
         {badge ? <span id={`${id}-badge`}>{badge}</span> : null}
       </span>
       {description ? (
-        <span id={`${id}-description`} className="pl-[1.625rem] text-[0.8125rem] leading-snug text-muted">
+        <span id={`${id}-description`} className="pl-[26px] text-sm leading-relaxed text-muted">
           {description}
         </span>
       ) : null}
       {children ? (
-        <span id={`${id}-detail`} className="pl-[1.625rem]">
+        <span id={`${id}-detail`} className="min-w-0 pl-[26px]">
           {children}
         </span>
       ) : null}

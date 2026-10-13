@@ -1,6 +1,9 @@
 name: Release
 
-# Publishes ghcr.io/<owner>/szalinski for linux/amd64 and linux/arm64.
+# Publishes ghcr.io/<owner>/popcorn-batch for linux/amd64 and linux/arm64.
+# Every tag is also copied, same digest, to the image's earlier names,
+# ghcr.io/<owner>/szalinski and ghcr.io/<owner>/chrysopoeia, so installs that
+# still pull one of those keep updating (LEGACY_IMAGES below).
 #
 # Update channels: what an installed container follows depends on its tag.
 #   :stable      the newest non-prerelease version tag (vX.Y.Z), compared by
@@ -53,7 +56,7 @@ name: Release
 #
 # The first image ever published, including a first :edge from a manual run on
 # a branch, creates the package as private. Make it public once (GitHub ->
-# Packages -> szalinski -> Package settings -> Change visibility) so Unraid
+# Packages -> popcorn-batch -> Package settings -> Change visibility) so Unraid
 # and Docker can pull it without logging in. The run's summary repeats this.
 
 on:
@@ -98,18 +101,21 @@ jobs:
         id: registry
         # Registry paths must be lowercase.
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/szalinski"
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          image="ghcr.io/$owner/popcorn-batch"
           echo "IMAGE=$image" >> "$GITHUB_ENV"
           echo "name=$image" >> "$GITHUB_OUTPUT"
-          # The image's name before the rename from Chrysopoeia. Every tag is
-          # copied there too for a while, so installs that still pull it keep
-          # getting updates until their template is switched to the new name.
-          echo "LEGACY_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/chrysopoeia" >> "$GITHUB_ENV"
+          # The image's names under the project's earlier names, newest
+          # first: Szalinski (0.3) and Chrysopoeia (0.2). Every tag is copied
+          # to each of them too, so installs that still pull an older name
+          # keep getting updates until their template is switched to the new
+          # name. Separated by spaces.
+          echo "LEGACY_IMAGES=ghcr.io/$owner/szalinski ghcr.io/$owner/chrysopoeia" >> "$GITHUB_ENV"
 
       - name: Channel and version
         # kind is "release" for a version tag (v1.2.3, v1.2.0-rc.1) and
         # "build" for everything else. The image version is shown in the first
-        # line of the container log ("Szalinski 0.3.0 (build main-1a2b3c4)")
+        # line of the container log ("Popcorn Batch 0.4.0 (build main-1a2b3c4)")
         # and in the OCI version label. Tags: v1.2.3 -> 1.2.3. Branches:
         # <branch>-<short sha>, so a bug report from a :latest image names the
         # exact commit. The server itself (API, "is running" log line) reports
@@ -179,12 +185,12 @@ jobs:
           # The version label overrides metadata-action's default, which is
           # "latest" for builds from main.
           labels: |
-            org.opencontainers.image.title=Szalinski
+            org.opencontainers.image.title=Popcorn Batch
             org.opencontainers.image.description=Self-hosted media transcoder: pick a folder and a goal; every file is verified before it replaces the original.
             org.opencontainers.image.licenses=Apache-2.0
             org.opencontainers.image.version=${{ steps.channel.outputs.version }}
           annotations: |
-            org.opencontainers.image.title=Szalinski
+            org.opencontainers.image.title=Popcorn Batch
             org.opencontainers.image.description=Self-hosted media transcoder: pick a folder and a goal; every file is verified before it replaces the original.
             org.opencontainers.image.licenses=Apache-2.0
             org.opencontainers.image.version=${{ steps.channel.outputs.version }}
@@ -195,7 +201,7 @@ jobs:
           context: .
           platforms: linux/amd64
           load: true
-          tags: szalinski:release-test
+          tags: popcorn-batch:release-test
           build-args: |
             VERSION=${{ steps.channel.outputs.version }}
             REVISION=${{ github.sha }}
@@ -206,10 +212,10 @@ jobs:
           cache-to: type=gha,mode=max,scope=amd64
 
       - name: Entrypoint tests
-        run: docker/test-entrypoint.sh szalinski:release-test
+        run: docker/test-entrypoint.sh popcorn-batch:release-test
 
       - name: End-to-end smoke test (API)
-        run: scripts/e2e-smoke.sh szalinski:release-test
+        run: scripts/e2e-smoke.sh popcorn-batch:release-test
 
       - name: Install Playwright and Chromium
         run: |
@@ -217,7 +223,7 @@ jobs:
           playwright install --with-deps chromium
 
       - name: End-to-end smoke test (first run in a browser)
-        run: scripts/e2e-browser.sh szalinski:release-test
+        run: scripts/e2e-browser.sh popcorn-batch:release-test
 
       - name: Build and push linux/amd64 + linux/arm64
         id: push
@@ -278,9 +284,12 @@ jobs:
             echo "moving_tags=${moving[*]}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Also publish under the name before the rename
+      - name: Also publish under the earlier names
         # Copies of the pushed image's digest (no new build) under every tag
-        # this run published, including the moving ones set above.
+        # this run published, including the moving ones set above, for each
+        # of LEGACY_IMAGES (Szalinski, Chrysopoeia). Each copy is checked
+        # afterwards. One that fails does not stop the others; the step
+        # fails at the end.
         env:
           DIGEST: ${{ steps.push.outputs.digest }}
           TAGS: ${{ steps.meta.outputs.tags }}
@@ -288,19 +297,39 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "$DIGEST" ]]; then
-            echo "::error::The push step reported no image digest, so nothing was copied to $LEGACY_IMAGE."
+            echo "::error::The push step reported no image digest, so nothing was copied to $LEGACY_IMAGES."
             exit 1
           fi
-          args=()
+          tags=()
           while read -r ref; do
-            [[ -n "$ref" ]] && args+=(-t "$LEGACY_IMAGE:${ref##*:}")
+            if [[ -n "$ref" ]]; then tags+=("${ref##*:}"); fi
           done <<<"$TAGS"
           for t in $MOVING; do
-            args+=(-t "$LEGACY_IMAGE:$t")
+            tags+=("$t")
           done
-          if ((${#args[@]} > 0)); then
-            docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"
+          if ((${#tags[@]} == 0)); then
+            exit 0
           fi
+          failed=0
+          for legacy in $LEGACY_IMAGES; do
+            args=()
+            for t in "${tags[@]}"; do
+              args+=(-t "$legacy:$t")
+            done
+            if ! docker buildx imagetools create "${args[@]}" "$IMAGE@$DIGEST"; then
+              echo "::error::Could not copy the image to $legacy, so installs that pull that name were not updated."
+              failed=1
+              continue
+            fi
+            for t in "${tags[@]}"; do
+              got=$(docker buildx imagetools inspect "$legacy:$t" --format '{{json .Manifest}}' | jq -r .digest) || got="nothing"
+              if [[ "$got" != "$DIGEST" ]]; then
+                echo "::error::$legacy:$t points at $got, not at the image this run pushed ($DIGEST)."
+                failed=1
+              fi
+            done
+          done
+          exit "$failed"
 
       - name: Summary
         env:
@@ -334,7 +363,13 @@ jobs:
               echo "\`:stable\` was **not** moved: a newer release exists, and the stable channel never moves backwards."
             fi
             echo
-            echo "If this is the first image ever published (including a first \`:edge\` from a branch), the package is private and Unraid and Docker are refused when pulling it. Make it public once: open https://github.com/${GITHUB_REPOSITORY}/pkgs/container/szalinski, then **Package settings > Change visibility > Public**."
+            echo "The same tags were copied to the earlier names, for installs that still pull them:"
+            echo
+            for legacy in $LEGACY_IMAGES; do
+              echo "- \`$legacy\`"
+            done
+            echo
+            echo "If this is the first image ever published (including a first \`:edge\` from a branch), the package is private and Unraid and Docker are refused when pulling it. Make it public once: open https://github.com/${GITHUB_REPOSITORY}/pkgs/container/popcorn-batch, then **Package settings > Change visibility > Public**."
           } >> "$GITHUB_STEP_SUMMARY"
 
   release:

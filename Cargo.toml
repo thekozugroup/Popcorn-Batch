@@ -1,19 +1,19 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/szalinski-core",
-    "crates/szalinski-server",
-    "crates/szalinski-worker",
-    "crates/szalinski-scanner",
-    "crates/szalinski-hwdetect",
+    "crates/popcorn-batch-core",
+    "crates/popcorn-batch-server",
+    "crates/popcorn-batch-worker",
+    "crates/popcorn-batch-scanner",
+    "crates/popcorn-batch-hwdetect",
 ]
 
 [workspace.package]
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.88"
 license = "Apache-2.0"
-repository = "https://github.com/thekozugroup/Szalinski"
+repository = "https://github.com/thekozugroup/Popcorn-Batch"
 
 [workspace.dependencies]
 # Async runtime
@@ -47,10 +47,10 @@ globset = "0.4"
 tempfile = "3"
 
 # Internal crates
-szalinski-core = { path = "crates/szalinski-core" }
-szalinski-hwdetect = { path = "crates/szalinski-hwdetect" }
-szalinski-scanner = { path = "crates/szalinski-scanner" }
-szalinski-worker = { path = "crates/szalinski-worker" }
+popcorn-batch-core = { path = "crates/popcorn-batch-core" }
+popcorn-batch-hwdetect = { path = "crates/popcorn-batch-hwdetect" }
+popcorn-batch-scanner = { path = "crates/popcorn-batch-scanner" }
+popcorn-batch-worker = { path = "crates/popcorn-batch-worker" }
 
 # Smaller, faster debug builds. Line tables keep backtraces useful.
 [profile.dev]

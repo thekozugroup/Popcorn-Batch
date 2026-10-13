@@ -1,6 +1,6 @@
-# Szalinski architecture
+# Popcorn Batch architecture
 
-Szalinski is a self-hosted media transcoder: point it at folders, pick a goal,
+Popcorn Batch is a self-hosted media transcoder: point it at folders, pick a goal,
 and it converts the library in the background, verifies every result, and only
 then replaces the original. It is a Tdarr alternative that trades plugin stacks
 for sensible defaults, automatic hardware setup and verified output.
@@ -8,7 +8,7 @@ for sensible defaults, automatic hardware setup and verified output.
 This document is the contract between the backend crates, the web UI and the
 deployment files, and it describes what the code does. Field names and JSON
 shapes here are normative. The Rust source of truth for every shared type is
-`crates/szalinski-core`; the TypeScript mirror is `web/src/lib/types.ts`.
+`crates/popcorn-batch-core`; the TypeScript mirror is `web/src/lib/types.ts`.
 
 ## Runtime shape
 
@@ -22,11 +22,11 @@ shapes here are normative. The Rust source of truth for every shared type is
              │   │     plan ─► ffmpeg (HW ► HW-enc/SW-dec ► CPU) ─► verify   │
              │   │     ─► finalize (crash-safe replace) ─► DB + events       │
              │   └─ Hardware: hwdetect::detect at startup + on demand        │
-             │ SQLite (WAL) at $DATA_DIR/szalinski.db                       │
+             │ SQLite (WAL) at $DATA_DIR/popcorn-batch.db                    │
              └────────────────────────────────────────────────────────────────┘
 ```
 
-- Single static binary `szalinski` (crate `szalinski-server`) serves the
+- Single static binary `popcorn-batch` (crate `popcorn-batch-server`) serves the
   API, the WebSocket and the exported Next.js UI. No Node at runtime.
 - ffmpeg/ffprobe are external processes (jellyfin-ffmpeg in the Docker image,
   which bundles NVENC, QSV/oneVPL, VA-API (Intel iHD + AMD), AMF and Rockchip
@@ -39,11 +39,11 @@ shapes here are normative. The Rust source of truth for every shared type is
 
 | Crate | Owns | Public API |
 |---|---|---|
-| `szalinski-core` | Shared types, codec/container rules, goals, settings, events, artifact naming, Matroska statistics tags, where a file really ends by its packets (`timeline`), tying child processes to the server's life | Everything in `src/*.rs` |
-| `szalinski-hwdetect` | CPU/memory/cgroup detection, GPU discovery, ffmpeg encoder listing and **test-encode verification**, job-count recommendation, setup hints | `detect`, `recommend_jobs`, `encoder_candidates`, `is_busy_failure`, `preference_problem`, `preference_hint` |
-| `szalinski-scanner` | Walking libraries, media extension list, ffprobe probing (async, timeout), folder watching with settle debounce | `walk_library`, `is_media_path`, `is_video_path`, `probe_file`, `parse_ffprobe_json`, `LibraryWatcher`, `ScanOptions::from_settings`, `IgnoreRules`, `validate_ignore_pattern` |
-| `szalinski-worker` | `plan`/`quality`: skip decision + ffmpeg args. `ffmpeg`/`run`/`validate`/`finalize`: process execution with fallback chain, verification, crash-safe replacement | `decide`, `decide_forced`, `build_plan`, `run_job`, `validate_output`, `finalize::*` (incl. `resume_replace`, `remove_backup`, `recover_artifact`), `slow_fs` |
-| `szalinski-server` | Config (CLI/env), SQLite schema + migrations, REST + WS, LibraryService, Dispatcher, static UI hosting, filesystem browser | binary `szalinski` |
+| `popcorn-batch-core` | Shared types, codec/container rules, goals, settings, events, artifact naming, Matroska statistics tags, where a file really ends by its packets (`timeline`), tying child processes to the server's life | Everything in `src/*.rs` |
+| `popcorn-batch-hwdetect` | CPU/memory/cgroup detection, GPU discovery, ffmpeg encoder listing and **test-encode verification**, job-count recommendation, setup hints | `detect`, `recommend_jobs`, `encoder_candidates`, `is_busy_failure`, `preference_problem`, `preference_hint` |
+| `popcorn-batch-scanner` | Walking libraries, media extension list, ffprobe probing (async, timeout), folder watching with settle debounce | `walk_library`, `is_media_path`, `is_video_path`, `probe_file`, `parse_ffprobe_json`, `LibraryWatcher`, `ScanOptions::from_settings`, `IgnoreRules`, `validate_ignore_pattern` |
+| `popcorn-batch-worker` | `plan`/`quality`: skip decision + ffmpeg args. `ffmpeg`/`run`/`validate`/`finalize`: process execution with fallback chain, verification, crash-safe replacement | `decide`, `decide_forced`, `build_plan`, `run_job`, `validate_output`, `finalize::*` (incl. `resume_replace`, `remove_backup`, `recover_artifact`), `slow_fs` |
+| `popcorn-batch-server` | Config (CLI/env), SQLite schema + migrations, REST + WS, LibraryService, Dispatcher, static UI hosting, filesystem browser | binary `popcorn-batch` |
 
 Existing public signatures are fixed; new public items may be added. The
 workspace's minimum Rust version (MSRV) is 1.88.
@@ -76,22 +76,40 @@ it is picked up or converted (the settle time); the database busy timeout is
 
 Start order: raise the soft limit on open files to the hard limit (at most
 65 536; Docker often starts with 1 024) → exclusive lock on
-`$DATA_DIR/szalinski.lock` (a second
-Szalinski on the same data folder exits with "Another Szalinski is already
+`$DATA_DIR/popcorn-batch.lock` (a second
+Popcorn Batch on the same data folder exits with "Another Popcorn Batch is already
 using the data folder …" and changes nothing, advising to stop the other one or
 give this one its own Config folder in a container (the image sets the data
 folder there), and `--data-dir` / `DATA_DIR` outside one; filesystems that
 can't lock only log a warning) → bind the port → open the database → recovery.
 
+Earlier names: the project was called Szalinski (0.3) and Chrysopoeia (0.2),
+and installs of both exist. The lock step also takes `szalinski.lock` and
+`chrysopoeia.lock` (`app::LEGACY_LOCK_FILE_NAMES`, the files those versions
+lock), so neither older image can share the data folder with this one, in
+either order. Before the database is opened, a data folder without
+`popcorn-batch.db` adopts the newest older database it holds
+(`db::adopt_legacy_database`: `szalinski.db`, else `chrysopoeia.db`), renamed
+with its `-wal`, `-shm` and `-journal` files (the log files first, so a start
+interrupted half way finishes the next time), and logs "carried over the
+database of Szalinski (an earlier name of Popcorn Batch): … is now …". A
+folder that has `popcorn-batch.db` never adopts anything, and older files
+next to it are left alone. Temp and backup files named with `.szalinski-` or
+`.chrysopoeia-` instead of `.popcorn-batch-` are recognised, recovered and
+cleaned like current ones (`popcorn_batch_core::paths::ARTIFACT_MARKERS`),
+so a conversion interrupted under an older name is finished or undone after
+the upgrade. The build label is read from `POPCORN_BATCH_VERSION`, else
+`SZALINSKI_VERSION`, else `CHRYSOPOEIA_VERSION`.
+
 A database file SQLite finds damaged (`SQLITE_CORRUPT`, `SQLITE_NOTADB`) is
-moved aside as `szalinski.db.damaged-<UTC time>` (with its `-wal`/`-shm`
+moved aside as `popcorn-batch.db.damaged-<UTC time>` (with its `-wal`/`-shm`
 files) and a new one is started; the feed says so at WARN ("The database was
-damaged, so Szalinski moved it aside to … and started with a new one. Your
+damaged, so Popcorn Batch moved it aside to … and started with a new one. Your
 media files were not touched. Add your libraries and settings again."), so a
 container set to restart doesn't loop. A data folder on a full disk stops
 the start with "The disk that holds the data folder (…) is full, so the
 database there couldn't be opened. Free some space on that disk, then start
-Szalinski again" (`db::is_disk_full`: SQLite's `SQLITE_FULL` or the
+Popcorn Batch again" (`db::is_disk_full`: SQLite's `SQLITE_FULL` or the
 system's "no space left", or any database error while less than 1 MiB is
 free there; a new database fails with the former, an existing one with a
 disk I/O error). This covers opening, migrating and the first writes of the
@@ -357,7 +375,7 @@ dispatcher claims job ─► running(preparing ► transcoding ► verifying ►
   it, and its conversions continue."), and while something else is
   mounted there it is not connected either ("A different drive is mounted
   at /mnt/remotes/nas than before. Reconnect the usual one, or tell
-  Szalinski to use the one there now."), whatever the folder holds: the
+  Popcorn Batch to use the one there now."), whatever the folder holds: the
   library shows that as its `path_error` (with `changed_mount`, the place,
   for another drive), a scan of it stops there (an error entry, nothing
   taken for removed or added), its jobs and every job that uses the
@@ -440,7 +458,7 @@ dispatcher claims job ─► running(preparing ► transcoding ► verifying ►
   place after the job ended, whatever the stop recorded them as: back in
   the queue, cancelled) is settled from what is on the disk (see "Putting
   the new file in place on a share that stops answering"): its new file in
-  place → recorded `done` (note: "Szalinski stopped just as the new file
+  place → recorded `done` (note: "Popcorn Batch stopped just as the new file
   was being put in place. The new file was already complete, so it was
   kept") and the backup removed; not in place → the original put back and
   the job's temp files gone. Only an answer settles a job: a folder that
@@ -524,9 +542,9 @@ dispatcher claims job ─► running(preparing ► transcoding ► verifying ►
   is held across a watcher call.
 - A new or changed file is reported once no event arrived for it for the
   settle time and its size/mtime held still that long; removals (files and
-  folders) are reported at once, except renames to Szalinski's backup names
+  folders) are reported at once, except renames to Popcorn Batch's backup names
   and the loss of a whole root.
-- Szalinski's own results are not copies in progress. A converted file put
+- Popcorn Batch's own results are not copies in progress. A converted file put
   in place goes through the same settle wait as any new file, but it is
   complete, so the count of files still being copied
   (`LibraryStats.settling`, "Waiting for 1 file to finish copying") leaves
@@ -599,7 +617,7 @@ dispatcher claims job ─► running(preparing ► transcoding ► verifying ►
   queue while they waited for it). Cancel answers before the other
   `*.updated` events go out (they follow in the background), so a library
   on a hung share, which takes seconds to describe, doesn't slow it.
-- Folder checks that may hang (`szalinski_worker::slow_fs`, used through
+- Folder checks that may hang (`popcorn_batch_worker::slow_fs`, used through
   `services::fs_guard`): library checks, every check of a job (server and
   worker share them), leftover searches and the folder picker run on a
   blocking thread, one at a time per path, kind of check and mount (a
@@ -646,7 +664,7 @@ dispatcher claims job ─► running(preparing ► transcoding ► verifying ►
   check is busy shows no problem, an offline library stays as it was and
   is checked again 15 s later, a job waits (above), a failed job whose
   file can't be looked at is tried again rather than failed or taken for
-  deleted, the folder picker answers 503 `busy` ("Szalinski is still
+  deleted, the folder picker answers 503 `busy` ("Popcorn Batch is still
   waiting for other folders that stopped answering, so it couldn't open
   this one right now. Try again in a moment."), and the watch over a long
   step ignores such checks. A hung share therefore costs at most 8
@@ -745,7 +763,7 @@ dispatcher claims job ─► running(preparing ► transcoding ► verifying ►
   the conversion can remove them.
 - A failure is logged once, at WARN, through its activity entry.
 - Logging: the start line names the version and, when set, the build
-  (`SZALINSKI_VERSION`); each hardware detection logs one INFO line
+  (`POPCORN_BATCH_VERSION`); each hardware detection logs one INFO line
   ("hardware detection finished", with hwdetect's own summary at DEBUG);
   each finished job logs one plain INFO line, its activity entry ("Converted
   …", "Skipped …", "Cancelled …"; failures at WARN). Job starts, attempts
@@ -1180,7 +1198,7 @@ that finds its files. Replacements go by the backup
 under the final name (the original's own name, or the new name while the
 original's name is free) → in place; this is noted first (`placing` = 2,
 with both sizes), then the backup is removed (`finalize::remove_backup`)
-and the job recorded `done` with the note "Szalinski stopped just as the
+and the job recorded `done` with the note "Popcorn Batch stopped just as the
 new file was being put in place. The new file was already complete, so it
 was kept", its savings counted. (Noting it first means a removal that
 finishes after a share answered late can't make the job look as if its
@@ -1227,7 +1245,7 @@ drive or share known to be mounted in the library above the file is
 disconnected, and in folder mode the output folder answers and can be
 read. A job that settles itself
 then waits with its library offline, its reason the library's own
-problem or "Szalinski can't read the folder … because the disk reported
+problem or "Popcorn Batch can't read the folder … because the disk reported
 a read or write error. If it's on a drive or network share, check that
 it's connected."; the check every 15 s keeps it so while the share
 answers with errors. While a job is marked, its destination counts
@@ -1254,7 +1272,7 @@ group where allowed (the group alone when only that is), and, with
 `keep_file_dates`, its times; a new file that couldn't keep the owner or
 group gets a job note ("The new file couldn't keep the original's group
 (group 1001), so it is in group 100. If your media server can't open it,
-run Szalinski as the owner of your media (PUID and PGID)"). MP4 and WebM
+run Popcorn Batch as the owner of your media (PUID and PGID)"). MP4 and WebM
 can't hold attachments: the plan notes the fonts it leaves out ("Left out 2
 subtitle fonts because MP4 can't hold attachments"; "Left out 1 attached
 file because …" when not all are fonts). Every loss `replace_loss` counts
@@ -1303,7 +1321,7 @@ activity feed, setup hints, API errors) is one or two plain sentences: what
 happened, then what to do ("The work folder /temp can't be used because a
 file with that name is in the way. Fix it, or choose another work folder, in
 Settings › Output."). Messages never carry raw OS errors or error numbers
-(`szalinski_core::plain::io_reason` turns an `io::Error` into a few words
+(`popcorn_batch_core::plain::io_reason` turns an `io::Error` into a few words
 such as "the disk is full"), encoder names ("Converting on the NVIDIA GPU
 didn't work…", not `hevc_nvenc`), exit codes, or paths without saying what
 the folder is ("the work folder /temp", "the output folder /out/TV", "the
@@ -1314,7 +1332,7 @@ file's size, not the margin kept free. A size reads the same wherever it
 appears (the activity feed, a job's check lines, the web UI): decimal units,
 whole KB, then two decimals below 10, one below 100 and none above, rounded
 before moving up a unit ("3.13 MB", "572 KB", "1 GB"); one formatter,
-`szalinski_core::format::bytes`, follows the web's `formatBytes`.
+`popcorn_batch_core::format::bytes`, follows the web's `formatBytes`.
 An unfamiliar ffmpeg failure is described plainly and then quoted
 ("Converting on the CPU stopped with an error, so the original was left
 unchanged. ffmpeg said: "…""); the job's `log_tail` keeps the details.
@@ -1334,8 +1352,8 @@ limited to 1 MB (413 `body_too_large`); write requests with a body need
 
 | Method & path | Body / query | Returns |
 |---|---|---|
-| `GET /health` | | `{"ok":true,"version":"0.3.0"}` |
-| `GET /system` | | `SystemInfo {version, build, default_temp_dir, browse_roots, data_dir, in_container}` (`build` from `SZALINSKI_VERSION` when it differs from `version`, else null) |
+| `GET /health` | | `{"ok":true,"version":"0.4.0"}` |
+| `GET /system` | | `SystemInfo {version, build, default_temp_dir, browse_roots, data_dir, in_container}` (`build` from `POPCORN_BATCH_VERSION` when it differs from `version`, else null) |
 | `GET /overview` | | `Overview` (`totals` and `savings_history` cover the same libraries; `resolutions` has a "No video" bucket for files without a video stream, "Unknown" for pictures whose size couldn't be read) |
 | `GET /libraries` | | `Library[]` (`path_error` set when the folder is missing, unreadable or offline, or on a drive or share seen mounted there that isn't now: "The drive or share mounted at … isn't connected. …", or has another drive in its place: "A different drive is mounted at … than before. …", with `changed_mount` the place, also when that is the output or work folder's or where an unsettled conversion's new file goes) |
 | `POST /libraries` | `{"path", "name"?, "profile"?, "goal"?}` | `Library` (201). 400 `path_required`/`path_not_absolute`/`path_not_found`/`not_a_directory`/`not_readable`/`path_not_supported`/`folder_not_allowed`/`contains_output_folder`/`invalid_name`/`invalid_profile`, 409 `library_exists`/`library_overlaps`. `folder_not_allowed`: the folder (as the disk has it, links followed) is `/`, the data folder or inside it or above it, `/config`, `/app` or the web folder or inside them, or `/proc`, `/sys` or `/dev` or inside them; the `LIBRARIES` start-up list follows the same rule. Starts a scan. |
@@ -1358,8 +1376,8 @@ limited to 1 MB (413 `body_too_large`); write requests with a body need
 | `GET /queue` | | `QueueState` |
 | `POST /queue/pause` / `POST /queue/resume` | | `QueueState` |
 | `POST /queue/stop` | | `QueueState` (cancel running, re-queue them, pause) |
-| `GET /settings` | | `Settings` |
-| `PATCH /settings` | partial `Settings` JSON (merged at top level; `default_profile` replaced whole) | `Settings`. 400 `invalid_settings`/`unknown_setting` with `field` (e.g. folder mode without folder, unwritable temp dir, an added ignore pattern that is invalid; patterns already saved don't block other changes). An output or work folder saved again as it was (or through a link to the same place) keeps the drives remembered for it, and one whose drive isn't connected as it was isn't written into to check it; only a folder that changes is learned afresh. The work folder compared is the one in use (`temp_dir`, else `TEMP_DIR`), so choosing the folder the server was started with is no change. A chosen folder is checked (exists, writable) within 15 s; one on a share that doesn't answer in time is refused with `field` and "The output folder … isn't responding…", and nothing changes. |
+| `GET /settings` | | `Settings`. `popcorn_sr_url` (string or null, null by default) is the address the user opens Popcorn SR at, for the web UI to show as a link. The server only stores it: it never connects to it, and nothing else uses it. |
+| `PATCH /settings` | partial `Settings` JSON (merged at top level; `default_profile` replaced whole) | `Settings`. 400 `invalid_settings`/`unknown_setting` with `field` (e.g. folder mode without folder, unwritable temp dir, an added ignore pattern that is invalid; patterns already saved don't block other changes). `popcorn_sr_url` is set with a string and cleared with `null`, `""` or spaces only (like `temp_dir` and `output_folder`, blank means unset); it is trimmed and otherwise kept as sent. It must be a full `http://` or `https://` address with a host, no user name or password, and at most 2,048 characters; otherwise 400 `invalid_settings` with `field: "popcorn_sr_url"` and one of "Enter the full address, starting with http:// or https://, such as http://tower:8787.", "Leave out the user name and password. Popcorn SR asks for its key when you open it." or "This address is too long. Use the address you open Popcorn SR at.". Settings saved before the field existed load with it unset. An output or work folder saved again as it was (or through a link to the same place) keeps the drives remembered for it, and one whose drive isn't connected as it was isn't written into to check it; only a folder that changes is learned afresh. The work folder compared is the one in use (`temp_dir`, else `TEMP_DIR`), so choosing the folder the server was started with is no change. A chosen folder is checked (exists, writable) within 15 s; one on a share that doesn't answer in time is refused with `field` and "The output folder … isn't responding…", and nothing changes. |
 | `GET /settings/folders` | | `FolderStatus[]` `{setting: "output_folder"\|"temp_dir", path, problem, changed_mount}`: the output folder (folder mode) and the work folder in use (`temp_dir`, else the one the server was started with), `problem` the same sentence as a library's `path_error` when its drive isn't connected as it was, `changed_mount` the place when another drive is mounted there. No disk is touched. |
 | `POST /settings/relearn-mounts` | | `FolderStatus[]`. Takes the drive mounted now as the usual one where the output or work folder's drive was and something else is mounted (also for the unsettled conversions whose new file goes there); places with nothing mounted stay "not connected". Logs "The output folder … now uses the drive mounted at …", and checks the waiting libraries again. 409 `nothing_changed` when no such place has another drive. |
 | `GET /hardware` | | `HardwareInfo` (`detecting: true` placeholder until the first detection ends) |
@@ -1504,7 +1522,7 @@ Every new field may be absent in what an older server sends (read as
   encode with the same init flags `build_plan` uses (15 s each, 30 s in all,
   NVENC one at a time, a hung GPU is not tested again). Unverified encoders
   say why in `error` ("<sentence> Details: <ffmpeg tail>").
-- Busy NVIDIA GPU (every encoding session taken, e.g. by Szalinski's own
+- Busy NVIDIA GPU (every encoding session taken, e.g. by Popcorn Batch's own
   running jobs or by Plex): tested again once after 3 s. If it stays busy, an
   encoder the previous detection verified keeps that result (and the busy
   hint goes); otherwise the busy hint stays and detection runs again by itself
@@ -1525,7 +1543,7 @@ Every new field may be absent in what an older server sends (read as
   otherwise it gives the fix itself (NVIDIA: the Nvidia-Driver plugin and
   `--runtime=nvidia` settings; Intel/AMD: `--device=/dev/dri`; or choose
   Automatic). A busy GPU gets a warning saying files wait (or use the CPU)
-  until it is free and that Szalinski checks again by itself.
+  until it is free and that Popcorn Batch checks again by itself.
 - `recommend_jobs`: CPU jobs = clamp(floor(effective_cores / 4), 1, 8), further
   capped by memory (1.5 GB per job) — effective cores honor cgroup limits.
   GPU jobs: NVIDIA 3 per GPU (consumer NVENC session limits), Intel/AMD 2 per
@@ -1543,36 +1561,48 @@ served by the Rust binary. All data comes from `/api` on the same origin
 `/api/ws` events. No mock data in the bundle. State lives in the URL hash
 (`#/queue/history`), so reloads and links keep the view.
 
-Navigation: a sidebar on wide screens (Overview, Queue, each library, "Add
-library", Settings; appearance switch), a bottom tab bar on phones
-(Overview, Queue, Libraries, Settings). The queue link shows what is
-running. Details of a job or file open in a sheet over the current screen.
+Navigation, as in Popcorn SR: from 801px a 228px sidebar with the brand,
+Overview, Libraries, Queue and Settings, then each library with its state
+and "Add library", and a footer with the queue status link, "Open Popcorn
+SR" when its address is set (`Settings.popcorn_sr_url`), and the server's
+version; at 800px and below the same element is a compact top
+block that scrolls away (the brand and the queue status on one line, then
+the four sections). There is no bottom tab bar and no appearance switch:
+light and dark follow the system preference. The queue status link shows
+what is running with a status dot. A skip link reaches the content first,
+and focus moves to it on each new screen. Details of a job or file open in
+a sheet over the current screen.
 A file's sheet lists its tracks with the language, codec and channels always
 in full; the optional title a release gave a track (often the whole release
 name) is a line of its own that is cut short, with the full text as its
 tooltip, so it never hides the codec.
 
-Typography: display type (page titles, the big savings number, the brand)
-is Newsreader, self-hosted (`@fontsource-variable/newsreader`, with its
-optical-size axis, which follows the font size on its own), DM Sans for the
-interface and JetBrains Mono for technical values.
+Typography and colour follow the Popcorn family system (`DESIGN.md`): the
+platform's system sans for everything, with monospace only for commands,
+logs and encoder names; zinc neutrals, Tailwind blue-500 as the one action,
+focus and progress colour with dark text on it, and emerald, amber and red
+only as status dots, icons and borders beside neutral words. No web fonts
+are bundled.
 
 Screens:
 1. **Setup** (first run, when `settings.onboarded` is false and there are no
-   libraries): welcome (what Szalinski does, three reassurances) → pick a
+   libraries): welcome (what Popcorn Batch does, three reassurances) → pick a
    folder with the server-side folder picker, which shows how many videos
    each folder and the current one hold (`media_count`) → choose a goal
    (Save space / Balanced / Plays everywhere / Archive, each with its
    trade-off and the detected hardware's speed) → start (creates the
    library, scanning begins, `onboarded = true`). Later libraries are added
    with the same two steps under "Add library".
-2. **Overview**, a status page: the space saved as one big number with a
-   one-line status sentence (what is happening now, what is left) and a
-   savings chart once there is history worth charting; **Needs your
+2. **Overview**, a status page: the space saved as the page's heading
+   ("612 GB saved") with a one-line status sentence after a status dot
+   (what is happening now, what is left) and **Saved per day**, a chart of
+   `Overview.savings_history` once at least three days have savings, with
+   the same numbers as a table under "Show the daily numbers"; **Needs your
    attention** (setup hints from hardware detection, libraries that can't be
-   reached, failed files grouped by `problem` with the fix for each);
-   **Converting now** (live cards per running job: file, stage, progress,
-   speed, time left, where it runs; while the share isn't known
+   reached, failed files grouped by `problem` with the fix for each, one
+   row each with an amber or red dot); **Converting now** (one panel with
+   a row per running job: file, stage, progress, speed, time left, where
+   it runs; while the share isn't known
    (`progress_basis` `unknown`) a moving bar with "1,017 frames · 7 min
    elapsed" instead of a percentage and no time left, and an estimate from
    frames reads "About 37% · estimated from 1,017 frames"; a later attempt
@@ -1605,7 +1635,7 @@ Screens:
    `path_error` (in a callout at the top; when that is another drive
    mounted in place of the usual one, `changed_mount`, the callout is
    "A different drive is mounted" with **Use the drive that's there now**,
-   which asks first: "Szalinski will take the drive mounted at … as the
+   which asks first: "Popcorn Batch will take the drive mounted at … as the
    usual one from now on: it reads files from it and saves new files to
    it. Only do this if you replaced the drive or share on purpose. If the
    usual one just isn't connected yet, reconnect it instead: files saved
@@ -1618,13 +1648,26 @@ Screens:
    files: replace the original or save to a separate folder; the work
    folder, naming `SystemInfo.default_temp_dir` as the automatic one; keep
    file dates; **Checks before replacing**: the verification level, with a
-   warning when checks are off); **This machine** (detected processor,
-   memory and graphics, setup tips, hardware preference and CPU fallback,
-   "check again", and encoders and ffmpeg details under a disclosure);
-   **Advanced** (ignored files, minimum file size in MB, defaults for new
-   libraries); and **About** (version, build, and a copyable bug-report
-   summary). Changes are saved with one save bar; a field error is shown
-   next to the field named by the API's `field` and in the save bar. The
+   warning when checks are off); **Hardware** (the This machine panel:
+   when it was checked, one sentence about what converts what, the
+   processor, memory and graphics, and a tag per format whose test encode
+   passed, such as "HEVC · NVIDIA GPU"; setup tips, hardware preference and
+   CPU fallback, "Check again", and encoders and ffmpeg details under a
+   disclosure); **Advanced** (ignored files, minimum file size in MB,
+   defaults for new libraries, and last the optional **Popcorn SR
+   address**, `popcorn_sr_url`: a URL field checked in the browser with
+   the server's rules and words before Save is enabled, its error shown
+   under the field once it is left and the server's own error landing
+   there through `field`; empty is sent as `null` and clears it); and
+   **About** (version, build, a copyable bug-report summary that never
+   includes the Popcorn SR address, and "Open Popcorn SR" when one is
+   saved). The Popcorn SR link, here and in the sidebar footer, is an
+   `<a target="_blank" rel="noopener noreferrer">` shown only for a saved
+   address that passes the same checks; Popcorn Batch never fetches, pings
+   or embeds the address and shows no connection state for it. Each
+   section is one panel of setting groups. Changes are saved with one save
+   bar; a field error is shown next to the field named by the API's
+   `field` and in the save bar. The
    output or work folder picked again as it is is no change. When the
    drive the saved output or work folder sits on isn't connected as it
    was (`GET /api/settings/folders`, looked at again every 15 s), its
@@ -1648,6 +1691,6 @@ every destructive action is reversible or confirmed.
   folder, put it on an SSD/cache pool). One port: 8080.
 - GPU: NVIDIA via `--runtime=nvidia` (Unraid Nvidia-Driver plugin) or compose
   `deploy.resources.reservations.devices`; Intel/AMD via `--device=/dev/dri`.
-- `unraid/szalinski.xml`: Community Applications template with those fields.
+- `unraid/popcorn-batch.xml`: Community Applications template with those fields.
 - `docker-compose.yml` (CPU), `docker-compose.nvidia.yml`,
   `docker-compose.intel-amd.yml` overlays.

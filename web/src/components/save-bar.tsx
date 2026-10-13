@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Floating "unsaved changes" bar shared by every settings form. While there
+ * Sticky "unsaved changes" bar shared by every settings form, 16px above the
+ * bottom of the viewport (flat: a 1px border, red while saving failed). While there
  * are unsaved changes it also guards navigation: closing the tab warns, and
  * leaving the screen inside the app asks to save, discard or keep editing.
  */
@@ -57,18 +58,22 @@ export function SaveBar({
   useNavigationGuard(dirty, { blocks, save: saveAndLeave, discard: onDiscard });
 
   if (!dirty && !error) return null;
+  // Red only while saving failed; a note that points at a highlighted field stays neutral.
+  const failed = Boolean(error) && errorRole === "alert";
   return (
-    <div className="pointer-events-none sticky bottom-20 z-20 mt-8 flex justify-center md:bottom-5">
+    <div className="pointer-events-none sticky bottom-4 z-20 mt-8 flex justify-center">
       <div
         role="region"
         aria-label="Unsaved changes"
         className={cn(
-          "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-xl border bg-surface px-4 py-3 shadow-pop sm:flex-row sm:items-center",
-          error ? "border-danger/40" : "border-line",
+          "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-panel border bg-surface px-4 py-3 roomy:flex-row roomy:items-center",
+          // It floats over the page's content: in the dark theme the divider colour (1.19:1 against the
+          // page) would lose its edge, so it takes the field border's Zinc Status there.
+          failed ? "border-error" : "border-line dark:border-field",
         )}
       >
         <p
-          className={cn("min-w-0 flex-1 text-sm", error ? "font-medium text-danger" : "text-fg")}
+          className={cn("min-w-0 flex-1 text-sm text-ink", error && "font-label")}
           role={error ? errorRole : "status"}
         >
           {error ?? "You have unsaved changes."}

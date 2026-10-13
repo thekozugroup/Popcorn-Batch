@@ -5,8 +5,7 @@
  * server" screen and the normal app, and maps hash routes to screens.
  */
 
-import { RefreshCw, ServerCrash } from "lucide-react";
-import { Component, useEffect, type ErrorInfo, type ReactNode } from "react";
+import { Component, useEffect, useSyncExternalStore, type ErrorInfo, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { FileSheet } from "@/components/files";
 import { JobSheet } from "@/components/jobs";
@@ -25,6 +24,15 @@ import { QueueScreen } from "@/screens/queue";
 import { SettingsScreen } from "@/screens/settings";
 import { SetupScreen } from "@/screens/setup";
 
+/** A flat panel: the surface, a 1px divider border, the panel radius. */
+const PANEL = "rounded-panel border border-line bg-surface";
+
+/** A screen outside the shell: one centred column. */
+const FRAME = "grid min-h-dvh place-items-center px-5 py-10 roomy:px-6";
+
+/** The page's one heading, in the headline token. */
+const HEADLINE = "text-headline break-words text-ink";
+
 /** Catches render errors so one broken view never blanks the whole app. */
 class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string }, { error: Error | null }> {
   state: { error: Error | null } = { error: null };
@@ -34,7 +42,7 @@ class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string },
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("Szalinski UI error", error, info.componentStack);
+    console.error("Popcorn Batch UI error", error, info.componentStack);
   }
 
   componentDidUpdate(prev: { resetKey: string }) {
@@ -44,26 +52,28 @@ class ErrorBoundary extends Component<{ children: ReactNode; resetKey: string },
   render() {
     if (this.state.error) {
       return (
-        <EmptyState
-          icon={<ServerCrash aria-hidden />}
-          title="This view ran into a problem"
-          action={
-            <Button variant="primary" onClick={() => window.location.reload()}>
-              <RefreshCw aria-hidden />
-              Reload
-            </Button>
-          }
-        >
-          <p>Your files and settings are fine; only this page failed to draw.</p>
-          <CodeBlock className="mt-4 text-left" code={this.state.error.message} label="Error" />
-        </EmptyState>
+        <div className={PANEL}>
+          {/* Its title is the page's heading: the screen that would have had one didn't draw. */}
+          <EmptyState
+            as="h1"
+            title="This view ran into a problem"
+            action={
+              <Button variant="primary" onClick={() => window.location.reload()}>
+                Reload
+              </Button>
+            }
+          >
+            <p>Your files and settings are fine; only this page failed to draw.</p>
+            <CodeBlock className="mt-4 text-left" code={this.state.error.message} label="Error" />
+          </EmptyState>
+        </div>
       );
     }
     return this.props.children;
   }
 }
 
-function titleFor(route: Route): string {
+function screenTitle(route: Route): string {
   const [first, second] = route.segments;
   switch (first) {
     case undefined:
@@ -83,6 +93,26 @@ function titleFor(route: Route): string {
   }
 }
 
+/** A link to a screen that doesn't exist. */
+export function NotFound() {
+  return (
+    <div className={PANEL}>
+      {/* The page's one heading: nothing else is on it. */}
+      <EmptyState
+        as="h1"
+        title="This page doesn't exist"
+        action={
+          <a href={href("/")} className={buttonVariants({ variant: "primary" })}>
+            Go to overview
+          </a>
+        }
+      >
+        The link may be from an older version of Popcorn Batch.
+      </EmptyState>
+    </div>
+  );
+}
+
 function Screen({ route }: { route: Route }) {
   const [first, second] = route.segments;
   switch (first) {
@@ -98,18 +128,7 @@ function Screen({ route }: { route: Route }) {
     case "settings":
       return <SettingsScreen route={route} />;
     default:
-      return (
-        <EmptyState
-          title="This page doesn't exist"
-          action={
-            <a href={href("/")} className={buttonVariants({ variant: "primary" })}>
-              Go to overview
-            </a>
-          }
-        >
-          The link may be from an older version of Szalinski.
-        </EmptyState>
-      );
+      return <NotFound />;
   }
 }
 
@@ -130,19 +149,37 @@ function RouteSheets({ route }: { route: Route }) {
   );
 }
 
+/**
+ * The shell's shape while the first answers load: from 801px a full-height
+ * sidebar of placeholders with the brand where the real one has it, and the
+ * main region. A status line says what is happening to screen readers.
+ */
 function BootScreen() {
   return (
-    <div className="flex min-h-dvh" aria-busy="true" aria-label="Loading Szalinski">
-      <div className="hidden w-60 shrink-0 flex-col gap-4 border-r border-line bg-sunken px-5 pt-5 md:flex">
-        <Brand />
-        <Skeleton className="mt-4 h-8 w-full" />
-        <Skeleton className="h-8 w-full" />
+    <div
+      className="grid min-h-dvh grid-cols-[minmax(0,1fr)] content-start wide:grid-cols-[228px_minmax(0,1fr)]"
+      aria-busy="true"
+    >
+      <p role="status" className="sr-only">
+        Loading Popcorn Batch…
+      </p>
+      <div className="hidden flex-col gap-10 border-r border-line bg-surface px-5 py-8 wide:sticky wide:top-0 wide:flex wide:h-dvh">
+        {/* The real sidebar's brand is a 44px link; the same row keeps it in place. */}
+        <div className="flex min-h-11 items-center">
+          <Brand />
+        </div>
+        <div className="grid gap-1.5">
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+          <Skeleton className="h-11 w-full" />
+        </div>
       </div>
-      <div className="flex-1 px-4 pt-8 md:px-10 md:pt-12">
-        <Skeleton className="h-10 w-64" />
-        <Skeleton className="mt-8 h-40 w-full max-w-4xl" />
-        <Skeleton className="mt-6 h-28 w-full max-w-4xl" />
-      </div>
+      <main className="mx-auto w-full max-w-[1320px] min-w-0 px-5 pt-6 pb-12 wide:p-[clamp(24px,5vw,64px)]">
+        <Skeleton className="h-9 w-64 max-w-full" />
+        <Skeleton className="mt-8 h-40 w-full" />
+        <Skeleton className="mt-6 h-28 w-full" />
+      </main>
     </div>
   );
 }
@@ -163,33 +200,32 @@ export function HostNotAllowed({
   host?: string;
 }) {
   return (
-    <div className="grid min-h-dvh place-items-center px-5 py-10">
-      <div className="w-full max-w-lg">
-        <Brand className="mb-10" />
+    <div className={FRAME}>
+      <main className="w-full max-w-lg min-w-0">
+        <Brand className="mb-11" />
         {/* The wording of the docs and of the server's own error, so searching for either finds this screen. */}
-        <h1 className="font-display text-4xl leading-tight break-words text-fg">
-          {host ? `Szalinski doesn't answer to the address "${host}"` : "Szalinski doesn't answer to this address"}
+        <h1 className={HEADLINE}>
+          {host ? `Popcorn Batch doesn't answer to the address "${host}"` : "Popcorn Batch doesn't answer to this address"}
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
+        <p className="mt-3 text-base leading-relaxed text-muted">
           To protect your library, it only answers to addresses it recognises. Add{" "}
-          <code className="font-mono text-[0.8125rem] text-fg">{host || "this name"}</code> to the container&apos;s{" "}
-          <code className="font-mono text-[0.8125rem] text-fg">ALLOWED_HOSTS</code> variable, then restart it.
+          <code className="text-meta break-all text-ink">{host || "this name"}</code> to the container&apos;s{" "}
+          <code className="text-meta text-ink">ALLOWED_HOSTS</code> variable, then restart it.
         </p>
         <CodeBlock className="mt-5" code={`ALLOWED_HOSTS=${host || "media.example.com"}`} label="Container variable" />
-        <p className="mt-4 text-[0.8125rem] leading-relaxed text-muted">
+        <p className="mt-4 text-meta leading-relaxed text-muted">
           Behind a reverse proxy? Make it pass the original Host header, port included (in Nginx:{" "}
-          <code className="font-mono text-xs text-fg">proxy_set_header Host $http_host;</code>).
+          <code className="text-meta text-ink">proxy_set_header Host $http_host;</code>).
         </p>
         <div className="mt-8 flex items-center gap-3">
           <Button variant="primary" onClick={onRetry} loading={retrying}>
-            <RefreshCw aria-hidden />
             Try again
           </Button>
-          <p role="status" className="text-[0.8125rem] text-muted">
+          <p role="status" className="text-meta text-muted">
             {retrying ? "Checking…" : ""}
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
@@ -200,36 +236,53 @@ function Unreachable({ error, retrying, onRetry }: { error: unknown; retrying: b
     return <HostNotAllowed retrying={retrying} onRetry={onRetry} />;
   }
   return (
-    <div className="grid min-h-dvh place-items-center px-5 py-10">
-      <div className="w-full max-w-lg">
-        <Brand className="mb-10" />
-        <h1 className="font-display text-4xl leading-tight text-fg">
-          {network ? "Can't reach Szalinski" : "Szalinski couldn't load"}
-        </h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
+    <div className={FRAME}>
+      <main className="w-full max-w-lg min-w-0">
+        <Brand className="mb-11" />
+        <h1 className={HEADLINE}>{network ? "Can't reach Popcorn Batch" : "Popcorn Batch couldn't load"}</h1>
+        <p className="mt-3 text-base leading-relaxed text-muted">
           {network
             ? "The server isn't answering. It may be restarting or the container may have stopped. This page tries again every few seconds."
             : errorMessage(error)}
         </p>
-        <ul className="mt-6 list-disc space-y-2 pl-5 text-sm text-fg/90 marker:text-muted">
+        <ul className="mt-6 list-disc space-y-2 pl-5 text-sm leading-relaxed text-ink marker:text-muted">
           <li>Check that the container is running (on Unraid: the Docker tab).</li>
           <li>Look at the container log for errors.</li>
           <li>
-            The app is looking for its API at <code className="font-mono text-[0.8125rem]">{apiBase()}</code>.
+            The app is looking for its API at <code className="text-meta break-all">{apiBase()}</code>.
           </li>
         </ul>
         <div className="mt-8 flex items-center gap-3">
           <Button variant="primary" onClick={onRetry} loading={retrying}>
-            <RefreshCw aria-hidden />
             Try again
           </Button>
-          <p role="status" className="text-[0.8125rem] text-muted">
+          <p role="status" className="text-meta text-muted">
             {retrying ? "Checking…" : ""}
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
+}
+
+/** The browser tab's title for what is on screen: "Queue — Popcorn Batch". */
+export function documentTitle(route: Route, needsSetup: boolean): string {
+  return `${needsSetup ? "Welcome" : screenTitle(route)} — Popcorn Batch`;
+}
+
+const noSubscription = () => () => {};
+
+/**
+ * The tab title as React's own `<title>`, which React keeps in the head (see
+ * Next's docs on titles from Client Components). It is the page's only title
+ * (layout.tsx sets none): setting `document.title` from an effect lost to
+ * Next on a fresh load, whose metadata `<title>` mounted after the effect
+ * and set the title back to "Popcorn Batch". The static HTML and the first
+ * render after it say "Popcorn Batch"; the screen's title follows at once.
+ */
+function DocumentTitle({ title }: { title: string }) {
+  const hydrated = useSyncExternalStore(noSubscription, () => true, () => false);
+  return <title>{hydrated ? title : "Popcorn Batch"}</title>;
 }
 
 export function App() {
@@ -238,10 +291,6 @@ export function App() {
   const libraries = useLibraries();
 
   const needsSetup = settings.data !== undefined && libraries.data !== undefined && !settings.data.onboarded && libraries.data.length === 0;
-
-  useEffect(() => {
-    document.title = needsSetup ? "Welcome — Szalinski" : `${titleFor(route)} — Szalinski`;
-  }, [route, needsSetup]);
 
   // Setup is only for the first run; send stale links to the overview.
   useEffect(() => {
@@ -261,8 +310,9 @@ export function App() {
     return () => clearInterval(timer);
   }, [failed, refetchSettings, refetchLibraries]);
 
+  let content: ReactNode;
   if (failed) {
-    return (
+    content = (
       <Unreachable
         error={settings.error ?? libraries.error}
         retrying={settings.isFetching || libraries.isFetching}
@@ -272,19 +322,26 @@ export function App() {
         }}
       />
     );
+  } else if (!settings.data || !libraries.data) {
+    content = <BootScreen />;
+  } else if (needsSetup) {
+    content = <SetupScreen settings={settings.data} />;
+  } else {
+    content = (
+      <Shell route={route}>
+        <ErrorBoundary resetKey={route.segments.join("/")}>
+          <Screen route={route} />
+          <RouteSheets route={route} />
+        </ErrorBoundary>
+        <NavigationPrompt />
+      </Shell>
+    );
   }
 
-  if (!settings.data || !libraries.data) return <BootScreen />;
-
-  if (needsSetup) return <SetupScreen settings={settings.data} />;
-
   return (
-    <Shell route={route}>
-      <ErrorBoundary resetKey={route.segments.join("/")}>
-        <Screen route={route} />
-        <RouteSheets route={route} />
-      </ErrorBoundary>
-      <NavigationPrompt />
-    </Shell>
+    <>
+      <DocumentTitle title={documentTitle(route, needsSetup)} />
+      {content}
+    </>
   );
 }

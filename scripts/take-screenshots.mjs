@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Takes the screenshots in docs/screenshots from a running Szalinski server,
+ * Takes the screenshots in docs/screenshots from a running Popcorn Batch server,
  * the way a new user would meet it: dark theme, 1440x900, real conversions of
  * the demo library (scripts/make-demo-media.sh).
  *
@@ -19,7 +19,7 @@
  *
  *   scripts/make-demo-media.sh /srv/demo-media
  *   docker run -d -p 8080:8080 -v /srv/demo-media:/media -v "$(mktemp -d)":/config \
- *     -e PUID=$(id -u) -e PGID=$(id -g) szalinski:dev
+ *     -e PUID=$(id -u) -e PGID=$(id -g) popcorn-batch:dev
  *   node scripts/take-screenshots.mjs http://127.0.0.1:8080
  *
  * Writes setup.png (first-run goal step), overview.png and queue.png (a
@@ -91,13 +91,16 @@ async function main() {
     health = await api("/health").catch(() => null);
     if (!health) await sleep(500);
   }
-  if (!health?.ok) throw new Error(`No Szalinski server answered at ${opts.url}/api/health`);
+  if (!health?.ok) throw new Error(`No Popcorn Batch server answered at ${opts.url}/api/health`);
   const [settings, libraries] = await Promise.all([api("/settings"), api("/libraries")]);
   if (settings.onboarded || libraries.length) throw new Error("The server has already been set up. Start it with an empty data folder.");
 
   const { chromium } = await loadPlaywright();
   const browser = await chromium.launch();
   const shot = async (page, name, options = {}) => {
+    // The pointer stays where the last click was (Start, a history row); move it off the
+    // content so no row shows its hover state (an underlined name) in the picture.
+    await page.mouse.move(0, 0);
     await sleep(700); // let transitions and live numbers settle
     await page.screenshot({ path: join(opts.out, `${name}.png`), animations: "disabled", ...options });
     log(`Saved ${name}.png`);

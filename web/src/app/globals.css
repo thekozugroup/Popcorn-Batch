@@ -1,121 +1,80 @@
 @import "tailwindcss";
 
-@custom-variant dark (&:where(.dark, .dark *));
-
 /*
- * Szalinski design tokens.
- * Warm near-black surfaces with a gold accent (dark), warm paper with an
- * inked gold (light). Gold marks primary actions, current selection and
- * progress only; status colours always come with an icon and a word.
+ * Popcorn Batch design tokens: the Popcorn family system (DESIGN.md), whose
+ * values match Popcorn SR's ui.css. Zinc neutrals, Tailwind blue-500 as the
+ * one action, focus and progress colour (with dark text on it), and
+ * emerald, amber and red only as small status indicators beside neutral
+ * words. Light and dark follow the system preference.
  */
 
+/* Popcorn family breakpoints (DESIGN.md, Layout). */
+@theme {
+  --breakpoint-roomy: 32.5625rem; /* 521px: wider than SR's stacked-controls breakpoint */
+  --breakpoint-wide: 50.0625rem; /* 801px: wider than SR's compact-navigation breakpoint */
+}
+
+/*
+ * Type values the screens share (DESIGN.md, Typography): `text-meta` (the
+ * metadata size, 13px: paths, details, hints; no line height of its own, so
+ * it keeps the one around it), `font-label` (the label weight, 550) and
+ * `leading-relaxed` (supporting paragraphs, 1.6).
+ */
+@theme {
+  --text-meta: 13px;
+  --font-weight-label: 550;
+  --leading-relaxed: 1.6;
+}
+
 @theme inline {
-  --color-bg: var(--bg);
-  --color-sunken: var(--sunken);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --color-page: var(--page);
   --color-surface: var(--surface);
-  --color-raised: var(--raised);
-  --color-line: var(--line);
-  --color-line-strong: var(--line-strong);
-  --color-fg: var(--fg);
+  --color-ink: var(--ink);
   --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-subtle: var(--subtle);
+  --color-field: var(--field);
   --color-accent: var(--accent);
-  --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
-  --color-on-accent: var(--on-accent);
-  --color-accent-soft: var(--accent-soft);
-  --color-meter: var(--meter);
-  --color-bar-skipped: var(--bar-skipped);
-  --color-success: var(--success);
-  --color-success-soft: var(--success-soft);
-  --color-danger: var(--danger);
-  --color-danger-soft: var(--danger-soft);
-  --color-warning: var(--warning);
-  --color-warning-soft: var(--warning-soft);
-  --color-info: var(--info);
-  --color-info-soft: var(--info-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-error: var(--error);
   --color-overlay: var(--overlay);
-
-  /*
-   * UI type scale: 15px for everything people read (text-sm), 13px for
-   * secondary lines, 12px (text-xs) only for tabular meta and timestamps.
-   * Display sizes (Newsreader) are set where they're used.
-   */
-  --text-sm: 0.9375rem;
-  --text-sm--line-height: 1.4;
-
-  --font-sans: "DM Sans Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Newsreader Variable", ui-serif, Georgia, "Times New Roman", serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
-
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --shadow-pop: 0 12px 32px -8px var(--shadow-color), 0 2px 6px -2px var(--shadow-color);
-  --shadow-card: 0 1px 2px 0 var(--shadow-color);
+  --radius-tag: 6px;
+  --radius-control: 8px;
+  --radius-panel: 16px;
+  --radius-progress: 4px;
 }
 
 :root {
-  --bg: oklch(0.974 0.006 85);
-  --sunken: oklch(0.948 0.009 82);
-  --surface: oklch(0.996 0.003 85);
-  --raised: oklch(0.955 0.008 82);
-  --line: oklch(0.885 0.01 80);
-  --line-strong: oklch(0.62 0.014 78);
-  --fg: oklch(0.2 0.012 70);
-  --muted: oklch(0.45 0.014 70);
-  --accent: oklch(0.79 0.135 82);
-  --accent-hover: oklch(0.75 0.14 80);
-  --accent-ink: oklch(0.48 0.1 72);
-  --on-accent: oklch(0.2 0.03 70);
-  --accent-soft: oklch(0.79 0.135 82 / 0.2);
-  --meter: oklch(0.62 0.125 76);
-  /*
-   * "Skipped" in the library bar: finished without converting, so it's part
-   * of the gold family (a pale tint), between solid gold and the track.
-   */
-  --bar-skipped: oklch(0.8 0.085 82);
-  --success: oklch(0.48 0.11 152);
-  --success-soft: oklch(0.6 0.12 152 / 0.12);
-  --danger: oklch(0.52 0.18 28);
-  --danger-soft: oklch(0.6 0.18 28 / 0.1);
-  /* Amber leans orange, so a problem never reads as the gold of progress. */
-  --warning: oklch(0.53 0.14 47);
-  --warning-soft: oklch(0.72 0.15 52 / 0.16);
-  --info: oklch(0.48 0.1 245);
-  --info-soft: oklch(0.6 0.1 245 / 0.1);
-  --overlay: oklch(0.2 0.02 70 / 0.35);
-  --shadow-color: oklch(0.3 0.03 70 / 0.16);
+  color-scheme: light dark;
+  --page: var(--color-zinc-50);
+  --surface: var(--color-white);
+  --ink: var(--color-zinc-900);
+  --muted: var(--color-zinc-600);
+  --line: var(--color-zinc-200);
+  --subtle: var(--color-zinc-100);
+  /* Zinc Status: field borders (3:1 against both surfaces), skipped segments, neutral dots. */
+  --field: var(--color-zinc-500);
+  --accent: var(--color-blue-500);
+  --accent-ink: var(--color-zinc-950);
+  --ok: var(--color-emerald-500);
+  --warn: var(--color-amber-500);
+  --error: var(--color-red-500);
+  --overlay: oklch(14.1% 0.005 285.823 / 0.45);
 }
 
-.dark {
-  --bg: oklch(0.158 0.006 75);
-  --sunken: oklch(0.133 0.006 75);
-  --surface: oklch(0.192 0.007 75);
-  --raised: oklch(0.235 0.008 75);
-  --line: oklch(0.285 0.009 75);
-  --line-strong: oklch(0.53 0.012 78);
-  --fg: oklch(0.935 0.009 85);
-  --muted: oklch(0.72 0.012 80);
-  --accent: oklch(0.8 0.125 82);
-  --accent-hover: oklch(0.85 0.12 85);
-  --accent-ink: oklch(0.82 0.12 84);
-  --on-accent: oklch(0.19 0.02 70);
-  --accent-soft: oklch(0.8 0.125 82 / 0.14);
-  --meter: oklch(0.8 0.125 82);
-  --bar-skipped: oklch(0.55 0.075 80);
-  --success: oklch(0.78 0.13 152);
-  --success-soft: oklch(0.78 0.13 152 / 0.12);
-  --danger: oklch(0.74 0.15 28);
-  --danger-soft: oklch(0.7 0.16 28 / 0.14);
-  --warning: oklch(0.79 0.14 56);
-  --warning-soft: oklch(0.79 0.14 56 / 0.13);
-  --info: oklch(0.78 0.08 240);
-  --info-soft: oklch(0.78 0.08 240 / 0.12);
-  --overlay: oklch(0.08 0.005 75 / 0.6);
-  --shadow-color: oklch(0.05 0.005 75 / 0.55);
+@media (prefers-color-scheme: dark) {
+  :root {
+    --page: var(--color-zinc-950);
+    --surface: var(--color-zinc-900);
+    --ink: var(--color-zinc-50);
+    --muted: var(--color-zinc-400);
+    --line: var(--color-zinc-800);
+    --subtle: var(--color-zinc-800);
+  }
 }
 
 @layer base {
@@ -125,51 +84,35 @@
     border-color: var(--line);
   }
 
-  html {
+  html,
+  body {
     font-family: var(--font-sans);
-    background: var(--bg);
-    color: var(--fg);
+    background: var(--page);
+    color: var(--ink);
+    font-size: 1rem;
+    line-height: 1.5;
+  }
+
+  html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    text-rendering: optimizeLegibility;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
     min-height: 100dvh;
-    background: var(--bg);
-    color: var(--fg);
-    font-size: 0.9375rem;
-    line-height: 1.5;
-    font-feature-settings: "ss01" off;
-    caret-color: var(--accent-ink);
   }
 
-  ::selection {
-    background: var(--accent-soft);
-    color: var(--fg);
+  button:not(:disabled),
+  summary,
+  select:not(:disabled) {
+    cursor: pointer;
   }
 
+  /* One focus style everywhere: a 2px Action Blue outline, 4px away. */
   :focus-visible {
-    outline: 2px solid var(--accent-ink);
-    outline-offset: 2px;
-  }
-
-  /* Focus inside rounded controls follows their radius. */
-  button:focus-visible,
-  a:focus-visible,
-  [role="button"]:focus-visible,
-  [role="tab"]:focus-visible,
-  [role="option"]:focus-visible,
-  [role="radio"]:focus-visible,
-  [role="switch"]:focus-visible,
-  [role="menuitem"]:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  summary:focus-visible {
-    outline: 2px solid var(--accent-ink);
-    outline-offset: 2px;
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
   }
 
   input::placeholder,
@@ -179,6 +122,7 @@
   }
 
   a {
+    color: inherit;
     text-underline-offset: 3px;
     text-decoration-thickness: 1px;
   }
@@ -197,51 +141,48 @@
     text-wrap: balance;
   }
 
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--line-strong) transparent;
+  /* Native checkboxes, as in Popcorn SR. */
+  input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
   }
+}
 
-  ::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
-  }
-  ::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: var(--line);
-    border: 3px solid transparent;
-    border-radius: 999px;
-    background-clip: padding-box;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background-color: var(--line-strong);
-  }
+/*
+ * A filled row (a selected file, the highlighted folder) keeps its tags and
+ * the library bar's empty track visible: inside it they take the surface
+ * colour instead of the subtle fill they share with the row. Rows never fill
+ * on hover (their name underlines instead, as in Popcorn SR); a navigable
+ * list's highlighted item does (`data-fill`).
+ */
+[data-selected] :is([data-tag], [data-track]),
+[data-fill]:is(:hover, :focus-visible) :is([data-tag], [data-track]) {
+  background-color: var(--surface);
 }
 
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
 
-/*
- * Display type is Newsreader, whose optical-size axis follows the font size
- * on its own: big sizes are drawn tighter and finer, small ones sturdier, so
- * letters get no extra negative tracking on top (a size may set its own),
- * and word spaces get a little air back.
- * Light text on a dark surface looks thinner than it is, so dark mode takes
- * a little more weight.
- */
-@utility font-display {
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-optical-sizing: auto;
-  letter-spacing: 0;
-  /* The display cut sets word spaces tight ("your videos" nearly runs together). */
-  word-spacing: 0.05em;
-  :where(.dark) & {
-    font-weight: 430;
+/* The headline token: a page's one h1 (30px, 600, 1.2, -0.025em; 28px at 520px and below). */
+@utility text-headline {
+  font-size: 1.875rem;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  @media (width < 32.5625rem) {
+    font-size: 28px;
   }
+}
+
+/* The title token: a section heading on a page (20px, 600, 1.4, -0.025em). */
+@utility text-title {
+  font-size: 1.25rem;
+  line-height: 1.4;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 /* Visually hidden but read by screen readers. */
@@ -259,97 +200,17 @@
   }
 }
 
-/* Checkboxes drawn from the palette instead of the browser default. */
-.checkbox {
-  appearance: none;
-  display: inline-grid;
-  place-content: center;
-  width: 1rem;
-  height: 1rem;
-  flex-shrink: 0;
-  border: 1.5px solid var(--line-strong);
-  border-radius: 4px;
-  background: var(--surface);
-  cursor: pointer;
-  transition: background-color 150ms, border-color 150ms;
-}
-.checkbox:hover {
-  border-color: var(--accent-ink);
-}
-.checkbox::before {
-  content: "";
-  width: 0.625rem;
-  height: 0.625rem;
-  transform: scale(0);
-  transition: transform 150ms var(--ease-out-expo);
-  background: var(--on-accent);
-  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-}
-.checkbox:checked,
-.checkbox:indeterminate {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-.checkbox:checked::before {
-  transform: scale(1);
-}
-.checkbox:indeterminate::before {
-  transform: scale(1);
-  clip-path: inset(40% 10% 40% 10%);
-}
-
-/* Progress fills glide to their new value (clip-path, no layout work). */
-.progress-fill {
-  transition: clip-path 600ms var(--ease-out-expo);
-}
-
-/*
- * The one moving thing: while a file is converting, a soft highlight travels
- * along its progress bar so a glance tells "working" from "stuck".
- */
-@keyframes progress-sheen {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(250%);
-  }
-}
-
-/*
- * Library bar: converted files are solid gold, skipped ones a pale gold
- * outlined in gold, files in the queue gold stripes, and files still to
- * convert the empty track; every segment is also listed in words. The pale
- * tint alone is too close to the light track, so the gold outline gives the
- * skipped segment its 3:1 edge (WCAG 1.4.11) in both themes.
- */
-.bar-active {
-  background-image: repeating-linear-gradient(-45deg, var(--meter) 0 3px, transparent 3px 6px);
-}
-
-.bar-skipped {
-  background-color: var(--bar-skipped);
-  box-shadow: inset 0 0 0 1px var(--meter);
-}
-
-.progress-live {
-  position: relative;
-  overflow: hidden;
-}
-
-.progress-live::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: linear-gradient(90deg, transparent, oklch(1 0 0 / 0.35), transparent);
-  animation: progress-sheen 2.4s var(--ease-out-expo) infinite;
+/* Placeholder block while content loads (it pulses only when motion is allowed). */
+.skeleton {
+  background: var(--subtle);
+  border-radius: var(--radius-tag);
 }
 
 /*
  * A share that isn't known yet (ffmpeg says how many frames it encoded, but
- * not how far into the file it is): a band moving along the bar instead of a
- * number it doesn't have. With reduced motion it stands still, striped.
+ * not how far into the file it is): a band one third wide moves along the
+ * track when motion is allowed. With reduced motion it isn't drawn; the
+ * words beside the bar carry the state.
  */
 .meter-indeterminate {
   position: relative;
@@ -360,33 +221,7 @@
   position: absolute;
   inset-block: 0;
   left: 0;
-  width: 35%;
-  animation: meter-indeterminate 1.8s ease-in-out infinite;
-}
-
-@keyframes meter-indeterminate {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(290%);
-  }
-}
-
-@keyframes skeleton-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-
-.skeleton {
-  background: var(--raised);
-  border-radius: var(--radius-sm);
-  animation: skeleton-pulse 1.8s ease-in-out infinite;
+  width: 33.333%;
 }
 
 @keyframes spin {
@@ -395,8 +230,68 @@
   }
 }
 
+/* Busy spinners keep turning, slowly, even with reduced motion (below). */
 .spin {
   animation: spin 1s linear infinite;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  button,
+  a,
+  input,
+  select {
+    transition:
+      background-color 160ms ease-out,
+      transform 160ms ease-out;
+  }
+
+  /* A screen enters with a short fade and a 4px rise, as in Popcorn SR. */
+  .view {
+    animation: view-enter 200ms ease-out;
+  }
+
+  @keyframes view-enter {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Progress fills move to their new value (clip-path, no layout work). */
+  .progress-fill {
+    transition: clip-path 200ms ease-out;
+  }
+
+  .skeleton {
+    animation: skeleton-pulse 1.8s ease-in-out infinite;
+  }
+
+  @keyframes skeleton-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.55;
+    }
+  }
+
+  .meter-indeterminate-band {
+    animation: meter-indeterminate 1.8s ease-in-out infinite;
+  }
+
+  @keyframes meter-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(300%);
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -408,14 +303,8 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  .progress-live::after {
-    display: none;
-  }
   .meter-indeterminate-band {
-    animation-name: none !important;
-    width: 100%;
-    background-color: transparent;
-    background-image: repeating-linear-gradient(-45deg, var(--meter) 0 4px, transparent 4px 8px);
+    display: none;
   }
   .spin {
     animation: spin 1.6s linear infinite !important;

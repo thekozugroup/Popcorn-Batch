@@ -1,4 +1,4 @@
-# Szalinski with CPU encoding. Works on any Docker host.
+# Popcorn Batch with CPU encoding. Works on any Docker host.
 #
 #   cp .env.example .env        # optional: adjust paths and ids
 #   docker compose up -d
@@ -7,16 +7,16 @@
 # Add a GPU with an overlay file:
 #   NVIDIA:     docker compose -f docker-compose.yml -f docker-compose.nvidia.yml up -d
 #   Intel/AMD:  docker compose -f docker-compose.yml -f docker-compose.intel-amd.yml up -d
-name: szalinski
+name: popcorn-batch
 
 services:
-  szalinski:
+  popcorn-batch:
     # To run an image built from this checkout (`make docker`), set
-    # SZALINSKI_IMAGE=szalinski:dev in .env.
-    image: ${SZALINSKI_IMAGE:-ghcr.io/thekozugroup/szalinski:latest}
-    container_name: szalinski
+    # POPCORN_BATCH_IMAGE=popcorn-batch:dev in .env.
+    image: ${POPCORN_BATCH_IMAGE:-ghcr.io/thekozugroup/popcorn-batch:latest}
+    container_name: popcorn-batch
     restart: unless-stopped
-    # Szalinski stops its running jobs and exits within about 10 seconds;
+    # Popcorn Batch stops its running jobs and exits within about 10 seconds;
     # the extra margin keeps a slow disk from turning that into a hard kill.
     stop_grace_period: 20s
     ports:
@@ -24,7 +24,7 @@ services:
     volumes:
       # Database and settings. Back this folder up.
       - ./config:/config
-      # Your media. Szalinski replaces files here once each result is verified.
+      # Your media. Popcorn Batch replaces files here once each result is verified.
       - ${MEDIA_PATH:-./media}:/media
       # Optional: a fast disk (SSD) for in-progress files. Without it, work
       # files are written next to each original.
@@ -51,7 +51,7 @@ services:
       # "Save space" goal and begin converting at once; leave it empty to
       # choose folder and goal in the app instead.
       LIBRARIES: ${LIBRARIES:-}
-      # Behind a reverse proxy: the domain name(s) you open Szalinski at,
+      # Behind a reverse proxy: the domain name(s) you open Popcorn Batch at,
       # e.g. transcode.example.com. IP addresses and local names always work.
       ALLOWED_HOSTS: ${ALLOWED_HOSTS:-}
     logging:

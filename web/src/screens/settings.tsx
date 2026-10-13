@@ -1,9 +1,11 @@
 "use client";
 
 /**
- * Settings, in four plain sections. Edits collect in a draft shared by all
- * sections; the save bar sends only what changed, and API errors land on the
- * field they are about (including one inside the default profile).
+ * Settings, in four plain sections, each one padded panel of setting groups
+ * separated by dividers (Hardware: This machine first). Edits collect in a
+ * draft shared by all sections; the save bar sends only what changed, and
+ * API errors land on the field they are about (including one inside the
+ * default profile).
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,16 +16,18 @@ import { UseDriveButton, UseDriveConfirm } from "@/components/drive-change";
 import { FolderField } from "@/components/folder-field";
 import { ProfileEditor } from "@/components/profile-editor";
 import { SaveBar } from "@/components/save-bar";
-import { PageHeader, ThemeSwitch } from "@/components/shell";
+import { SETTINGS_PANEL, SettingsSection } from "@/components/settings-section";
+import { PageHeader, PopcornSrLink } from "@/components/shell";
 import { Button } from "@/components/ui/button";
-import { ChoiceCard, Field, Input, Select, SwitchRow, Textarea } from "@/components/ui/controls";
-import { Badge, Callout, CopyButton, Skeleton } from "@/components/ui/display";
+import { ChoiceCard, ErrorText, Field, Input, Select, SwitchRow, Textarea } from "@/components/ui/controls";
+import { Callout, CopyButton, Skeleton, Tag } from "@/components/ui/display";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { formatHour, plural } from "@/lib/format";
 import { bugReportText, recommendedGoal } from "@/lib/hardware";
 import { GOAL_LABEL, VALIDATION_HELP, VALIDATION_LABEL, VALIDATION_LEVELS } from "@/lib/labels";
+import { popcornSrUrlError } from "@/lib/popcorn-sr";
 import { defaultsCustomized, defaultsPresetGoal } from "@/lib/profile";
-import { reasonsFor, setupFix, type SettingFocus, type SetupProblem } from "@/lib/outcomes";
+import { reasonsFor, setupFix, type SetupProblem } from "@/lib/outcomes";
 import {
   keys,
   useFailures,
@@ -90,33 +94,6 @@ export function automaticJobs(
   };
 }
 
-function Block({
-  title,
-  description,
-  children,
-  anchor,
-}: {
-  title: string;
-  description?: ReactNode;
-  children: ReactNode;
-  /** The setting a link can bring into view (`?focus=`, see `SetupFix.setting`). */
-  anchor?: SettingFocus;
-}) {
-  return (
-    <section
-      id={anchor ? `setting-${anchor}` : undefined}
-      tabIndex={anchor ? -1 : undefined}
-      className="grid scroll-mt-20 gap-4 border-t border-line py-7 outline-none first:border-t-0 first:pt-0 lg:grid-cols-[15rem_1fr] lg:gap-10"
-    >
-      <div>
-        <h2 className="text-[1.0625rem] leading-snug font-semibold text-fg">{title}</h2>
-        {description ? <p className="mt-1 text-[0.8125rem] leading-snug text-muted">{description}</p> : null}
-      </div>
-      <div className="flex min-w-0 max-w-2xl flex-col gap-5">{children}</div>
-    </section>
-  );
-}
-
 function Stepper({
   value,
   onChange,
@@ -131,7 +108,7 @@ function Stepper({
   label: string;
 }) {
   return (
-    <div className="inline-flex items-center rounded-md border border-line-strong bg-surface shadow-card" role="group" aria-label={label}>
+    <div className="inline-flex items-center rounded-control border border-field bg-surface" role="group" aria-label={label}>
       <Button variant="quiet" size="icon" aria-label="Fewer" disabled={value <= min} onClick={() => onChange(Math.max(min, value - 1))}>
         <Minus />
       </Button>
@@ -146,7 +123,7 @@ function Stepper({
           const n = Math.round(Number(e.target.value));
           if (Number.isFinite(n)) onChange(Math.max(min, Math.min(max, n)));
         }}
-        className="h-9 w-12 bg-transparent text-center text-sm font-semibold text-fg tabular [appearance:textfield] focus-visible:outline-none [&::-webkit-inner-spin-button]:appearance-none"
+        className="h-11 w-12 bg-transparent text-center text-base font-semibold text-ink tabular [appearance:textfield] -outline-offset-2 [&::-webkit-inner-spin-button]:appearance-none"
       />
       <Button variant="quiet" size="icon" aria-label="More" disabled={value >= max} onClick={() => onChange(Math.min(max, value + 1))}>
         <Plus />
@@ -174,7 +151,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
   const hours = draft.active_hours;
   return (
     <>
-      <Block title="Files at once" description="How many conversions run side by side.">
+      <SettingsSection title="Files at once" description="How many conversions run side by side.">
         <fieldset className="flex flex-col gap-3">
           <legend className="sr-only">Files at once</legend>
           <ChoiceCard
@@ -190,7 +167,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
                   : `Automatic (${auto.count})`
             }
             description={auto.description}
-            badge={<Badge tone="accent">Recommended</Badge>}
+            badge={<Tag>Recommended</Tag>}
           />
           <ChoiceCard
             name={name}
@@ -204,16 +181,16 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
               <span className="mt-3 flex items-center gap-3">
                 <Stepper value={draft.max_jobs} onChange={(max_jobs) => onChange({ max_jobs })} min={1} max={32} label="Files at once" />
                 {auto.count !== null && draft.max_jobs > auto.count * 2 ? (
-                  <span className="text-[0.8125rem] text-warning">Much more than recommended ({auto.count}).</span>
+                  <span className="text-meta text-ink">Much more than recommended ({auto.count}).</span>
                 ) : null}
               </span>
             ) : null}
           </ChoiceCard>
-          {errors.max_jobs ? <p role="alert" className="text-[0.8125rem] font-medium text-danger">{errors.max_jobs}</p> : null}
+          {errors.max_jobs ? <ErrorText>{errors.max_jobs}</ErrorText> : null}
         </fieldset>
-      </Block>
+      </SettingsSection>
 
-      <Block title="When to convert" description="Saved changes apply right away. Running files always finish.">
+      <SettingsSection title="When to convert" description="Saved changes apply right away. Running files always finish.">
         <SwitchRow
           label="Only start new conversions during certain hours"
           description="Handy for keeping evenings free for streaming. Uses the server's time zone."
@@ -221,7 +198,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
           onCheckedChange={(on) => onChange({ active_hours: on ? (hours ?? { start: 1, end: 7 }) : null })}
         />
         {hours ? (
-          <div className="flex flex-wrap items-end gap-3 pl-0 sm:pl-0">
+          <div className="flex flex-wrap items-end gap-3">
             <Field label="From" className="w-32">
               <Select value={hours.start} onChange={(e) => onChange({ active_hours: { ...hours, start: Number(e.target.value) } })}>
                 {Array.from({ length: 24 }, (_, h) => (
@@ -240,7 +217,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
                 ))}
               </Select>
             </Field>
-            <p className="pb-2 text-[0.8125rem] text-muted">
+            <p className="pb-3 text-meta text-muted">
               {hours.start === hours.end
                 ? "Same start and end means all day."
                 : hours.start > hours.end
@@ -249,16 +226,16 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
             </p>
           </div>
         ) : null}
-        {errors.active_hours ? <p role="alert" className="text-[0.8125rem] font-medium text-danger">{errors.active_hours}</p> : null}
+        {errors.active_hours ? <ErrorText>{errors.active_hours}</ErrorText> : null}
         <SwitchRow
           label="Run at low priority"
           description="Keeps the server responsive for streaming and other apps while converting."
           checked={draft.low_priority}
           onCheckedChange={(low_priority) => onChange({ low_priority })}
         />
-      </Block>
+      </SettingsSection>
 
-      <Block title="Finding files" description="How new and changed files are picked up.">
+      <SettingsSection title="Finding files" description="How new and changed files are picked up.">
         <SwitchRow
           label="Convert new files automatically"
           description="When off, new files wait in their library until you queue them."
@@ -287,7 +264,7 @@ function ProcessingSection({ draft, onChange, errors }: SectionProps) {
             ))}
           </Select>
         </Field>
-      </Block>
+      </SettingsSection>
     </>
   );
 }
@@ -308,7 +285,7 @@ export function automaticWorkFolderText(system: SystemInfo | undefined): ReactNo
   if (system.default_temp_dir) {
     return (
       <>
-        Uses <span className="font-mono text-[0.8125rem] text-fg">{system.default_temp_dir}</span>, the work folder this
+        Uses <span className="text-ink">{system.default_temp_dir}</span>, the work folder this
         server was started with.
         {system.in_container ? <> {UNRAID_TEMP_TIP}</> : null}
       </>
@@ -437,7 +414,7 @@ function OutputSection({
   useFocusSetting(focus);
   return (
     <>
-      <Block
+      <SettingsSection
         title="Finished files"
         description="Nothing is written anywhere until the new file has passed its checks."
         anchor="output_folder"
@@ -464,35 +441,37 @@ function OutputSection({
             onChange={() => onChange({ output_mode: "folder" })}
             title="Save to a separate folder"
             description="Originals stay untouched. New files mirror each library's folder structure, with the goal's extension (such as .mkv)."
-          />
+          >
+            {/* The folder belongs to this choice, so it is chosen inside the selected card. */}
+            {draft.output_mode === "folder" ? (
+              <span className="mt-3 block">
+                <span id={`${name}-label`} className="mb-2 block text-sm font-label text-ink">
+                  Output folder
+                </span>
+                <FolderField
+                  labelId={`${name}-label`}
+                  value={draft.output_folder}
+                  onChange={(output_folder) => onChange({ output_folder })}
+                  placeholder="No folder chosen"
+                  dialogTitle="Choose the output folder"
+                  dialogDescription="Finished files are written here, in the same folders as in the library."
+                  error={errors.output_folder ?? (draft.output_folder ? null : "Choose a folder, or switch back to replacing originals.")}
+                />
+              </span>
+            ) : null}
+          </ChoiceCard>
         </fieldset>
-        {draft.output_mode === "folder" ? (
-          <div>
-            <p id={`${name}-label`} className="mb-1.5 text-sm font-medium text-fg">
-              Output folder
-            </p>
-            <FolderField
-              labelId={`${name}-label`}
-              value={draft.output_folder}
-              onChange={(output_folder) => onChange({ output_folder })}
-              placeholder="No folder chosen"
-              dialogTitle="Choose the output folder"
-              dialogDescription="Finished files are written here, in the same folders as in the library."
-              error={errors.output_folder ?? (draft.output_folder ? null : "Choose a folder, or switch back to replacing originals.")}
-            />
-          </div>
-        ) : null}
         <SwitchRow
           label="Keep file dates"
           description="Gives the new file the original's modification date, so Plex, Jellyfin and Emby don't list it as newly added."
           checked={draft.keep_file_dates}
           onCheckedChange={(keep_file_dates) => onChange({ keep_file_dates })}
         />
-      </Block>
+      </SettingsSection>
 
       <ChecksBlock draft={draft} onChange={onChange} />
 
-      <Block
+      <SettingsSection
         title="Work folder"
         description="Where files are written while they're being converted. A fast SSD or cache pool speeds things up."
         anchor="temp_dir"
@@ -516,19 +495,22 @@ function OutputSection({
             onChange={() => onChange({ temp_dir: draft.temp_dir ?? "" })}
             title="A specific folder"
             description={specificWorkFolderText(system.data)}
-          />
+          >
+            {draft.temp_dir !== null ? (
+              <span className="mt-3 block">
+                <FolderField
+                  value={draft.temp_dir || null}
+                  onChange={(temp_dir) => onChange({ temp_dir })}
+                  placeholder="No folder chosen"
+                  dialogTitle="Choose a work folder"
+                  dialogDescription="In-progress files are written here and moved into place when they pass their checks."
+                  error={errors.temp_dir ?? (draft.temp_dir ? null : "Choose a folder, or switch back to Automatic.")}
+                />
+              </span>
+            ) : null}
+          </ChoiceCard>
         </fieldset>
-        {draft.temp_dir !== null ? (
-          <FolderField
-            value={draft.temp_dir || null}
-            onChange={(temp_dir) => onChange({ temp_dir })}
-            placeholder="No folder chosen"
-            dialogTitle="Choose a work folder"
-            dialogDescription="In-progress files are written here and moved into place when they pass their checks."
-            error={errors.temp_dir ?? (draft.temp_dir ? null : "Choose a folder, or switch back to Automatic.")}
-          />
-        ) : null}
-      </Block>
+      </SettingsSection>
     </>
   );
 }
@@ -547,7 +529,7 @@ function ChecksBlock({ draft, onChange }: Pick<SectionProps, "draft" | "onChange
   );
   if (draft.validation !== "off" && draft.validation !== level) setLevel(draft.validation);
   return (
-    <Block
+    <SettingsSection
       title="Checks before replacing"
       description="Each finished file is compared with its original. If a check fails, the original is kept and you're told why."
     >
@@ -569,7 +551,7 @@ function ChecksBlock({ draft, onChange }: Pick<SectionProps, "draft" | "onChange
               onChange={() => onChange({ validation: level })}
               title={VALIDATION_LABEL[level]}
               description={VALIDATION_HELP[level]}
-              badge={level === "standard" ? <Badge tone="accent">Recommended</Badge> : null}
+              badge={level === "standard" ? <Tag>Recommended</Tag> : null}
             />
           ))}
         </fieldset>
@@ -578,7 +560,7 @@ function ChecksBlock({ draft, onChange }: Pick<SectionProps, "draft" | "onChange
           A file damaged during conversion would replace a good one. Keep checks on unless you have backups.
         </Callout>
       ) : null}
-    </Block>
+    </SettingsSection>
   );
 }
 
@@ -621,7 +603,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
   }
   return (
     <>
-      <Block title="Ignored files" description="Files matching these are never scanned or converted.">
+      <SettingsSection title="Ignored files" description="Files matching these are never scanned or converted.">
         <Field
           label="Your ignore patterns"
           description={[
@@ -637,7 +619,7 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
             rows={4}
             spellCheck={false}
             placeholder="**/Extras/**"
-            className="font-mono text-[0.8125rem]"
+            className="font-mono text-meta"
             onChange={(e) => {
               setPatternsText(e.target.value);
               const patterns = e.target.value
@@ -665,16 +647,16 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
                 const n = Math.round(Number(e.target.value));
                 onChange({ min_file_size_mb: Number.isFinite(n) && n > 0 ? n : 0 });
               }}
-              className="w-28 font-mono"
+              className="w-28"
             />
             <span className="text-sm text-muted">MB</span>
           </div>
         </Field>
-      </Block>
+      </SettingsSection>
 
-      <section className="border-t border-line pt-7">
-        <h2 className="text-[0.9375rem] font-semibold text-fg">Defaults for new libraries</h2>
-        <p className="mt-1 mb-6 max-w-2xl text-[0.8125rem] text-muted">
+      <section className="border-t border-line py-6">
+        <h2 className="text-base font-semibold text-ink">Defaults for new libraries</h2>
+        <p className="mt-2 mb-6 max-w-[68ch] text-sm leading-[1.7] text-muted">
           {newLibraryDefaultsText(
             defaultsCustomized(presets.data, draft.default_profile),
             recommendedGoal(hardware.hw),
@@ -693,7 +675,51 @@ function AdvancedSection({ draft, onChange, errors, onValidity, resetKey, profil
           resetKey={resetKey}
         />
       </section>
+
+      <PopcornSrBlock draft={draft} onChange={onChange} error={errors.popcorn_sr_url} resetKey={resetKey} />
     </>
+  );
+}
+
+/**
+ * The optional Popcorn SR address, last in Advanced. Checked here with the
+ * server's rules and words (`popcornSrUrlError`) before Save is enabled: the
+ * message shows once the field has been left, and a server error lands on
+ * it through its `field`. Empty clears it. Popcorn Batch only links to it.
+ */
+function PopcornSrBlock({
+  draft,
+  onChange,
+  error,
+  resetKey,
+}: Pick<SectionProps, "draft" | "onChange" | "resetKey"> & { error?: string }) {
+  const [touched, setTouched] = useState(false);
+  const [lastReset, setLastReset] = useState(resetKey);
+  if (resetKey !== lastReset) {
+    setLastReset(resetKey);
+    setTouched(false);
+  }
+  const problem = error ?? (touched ? popcornSrUrlError(draft.popcorn_sr_url) : null);
+  return (
+    <SettingsSection title="Popcorn SR" description="Link to the Popcorn SR manager on your network.">
+      <Field
+        label="Popcorn SR address"
+        description="Optional. The address you open Popcorn SR at, starting with http:// or https://. Popcorn Batch only shows a link to it and never connects to it."
+        error={problem}
+      >
+        <Input
+          type="url"
+          inputMode="url"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="http://tower:8787"
+          value={draft.popcorn_sr_url ?? ""}
+          // Blank is no address, like the server ("" is sent as null).
+          onChange={(e) => onChange({ popcorn_sr_url: e.target.value.trim() ? e.target.value : null })}
+          onBlur={() => setTouched(true)}
+        />
+      </Field>
+    </SettingsSection>
   );
 }
 
@@ -761,6 +787,7 @@ function SettingsForm({ settings, section, focus }: { settings: Settings; sectio
       const patch: Partial<Settings> = {};
       for (const key of changed) (patch as Record<string, unknown>)[key] = draft[key];
       if (patch.temp_dir === "") patch.temp_dir = null;
+      if ("popcorn_sr_url" in patch) patch.popcorn_sr_url = patch.popcorn_sr_url?.trim() || null;
       return api.updateSettings(patch);
     },
     onSuccess: (next) => {
@@ -785,18 +812,27 @@ function SettingsForm({ settings, section, focus }: { settings: Settings; sectio
     errors,
     draft,
     section,
-    advancedValid: valid,
+    // The profile editor's free-text fields, and the Popcorn SR address.
+    advancedValid: valid && popcornSrUrlError(draft.popcorn_sr_url) === null,
     profileFieldShown: Object.keys(profileErrors).length > 0,
   });
 
   return (
     <>
-      {section === "processing" ? <ProcessingSection {...sectionProps} /> : null}
-      {section === "output" ? <OutputSection {...sectionProps} focus={focus} saved={base} /> : null}
+      {section === "processing" ? (
+        <div className={SETTINGS_PANEL}>
+          <ProcessingSection {...sectionProps} />
+        </div>
+      ) : null}
+      {section === "output" ? (
+        <div className={SETTINGS_PANEL}>
+          <OutputSection {...sectionProps} focus={focus} saved={base} />
+        </div>
+      ) : null}
       {section === "hardware" ? <HardwareSection draft={draft} onChange={onChange} /> : null}
       {/* Kept mounted while hidden, so text typed there (valid or not) isn't
           lost on switching sections, and invalid text keeps blocking Save. */}
-      <div hidden={section !== "advanced"}>
+      <div hidden={section !== "advanced"} className={SETTINGS_PANEL}>
         <AdvancedSection {...sectionProps} />
       </div>
       <SaveBar
@@ -828,7 +864,11 @@ function SettingsForm({ settings, section, focus }: { settings: Settings; sectio
   );
 }
 
-/** Version and build, and a copy of the facts a bug report needs. */
+/**
+ * Version and build, a copy of the facts a bug report needs (never the
+ * Popcorn SR address), and the link to Popcorn SR when one is saved: the
+ * place it is found on phones, where the sidebar footer is hidden.
+ */
 function About() {
   const system = useSystem();
   const { hw } = useHardwareInfo();
@@ -840,23 +880,26 @@ function About() {
   return (
     <section
       aria-labelledby="about-heading"
-      className="mt-12 flex flex-col gap-3 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between"
+      className="mt-10 flex flex-col gap-3 border-t border-line pt-6 roomy:flex-row roomy:items-center roomy:justify-between"
     >
       <div className="min-w-0">
-        <h2 id="about-heading" className="text-sm font-semibold text-fg">
+        <h2 id="about-heading" className="text-base font-semibold text-ink">
           About
         </h2>
-        <p className="mt-0.5 text-[0.8125rem] text-muted">
-          Szalinski <span className="font-mono text-fg">{info.version}</span>
+        <p className="mt-1 text-meta text-muted">
+          Popcorn Batch <span className="text-ink">{info.version}</span>
           {info.build ? (
             <>
               {" "}
-              · build <span className="font-mono text-fg">{info.build}</span>
+              · build <span className="text-ink">{info.build}</span>
             </>
           ) : null}
         </p>
       </div>
-      <CopyButton text={text} label="Copy for a bug report" className="self-start sm:self-auto" />
+      <div className="flex flex-wrap items-center gap-2">
+        <CopyButton text={text} label="Copy for a bug report" />
+        <PopcornSrLink variant="secondary" />
+      </div>
     </section>
   );
 }
@@ -868,48 +911,22 @@ export function SettingsScreen({ route }: { route: Route }) {
 
   return (
     <div>
-      <PageHeader
-        title="Settings"
-        description={current.description}
-        actions={
-          <div className="flex items-center gap-3 md:hidden">
-            <span className="text-[0.8125rem] text-muted">Appearance</span>
-            <ThemeSwitch />
-          </div>
-        }
-      />
-      <div className="lg:grid lg:grid-cols-[11rem_1fr] lg:gap-10">
-        <nav aria-label="Settings sections" className="hidden lg:block">
-          <ul className="sticky top-8 flex flex-col gap-0.5">
+      <PageHeader title="Settings" description={current.description} />
+      <div className="xl:grid xl:grid-cols-[11rem_minmax(0,1fr)] xl:gap-10">
+        {/*
+          From 1280px a column of navigation items that stays in view; below, the same items in a
+          wrapping row, so a laptop screen leaves the settings panel its full width.
+        */}
+        <nav aria-label="Settings sections" className="mb-8 xl:mb-0">
+          <ul className="flex flex-wrap gap-1.5 xl:sticky xl:top-8 xl:flex-col xl:gap-1">
             {SECTIONS.map((s) => (
               <li key={s.id}>
                 <a
                   href={href(`/settings/${s.id}`)}
                   aria-current={s.id === section ? "page" : undefined}
                   className={cn(
-                    "block rounded-md px-3 py-2 text-sm font-medium no-underline transition-colors",
-                    s.id === section ? "bg-raised text-fg" : "text-muted hover:bg-raised/60 hover:text-fg",
-                  )}
-                >
-                  {s.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        {/* Narrow screens: every section visible at once, as wrapping pills. */}
-        <nav aria-label="Settings sections" className="mb-7 lg:hidden">
-          <ul className="flex flex-wrap gap-2">
-            {SECTIONS.map((s) => (
-              <li key={s.id}>
-                <a
-                  href={href(`/settings/${s.id}`)}
-                  aria-current={s.id === section ? "page" : undefined}
-                  className={cn(
-                    "inline-flex h-9 items-center rounded-full border px-4 text-sm font-medium no-underline transition-colors pointer-coarse:h-11",
-                    s.id === section
-                      ? "border-accent-ink bg-accent-soft text-fg"
-                      : "border-line-strong/50 bg-surface text-muted hover:border-line-strong hover:text-fg",
+                    "flex min-h-11 items-center rounded-control px-3.5 py-3 text-sm font-medium no-underline",
+                    s.id === section ? "bg-subtle text-ink" : "text-muted hover:bg-subtle hover:text-ink",
                   )}
                 >
                   {s.label}
@@ -926,7 +943,7 @@ export function SettingsScreen({ route }: { route: Route }) {
               {errorMessage(settings.error)}
             </Callout>
           ) : (
-            <div className="space-y-4">
+            <div className={cn(SETTINGS_PANEL, "space-y-4")}>
               <Skeleton className="h-20 w-full max-w-2xl" />
               <Skeleton className="h-20 w-full max-w-2xl" />
             </div>

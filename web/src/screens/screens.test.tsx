@@ -111,6 +111,20 @@ describe("overview status sentence", () => {
       /^Looking through Movies/,
     );
   });
+
+  it("puts a status dot before it: blue while working, emerald when done, amber for a fix, Zinc Status while waiting", () => {
+    expect(overviewStatus(queue({ running: 2 }), undefined, null).dot).toBe("accent");
+    expect(overviewStatus(queue({ paused: true, running: 1 }), undefined, null).dot).toBe("accent");
+    expect(overviewStatus(queue({ paused: true }), undefined, null).dot).toBe("info");
+    expect(overviewStatus(queue({ waiting_for_schedule: true, queued: 2 }), undefined, null).dot).toBe("info");
+    expect(overviewStatus(queue(), undefined, "Looking through Movies").dot).toBe("accent");
+    expect(overviewStatus(queue({ queued: 4 }), undefined, null).dot).toBe("info");
+    expect(overviewStatus(queue(), undefined, null, { failed: 0, blocked: true }).dot).toBe("warning");
+    expect(overviewStatus(queue(), undefined, null, { failed: 0, blocked: false, settling: 3 }).dot).toBe("info");
+    expect(overviewStatus(queue(), undefined, null).dot).toBe("success");
+    // No icon any more: the dot and the words carry it.
+    expect(Object.keys(overviewStatus(queue(), undefined, null))).not.toContain("icon");
+  });
 });
 
 describe("needs your attention", () => {
@@ -199,7 +213,7 @@ describe("needs your attention", () => {
   it("never explains a name clash as a permission problem", () => {
     const libs = [library()];
     const denied =
-      "Szalinski doesn't have permission to write in /media/locked, so the new file couldn't be put there and the original was kept.";
+      "Popcorn Batch doesn't have permission to write in /media/locked, so the new file couldn't be put there and the original was kept.";
     const clash = 'A file named "dup.mkv" is already next to the original, so the new file can\'t take its name.';
     const files = [
       failedFile("p1", "lib-a", "destination", denied),
@@ -216,7 +230,7 @@ describe("needs your attention", () => {
       output_mode: "replace",
     });
     expect(bare.reasons).toEqual([]);
-    expect(bare.detail).toMatch(/^1 file couldn't be converted because of it\. Szalinski can't write to the library folder/);
+    expect(bare.detail).toMatch(/^1 file couldn't be converted because of it\. Popcorn Batch can't write to the library folder/);
   });
 
   it("counts, groups and retries every failed file, not one page of them", () => {

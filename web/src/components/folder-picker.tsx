@@ -11,19 +11,11 @@
  * "System folders".
  */
 
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  CornerDownLeft,
-  Folder,
-  FolderOpen,
-  HardDrive,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Folder, HardDrive } from "lucide-react";
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/controls";
-import { Callout, Skeleton } from "@/components/ui/display";
+import { Callout, Skeleton, Tag } from "@/components/ui/display";
 import { ApiError, errorMessage } from "@/lib/api";
 import { formatCount } from "@/lib/format";
 import { useBrowse } from "@/lib/queries";
@@ -195,44 +187,25 @@ function YourFolders({
   const given = shown.user_folders ?? [];
   const more = shown.roots.length > 1 ? shown.roots.filter((r) => !given.some((f) => f.path === r)) : [];
   const inside = (path: string) => current === path || current.startsWith(`${path.replace(/\/$/, "")}/`);
-  // A long path is cut short (its full text is the tooltip) rather than run past the picker.
-  const chip = "max-w-full truncate rounded-full border px-2.5 py-1 font-mono text-xs pointer-coarse:min-h-9";
   return (
-    <div
-      className="flex flex-wrap items-center gap-1.5 border-b border-line px-3 py-2"
-      role="group"
-      aria-labelledby={labelId}
-    >
-      <span id={labelId} className="mr-1 text-[0.8125rem] font-medium text-fg">
+    <div className={FILTER_ROW} role="group" aria-labelledby={labelId}>
+      <span id={labelId} className="mr-1 text-meta font-label text-ink">
         Your folders
       </span>
-      {folders.map((f) => {
-        const active = inside(f.path);
-        return (
-          <button
-            key={f.path}
-            type="button"
-            aria-pressed={active}
-            title={f.path}
-            onClick={() => onGo(f.path)}
-            className={cn(
-              chip,
-              active
-                ? "border-accent-ink/50 bg-accent-soft text-accent-ink"
-                : "border-line-strong/60 text-fg hover:bg-raised",
-            )}
-          >
-            {f.path}
-          </button>
-        );
-      })}
-      {more.map((root) => (
+      {folders.map((f) => (
         <button
-          key={root}
+          key={f.path}
           type="button"
-          onClick={() => onGo(root)}
-          className={cn(chip, "border-line text-muted hover:text-fg")}
+          aria-pressed={inside(f.path)}
+          title={f.path}
+          onClick={() => onGo(f.path)}
+          className={filterButton(inside(f.path))}
         >
+          {f.path}
+        </button>
+      ))}
+      {more.map((root) => (
+        <button key={root} type="button" onClick={() => onGo(root)} className={filterButton(false)}>
           {root === "/" ? "All folders" : root}
         </button>
       ))}
@@ -240,10 +213,34 @@ function YourFolders({
   );
 }
 
+/** The row of quick choices above the list. */
+const FILTER_ROW = "flex flex-wrap items-center gap-1.5 border-b border-line px-6 py-2.5 max-roomy:px-4";
+
 /**
- * The folders of a listing: yours first, then the others, then the
- * container's own system folders folded under one button. `index` is a
- * folder's place among those shown, which the arrow keys move through.
+ * A quick choice as a filter button: pressed while the folder you are in is
+ * inside it, shown by the subtle fill and a Zinc Status border (not by fill
+ * alone). A long path is cut short; its full text is the tooltip.
+ */
+function filterButton(pressed: boolean): string {
+  return cn(
+    "min-h-11 max-w-full truncate rounded-control border px-3 text-sm",
+    pressed ? "border-field bg-subtle text-ink" : "border-transparent text-muted hover:bg-subtle hover:text-ink",
+  );
+}
+
+/**
+ * A folder row, full width inside the panel: its focus outline sits inside
+ * it. Like a menu item, the row under the pointer or the arrow keys has the
+ * subtle fill (`data-fill`, so its tag turns to the surface; globals.css).
+ */
+const ROW_BUTTON =
+  "flex min-h-11 w-full items-center gap-3 px-6 py-2.5 text-left -outline-offset-2 hover:bg-subtle focus-visible:bg-subtle max-roomy:px-4";
+
+/**
+ * The folders of a listing: yours first, then the others under a heading,
+ * then the container's own system folders folded under one button. Each
+ * group is its own list. `index` is a folder's place among all those shown,
+ * which the arrow keys move through across the groups.
  */
 function FolderRows({
   groups,
@@ -262,6 +259,8 @@ function FolderRows({
   systemOpen: boolean;
   onToggleSystem: () => void;
 }) {
+  const otherId = useId();
+  const systemId = useId();
   const row = (entry: FsEntry, index: number, kind: "mine" | "other" | "system") => {
     const known = libraryAt(entry.path, libraries);
     const videos = videoCount(entry.media_count, entry.media_count_capped);
@@ -270,36 +269,27 @@ function FolderRows({
         <button
           type="button"
           data-index={index}
+          data-fill=""
           tabIndex={index === Math.max(0, focusIndex) ? 0 : -1}
           onFocus={() => onFocusIndex(index)}
           onClick={() => onOpen(entry.path)}
-          className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-raised focus-visible:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ink pointer-coarse:min-h-11"
+          className={ROW_BUTTON}
         >
           {kind === "mine" ? (
-            <HardDrive className="size-[1.125rem] shrink-0 text-accent-ink" aria-hidden />
+            <HardDrive className="size-4 shrink-0 text-muted" aria-hidden />
           ) : (
-            <Folder
-              className={cn("size-[1.125rem] shrink-0", kind === "system" ? "text-muted" : "text-accent-ink")}
-              aria-hidden
-            />
+            <Folder className="size-4 shrink-0 text-muted" aria-hidden />
           )}
           <span
             className={cn(
-              "min-w-0 flex-1 truncate",
-              kind === "mine" ? "font-medium text-fg" : kind === "system" ? "text-muted" : "text-fg",
+              "min-w-0 flex-1 truncate text-sm",
+              kind === "system" ? "text-muted" : "font-label text-ink",
             )}
           >
             {entry.name}
           </span>
-          {known ? (
-            <span
-              className="shrink-0 rounded-full border border-line-strong/60 px-2 py-0.5 text-xs text-muted"
-              title={`Already the library “${known.name}”`}
-            >
-              Library
-            </span>
-          ) : null}
-          {videos ? <span className="shrink-0 text-[0.8125rem] text-muted tabular">{videos}</span> : null}
+          {known ? <Tag title={`Already the library “${known.name}”`}>Library</Tag> : null}
+          {videos ? <span className="shrink-0 text-meta text-muted tabular">{videos}</span> : null}
           <ChevronRight className="size-4 shrink-0 text-muted" aria-hidden />
         </button>
       </li>
@@ -309,32 +299,44 @@ function FolderRows({
   // Yours need no heading (the choices above the list are named the same
   // way); the others do, to say what they are next to them.
   const sections = (mine.length > 0 ? 1 : 0) + (other.length > 0 ? 1 : 0) + (system.length > 0 ? 1 : 0);
-  const heading = "px-4 pb-1 text-xs font-medium text-muted";
+  const otherHeading = mine.length > 0 && other.length > 0;
   return (
     <>
-      {mine.map((entry, i) => row(entry, i, "mine"))}
-      {mine.length > 0 && other.length > 0 ? (
-        <li role="presentation" className={cn(heading, "mt-1 border-t border-line pt-2.5")}>
+      {mine.length > 0 ? <ul aria-label="Your folders">{mine.map((entry, i) => row(entry, i, "mine"))}</ul> : null}
+      {otherHeading ? (
+        <p id={otherId} className="mt-1 border-t border-line px-6 pt-3 pb-1 text-meta text-muted max-roomy:px-4">
           Other folders
-        </li>
+        </p>
       ) : null}
-      {other.map((entry, i) => row(entry, mine.length + i, "other"))}
+      {other.length > 0 ? (
+        <ul aria-labelledby={otherHeading ? otherId : undefined}>
+          {other.map((entry, i) => row(entry, mine.length + i, "other"))}
+        </ul>
+      ) : null}
       {system.length > 0 ? (
-        <li role="presentation" className={cn(sections > 1 && "mt-1 border-t border-line")}>
+        <div className={cn(sections > 1 && "mt-1 border-t border-line")}>
           <button
             type="button"
             aria-expanded={systemOpen}
+            aria-controls={systemOpen ? systemId : undefined}
             onClick={onToggleSystem}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-[0.8125rem] text-muted hover:bg-raised hover:text-fg focus-visible:bg-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ink pointer-coarse:min-h-11"
+            className={cn(ROW_BUTTON, "gap-2 text-sm font-label text-ink")}
           >
-            <ChevronDown className={cn("size-4 shrink-0 transition-transform", !systemOpen && "-rotate-90")} aria-hidden />
+            <ChevronRight
+              className={cn("size-4 shrink-0 text-muted motion-safe:transition-transform", systemOpen && "rotate-90")}
+              aria-hidden
+            />
             <span className="min-w-0 flex-1">
-              System folders <span className="tabular">({system.length})</span>
+              System folders <span className="font-normal text-muted tabular">({system.length})</span>
             </span>
           </button>
-        </li>
+        </div>
       ) : null}
-      {systemOpen ? system.map((entry, i) => row(entry, mine.length + other.length + i, "system")) : null}
+      {systemOpen && system.length > 0 ? (
+        <ul id={systemId} aria-label="System folders">
+          {system.map((entry, i) => row(entry, mine.length + other.length + i, "system"))}
+        </ul>
+      ) : null}
     </>
   );
 }
@@ -365,6 +367,14 @@ interface FolderPickerProps {
    * Output and work folders leave this off, so any folder can be chosen.
    */
   forLibrary?: boolean;
+  /**
+   * Without `initialPath`, open in the first of "Your folders" (the folders
+   * given to the container, such as `/media`) rather than at the top, which
+   * can't be a library: a first run lands where the videos are, with "Use"
+   * ready. Not when that folder is, holds or sits inside a library (Add
+   * library, once there are some): then it opens at the top as before.
+   */
+  startInYourFolders?: boolean;
 }
 
 /**
@@ -391,13 +401,14 @@ export function FolderPicker({
   onNavigate,
   libraries = NO_LIBRARIES,
   forLibrary = false,
+  startInYourFolders = false,
 }: FolderPickerProps) {
   const [path, setPath] = useState<string | undefined>(initialPath || undefined);
   const [typed, setTyped] = useState("");
   const [showTyped, setShowTyped] = useState(false);
   // No row is highlighted until an arrow key moves into the list.
   const [focusIndex, setFocusIndex] = useState(-1);
-  const listRef = useRef<HTMLUListElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const emptyRef = useRef<HTMLDivElement>(null);
   const shouldFocusList = useRef(false);
   const browse = useBrowse(path);
@@ -427,6 +438,16 @@ export function FolderPicker({
     if (Object.keys(next).length) setCounts((prev) => ({ ...prev, ...next }));
   }
   const own = counts[current];
+
+  // The first listing (the top) names the folders given to the container; move into the first one.
+  const [started, setStarted] = useState(!startInYourFolders || Boolean(initialPath));
+  if (!started && data && !loadingNew) {
+    setStarted(true);
+    const first = quickFolders(data, forLibrary)[0];
+    if (first && first.path !== data.path && !libraryConflict(first.path, libraries)) {
+      setPath(first.path);
+    }
+  }
 
   const go = (next: string | undefined, focusList = true) => {
     shouldFocusList.current = focusList;
@@ -502,11 +523,11 @@ export function FolderPicker({
   const conflictId = useId();
 
   return (
-    <div className={cn("flex flex-col overflow-hidden rounded-lg border border-line bg-surface", className)}>
-      <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
+    <div className={cn("flex min-w-0 flex-col overflow-hidden rounded-panel border border-line bg-surface", className)}>
+      <div className="flex items-start gap-2 border-b border-line px-6 py-3.5 max-roomy:px-4 max-roomy:py-3">
         <Button
           variant="quiet"
-          size="icon-sm"
+          size="icon"
           aria-label="Up one folder"
           disabled={!parent}
           onClick={() => parent && go(parent, false)}
@@ -514,7 +535,7 @@ export function FolderPicker({
           <ChevronLeft />
         </Button>
         <nav aria-label="Folder path" className="min-w-0 flex-1">
-          <ol className="flex min-w-0 flex-wrap items-center gap-0.5 font-mono text-[0.8125rem]">
+          <ol className="flex min-h-11 min-w-0 flex-wrap items-center gap-x-0.5 text-sm">
             {shown
               ? crumbsFor(shown).map((crumb, i, all) => {
                   const last = i === all.length - 1;
@@ -522,19 +543,18 @@ export function FolderPicker({
                     <li key={crumb.path} className="flex min-w-0 items-center gap-0.5">
                       {i > 0 ? <ChevronRight className="size-3.5 shrink-0 text-muted" aria-hidden /> : null}
                       {last ? (
-                        <span aria-current="location" className="truncate px-1 font-medium text-fg">
-                          {i === 0 ? <HardDrive className="mr-1 inline size-3.5 align-[-2px]" aria-hidden /> : null}
+                        <span aria-current="location" className="truncate px-1.5 font-label text-ink">
                           {crumb.label}
                         </span>
                       ) : (
-                        <button
-                          type="button"
+                        <Button
+                          variant="quiet"
+                          size="sm"
                           onClick={() => go(crumb.path, false)}
-                          className="truncate rounded px-1 text-muted hover:bg-raised hover:text-fg"
+                          className="min-w-0 truncate px-1.5 font-normal"
                         >
-                          {i === 0 ? <HardDrive className="mr-1 inline size-3.5 align-[-2px]" aria-hidden /> : null}
-                          {crumb.label}
-                        </button>
+                          <span className="truncate">{crumb.label}</span>
+                        </Button>
                       )}
                     </li>
                   );
@@ -549,7 +569,7 @@ export function FolderPicker({
 
       {showTyped ? (
         <form
-          className="flex gap-2 border-b border-line px-3 py-2.5"
+          className="flex gap-2 border-b border-line px-6 py-3.5 max-roomy:px-4"
           onSubmit={(e) => {
             e.preventDefault();
             const value = typed.trim();
@@ -561,14 +581,12 @@ export function FolderPicker({
             placeholder="/media/movies"
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
-            className="font-mono text-[0.8125rem]"
             autoFocus
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
           />
           <Button type="submit" variant="secondary">
-            <CornerDownLeft aria-hidden />
             Go
           </Button>
         </form>
@@ -582,7 +600,7 @@ export function FolderPicker({
           onGo={(next) => go(next, false)}
         />
       ) : shown && shown.roots.length > 1 ? (
-        <div className="flex flex-wrap gap-1.5 border-b border-line px-3 py-2" role="group" aria-label="Allowed folders">
+        <div className={FILTER_ROW} role="group" aria-label="Allowed folders">
           {shown.roots.map((root) => {
             const active = rootOf(current, shown.roots) === root;
             return (
@@ -591,10 +609,7 @@ export function FolderPicker({
                 type="button"
                 aria-pressed={active}
                 onClick={() => go(root, false)}
-                className={cn(
-                  "rounded-full border px-2.5 py-0.5 font-mono text-xs",
-                  active ? "border-accent-ink/50 text-accent-ink" : "border-line text-muted hover:text-fg",
-                )}
+                className={filterButton(active)}
               >
                 {root}
               </button>
@@ -610,16 +625,16 @@ export function FolderPicker({
         style={{ maxHeight: groups.system.length > 0 ? "27rem" : "22rem", minHeight: "14rem" }}
       >
         {browse.isPending ? (
-          <div className="space-y-3 p-4" aria-label="Loading folders">
+          <div className="space-y-3 px-6 py-4 max-roomy:px-4" role="status" aria-label="Loading folders">
             {[0, 1, 2, 3, 4].map((i) => (
-              <div key={i} className="flex items-center gap-3">
-                <Skeleton className="size-5 rounded" />
+              <div key={i} className="flex min-h-8 items-center gap-3">
+                <Skeleton className="size-4" />
                 <Skeleton className="h-4" style={{ width: `${40 + ((i * 17) % 35)}%` }} />
               </div>
             ))}
           </div>
         ) : browse.error ? (
-          <div className="p-4">
+          <div className="px-6 py-4 max-roomy:px-4">
             <Callout
               tone={forbidden ? "warning" : "danger"}
               title={forbidden ? "That folder isn't available" : "Couldn't open that folder"}
@@ -644,22 +659,22 @@ export function FolderPicker({
             ref={emptyRef}
             tabIndex={-1}
             onKeyDown={onKeyDown}
-            className="flex h-full min-h-56 flex-col items-center justify-center gap-1 px-6 text-center outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-ink"
+            className="flex h-full min-h-56 flex-col items-center justify-center gap-1 px-6 text-center -outline-offset-2"
           >
-            <FolderOpen className="size-6 text-muted" aria-hidden />
-            <p className="text-sm font-medium text-fg">No folders inside</p>
-            <p className="text-[0.8125rem] text-muted">You can still use this folder.</p>
+            <p className="text-base font-semibold text-ink">No folders inside</p>
+            <p className="text-sm text-muted">You can still use this folder.</p>
           </div>
         ) : (
-          <ul
+          <div
             ref={listRef}
+            role="group"
             tabIndex={-1}
             aria-label={`Folders in ${current}`}
             aria-busy={loadingNew || undefined}
             onKeyDown={onKeyDown}
             // The old listing can't be clicked while the new one loads.
             inert={loadingNew || undefined}
-            className={cn("py-1 outline-none", browse.isFetching && "opacity-60 transition-opacity")}
+            className={cn("py-1 -outline-offset-2", browse.isFetching && "opacity-60")}
           >
             <FolderRows
               groups={groups}
@@ -670,24 +685,28 @@ export function FolderPicker({
               systemOpen={systemOpen}
               onToggleSystem={() => setSystemOpen((open) => !open)}
             />
-          </ul>
+          </div>
         )}
       </div>
 
       {/* Right above the button it explains, so it is in view on a phone. */}
       {conflict ? (
-        <p id={conflictId} role="status" className="border-t border-warning/30 bg-warning-soft px-4 py-2.5 text-[0.8125rem] font-medium text-fg">
-          {conflict}
-        </p>
+        <div className="border-t border-line px-6 py-3.5 max-roomy:px-4">
+          <Callout tone="warning" id={conflictId} role="status">
+            {conflict}
+          </Callout>
+        </div>
       ) : error ? (
-        <p role="alert" className="border-t border-danger/30 bg-danger-soft px-4 py-2.5 text-[0.8125rem] font-medium text-danger">
-          {error}
-        </p>
+        <div className="border-t border-line px-6 py-3.5 max-roomy:px-4">
+          <Callout tone="danger" role="alert">
+            {error}
+          </Callout>
+        </div>
       ) : null}
-      <div className="flex flex-col gap-2 border-t border-line bg-sunken/60 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="min-w-0 text-[0.8125rem] text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line px-6 py-3.5 max-roomy:px-4">
+        <p className="min-w-0 flex-[1_1_12rem] text-meta break-words text-ink">
           <span className="sr-only">Current folder: </span>
-          <span className="block truncate font-mono text-fg">{current || "…"}</span>
+          {current || "…"}
         </p>
         <Button
           variant="primary"

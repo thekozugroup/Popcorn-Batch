@@ -1,13 +1,20 @@
 #!/usr/bin/env node
 /**
- * Phone and tablet layout check: the built UI (`web/out`, from `pnpm build`)
- * against the mock API with every file given a long, Plex/Sonarr-style name
- * (about 90 characters). It fails when a screen scrolls sideways, when a
+ * Phone, tablet and desktop layout check: the built UI (`web/out`, from
+ * `pnpm build`) against the mock API with every file given a long,
+ * Plex/Sonarr-style name (about 90 characters). It fails when a screen
+ * scrolls sideways, when the frame isn't Popcorn SR's (a 228px sidebar from
+ * 801px, a compact top block with the four sections in one row at 800px and
+ * below, nothing fixed to the bottom, frame controls under 44px), when a
  * running job's Stop or Details button is off screen, when those buttons
  * aren't named after their file, when a name's late episode is cut off, when
  * a stacked quality option on a touch screen is shorter than the 24 px
- * WCAG 2.2 target size, or when a confirmation's title (Stop, with a dotted
- * release name that has no place to break) runs past its dialog.
+ * WCAG 2.2 target size, when a confirmation's title (Stop, with a dotted
+ * release name that has no place to break) runs past its dialog, when a
+ * settings page cuts a segmented option or a select's chosen words short or
+ * squeezes a column of controls beside its heading under 320px (at laptop
+ * widths too, where the sidebar and the settings navigation take room), or
+ * when the tab's title isn't the screen's after a fresh load or a reload.
  *
  * Usage (from web/):
  *   pnpm build && node e2e/layout.mjs [--port 18925] [--screenshots <dir>] [--headed]
@@ -130,12 +137,30 @@ async function main() {
 
   try {
     const libraries = await (await fetch(`http://127.0.0.1:${mockPort}/api/libraries`)).json();
-    const screens = ["#/", "#/queue", "#/queue/next", "#/queue/history", `#/library/${libraries[0].id}`];
+    const screens = [
+      "#/",
+      "#/queue",
+      "#/queue/next",
+      "#/queue/history",
+      `#/library/${libraries[0].id}`,
+      // Goal cards with a "Best fit" tag beside the sidebar once ran past a 768px screen.
+      `#/library/${libraries[0].id}/settings`,
+      "#/settings/advanced",
+      // The full rescan select once read "Every 12 ho" beside the settings navigation at 1024px.
+      "#/settings/processing",
+    ];
     const viewports = [
       { name: "phone", width: 390, height: 844, isMobile: false },
       // The narrowest screens still in use: the Overview's heading and rows must wrap, not run past the edge.
       { name: "phone-small", width: 320, height: 640, isMobile: false },
       { name: "tablet", width: 768, height: 1024, isMobile: false },
+      // The widest compact top block, and the first width with the sidebar.
+      { name: "compact-800", width: 800, height: 900, isMobile: false },
+      // Laptops: beside the 228px sidebar (and, from 1280px, the settings navigation) a settings
+      // page once left its controls 140px at 1024 and 370px at 1280.
+      { name: "laptop-1024", width: 1024, height: 768, isMobile: false },
+      { name: "laptop-1280", width: 1280, height: 800, isMobile: false },
+      { name: "desktop", width: 1440, height: 900, isMobile: false },
       // A real phone: an overflowing page would widen the layout viewport instead of scrolling.
       { name: "phone-touch", width: 390, height: 844, isMobile: true, hasTouch: true },
     ];
@@ -169,6 +194,40 @@ async function main() {
         console.log(`${where}: scrollWidth ${widths.scroll}, innerWidth ${widths.inner}`);
         if (widths.scroll > widths.inner) fail(`${where} scrolls sideways (${widths.scroll} > ${widths.inner})`);
         if (widths.inner !== vp.width) fail(`${where} widened the layout viewport to ${widths.inner}`);
+        // The frame (Popcorn SR's): a 228px sidebar from 801px, a compact top block that scrolls away at
+        // 800px and below with the four sections in one row, nothing fixed to the bottom of the screen,
+        // and every control in it at least 44px tall.
+        const shell = await page.evaluate(() => {
+          const visible = (el) => {
+            const r = el.getBoundingClientRect();
+            const s = getComputedStyle(el);
+            return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none";
+          };
+          const aside = document.querySelector("aside");
+          const sections = [...document.querySelectorAll('nav[aria-label="Sections"] a')].filter(visible);
+          return {
+            aside: aside ? { width: aside.getBoundingClientRect().width, position: getComputedStyle(aside).position } : null,
+            rows: new Set(sections.map((a) => Math.round(a.getBoundingClientRect().top))).size,
+            sections: sections.length,
+            small: [...(aside?.querySelectorAll("a, button") ?? [])]
+              .filter((el) => visible(el) && el.getBoundingClientRect().height < 43.5)
+              .map((el) => (el.getAttribute("aria-label") || el.textContent || "").trim().slice(0, 40)),
+            fixedBottom: [...document.querySelectorAll("body *")]
+              .filter((el) => getComputedStyle(el).position === "fixed" && visible(el))
+              .filter((el) => el.getBoundingClientRect().bottom >= innerHeight - 1)
+              .filter((el) => !el.closest("[role=dialog], [role=alertdialog], [data-sonner-toaster]"))
+              .map((el) => el.tagName.toLowerCase()),
+          };
+        });
+        const compact = vp.width <= 800;
+        if (!shell.aside) fail(`${where}: the frame has no sidebar`);
+        else if (shell.aside.width > widths.inner) fail(`${where}: the sidebar is wider than the screen`);
+        else if (!compact && Math.round(shell.aside.width) !== 228) fail(`${where}: the sidebar is ${shell.aside.width}px wide, not 228`);
+        else if (compact && shell.aside.position === "sticky") fail(`${where}: the compact top block sticks instead of scrolling away`);
+        if (shell.sections !== 4) fail(`${where}: ${shell.sections} section links instead of 4`);
+        if (compact && shell.rows !== 1) fail(`${where}: the four sections take ${shell.rows} rows instead of one`);
+        if (shell.small.length) fail(`${where}: frame controls under 44px: ${shell.small.join(", ")}`);
+        if (shell.fixedBottom.length) fail(`${where}: something is fixed to the bottom of the screen (${shell.fixedBottom.join(", ")})`);
         // A late episode stays in view however the name is cut (its first six characters aren't clipped).
         const clipped = await page.locator("[data-file-tail]").evaluateAll((tails) =>
           tails
@@ -182,6 +241,61 @@ async function main() {
             .map((t) => t.textContent),
         );
         if (clipped.length) fail(`${where}: the episode is cut off in ${clipped.length} name(s), e.g. "${clipped[0]}"`);
+        if (screen.includes("settings")) {
+          // Every segmented option and every select reads in full, and a column of controls beside its
+          // heading keeps at least 320px (stacked, it is the panel's width, whatever the screen).
+          const fit = await page.evaluate(() => {
+            const visible = (el) => {
+              const r = el.getBoundingClientRect();
+              const s = getComputedStyle(el);
+              return r.width > 0 && r.height > 0 && s.visibility !== "hidden" && s.display !== "none" && s.opacity !== "0";
+            };
+            const cut = [];
+            for (const words of document.querySelectorAll('main [role="radiogroup"] label > span')) {
+              if (visible(words) && words.scrollWidth > words.clientWidth + 0.5) cut.push(`option "${words.textContent}"`);
+            }
+            // A select cuts its chosen words without overflowing: measure them against its inner width.
+            const ctx = document.createElement("canvas").getContext("2d");
+            for (const select of document.querySelectorAll("main select")) {
+              if (!visible(select)) continue;
+              const s = getComputedStyle(select);
+              ctx.font = `${s.fontWeight} ${s.fontSize} ${s.fontFamily}`;
+              const text = select.selectedOptions[0]?.textContent ?? "";
+              const room = select.clientWidth - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight);
+              if (select.scrollWidth > select.clientWidth || ctx.measureText(text).width > room + 0.5) cut.push(`select "${text}"`);
+            }
+            const narrow = [];
+            const columns = [];
+            for (const controls of document.querySelectorAll("main [data-settings-controls]")) {
+              if (!visible(controls)) continue;
+              const heading = controls.previousElementSibling;
+              const width = controls.getBoundingClientRect().width;
+              columns.push(Math.round(width));
+              const beside = heading && Math.abs(heading.getBoundingClientRect().top - controls.getBoundingClientRect().top) < 2;
+              if (beside && width < 320) narrow.push(`${heading.textContent.trim().slice(0, 30)} ${Math.round(width)}px`);
+            }
+            return { cut, narrow, columns };
+          });
+          if (fit.columns.length) console.log(`${where}: controls columns ${Math.min(...fit.columns)}-${Math.max(...fit.columns)}px`);
+          if (fit.cut.length) fail(`${where}: cut short: ${fit.cut.join(", ")}`);
+          if (fit.narrow.length) fail(`${where}: controls beside their heading under 320px: ${fit.narrow.join(", ")}`);
+        }
+        // A visually hidden radio must sit inside its label: mobile screen readers (and Playwright's
+        // check) activate it with a tap at its centre, which has to land on the card or option.
+        const missed = await page.evaluate(() =>
+          [...document.querySelectorAll("label > input.sr-only")].flatMap((input) => {
+            const label = input.closest("label");
+            const box = input.getBoundingClientRect();
+            const shown = label.getBoundingClientRect();
+            if (!shown.width || !shown.height) return [];
+            const x = box.left + box.width / 2;
+            const y = box.top + box.height / 2;
+            if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) return [];
+            const hit = document.elementFromPoint(x, y);
+            return hit && label.contains(hit) ? [] : [label.textContent?.trim().slice(0, 40) ?? "?"];
+          }),
+        );
+        if (missed.length) fail(`${where}: a tap on a hidden radio misses its label: ${missed.join(", ")}`);
         if (screen === "#/queue") {
           const cards = await page.locator("article").evaluateAll((articles) =>
             articles.map((a) =>
@@ -248,6 +362,29 @@ async function main() {
         if (heights.some((h) => h < 24)) fail(`${vp.name}: a quality option is under 24 px tall`);
         if (opts.screenshots) await page.screenshot({ path: join(opts.screenshots, `${vp.name}-settings-advanced.png`) });
       }
+      if (vp.name === "desktop") {
+        // The tab's title is the screen's on a fresh load and after a reload, and stays so once the
+        // app has settled (Next's own title once came back after the app had set it).
+        for (const [hash, title] of [
+          ["#/queue", "Queue — Popcorn Batch"],
+          ["#/libraries", "Libraries — Popcorn Batch"],
+        ]) {
+          const fresh = await context.newPage();
+          for (const step of ["load", "reload"]) {
+            if (step === "load") await fresh.goto(`${base}/${hash}`);
+            else await fresh.reload();
+            await fresh.locator("main h1").first().waitFor({ timeout: 15_000 });
+            await fresh.waitForTimeout(1500);
+            const seen = await fresh.title();
+            console.log(`${vp.name} ${hash} after a ${step}: title "${seen}"`);
+            if (seen !== title) fail(`${vp.name} ${hash}: after a ${step} the title is "${seen}", not "${title}"`);
+          }
+          await fresh.close();
+        }
+      }
+      // Polling requests still in the route handler would otherwise reach
+      // route.fetch after the context is gone.
+      await context.unrouteAll({ behavior: "ignoreErrors" });
       await context.close();
     }
   } finally {

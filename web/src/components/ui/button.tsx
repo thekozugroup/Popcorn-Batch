@@ -7,39 +7,45 @@ import { SERVER_DOWN_TITLE, useServerDown } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 /**
- * Shared button styling, also used for links that look like buttons. On
- * touch screens every size is at least 44px tall, so it can be hit reliably.
+ * Shared button styling, also used for links that look like buttons. Every
+ * size is at least 44px tall with every pointer. Primary is Action Blue with
+ * dark text, the one next step of a view; secondary is the surface with a
+ * thin border; quiet has neither. There is no red button: a destructive
+ * action is a secondary button with exact words and a confirmation.
  */
-export const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md border font-medium whitespace-nowrap select-none transition-[background-color,border-color,color,box-shadow,opacity] duration-150 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+const buttonClasses = cva(
+  "inline-flex shrink-0 items-center justify-center gap-2 min-h-11 rounded-control border text-sm leading-[1.4285714286] font-semibold whitespace-nowrap no-underline select-none hover:brightness-[.94] active:scale-[.98] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        primary:
-          "border-transparent bg-accent text-on-accent shadow-card hover:bg-accent-hover active:brightness-95",
-        secondary:
-          "border-line-strong/60 bg-surface text-fg shadow-card hover:border-line-strong hover:bg-raised",
-        ghost: "border-transparent bg-transparent text-fg hover:bg-raised",
-        quiet: "border-transparent bg-transparent text-muted hover:bg-raised hover:text-fg",
-        danger:
-          "border-transparent bg-danger-soft text-danger hover:bg-danger hover:text-surface",
-        link: "h-auto border-transparent bg-transparent p-0 text-accent-ink underline-offset-4 hover:underline",
+        primary: "border-accent bg-accent text-accent-ink",
+        secondary: "border-line bg-surface text-ink",
+        quiet: "border-transparent bg-transparent text-muted hover:bg-subtle hover:text-ink hover:brightness-100",
+        // Only for a link inside a sentence; it is the one control below 44px.
+        link: "min-h-0 border-0 bg-transparent font-medium text-ink underline hover:text-muted hover:brightness-100 active:scale-100",
       },
       size: {
-        sm: "h-8 px-3 text-[0.8125rem] pointer-coarse:h-11 [&_svg:not([class*='size-'])]:size-4",
-        md: "h-9 px-3.5 text-sm pointer-coarse:h-11 [&_svg:not([class*='size-'])]:size-4",
-        lg: "h-11 px-5 text-[0.9375rem] [&_svg:not([class*='size-'])]:size-[1.125rem]",
-        icon: "size-9 p-0 pointer-coarse:size-11 [&_svg:not([class*='size-'])]:size-[1.125rem]",
-        "icon-sm": "size-8 p-0 pointer-coarse:size-11 [&_svg:not([class*='size-'])]:size-4",
+        sm: "px-3 py-[11px]",
+        md: "px-[17px] py-[11px]",
+        // Icon-only buttons are 44px squares with a 16px glyph and an aria-label.
+        icon: "size-11 p-0",
       },
     },
-    compoundVariants: [{ variant: "link", className: "h-auto px-0 pointer-coarse:h-auto" }],
+    compoundVariants: [
+      { variant: "quiet", size: "md", className: "px-2.5" },
+      { variant: "link", className: "p-0" },
+    ],
     defaultVariants: { variant: "secondary", size: "md" },
   },
 );
 
+/** The button's classes, for links and triggers that look like buttons. */
+export function buttonVariants(props?: VariantProps<typeof buttonClasses>): string {
+  return cn(buttonClasses(props));
+}
+
 export type ButtonProps = ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
+  VariantProps<typeof buttonClasses> & {
     /** Show a spinner and block clicks while an action runs. */
     loading?: boolean;
     /**

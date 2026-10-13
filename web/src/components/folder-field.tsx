@@ -6,6 +6,7 @@ import { Folder } from "lucide-react";
 import { useState } from "react";
 import { FolderPicker } from "@/components/folder-picker";
 import { Button } from "@/components/ui/button";
+import { ErrorText } from "@/components/ui/controls";
 import { Modal } from "@/components/ui/overlays";
 import { cn } from "@/lib/utils";
 
@@ -33,26 +34,22 @@ export function FolderField({
     <div>
       <div
         className={cn(
-          "flex items-center gap-3 rounded-md border bg-surface py-1.5 pr-1.5 pl-3",
-          error ? "border-danger ring-2 ring-danger/25" : "border-line-strong",
+          "flex min-h-11 min-w-0 items-center gap-3 rounded-control border bg-surface py-1 pr-1 pl-3",
+          error ? "border-error" : "border-field",
         )}
       >
-        <Folder className="size-4 shrink-0 text-accent-ink" aria-hidden />
+        <Folder className="size-4 shrink-0 text-muted" aria-hidden />
         <span
-          className={cn("min-w-0 flex-1 truncate font-mono text-[0.8125rem]", value ? "text-fg" : "text-muted")}
+          className={cn("min-w-0 flex-1 text-base break-words", value ? "text-ink" : "text-muted")}
           aria-labelledby={labelId}
         >
           {value || placeholder}
         </span>
-        <Button size="sm" onClick={() => setOpen(true)} aria-describedby={labelId}>
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-describedby={labelId}>
           {value ? "Change…" : "Choose…"}
         </Button>
       </div>
-      {error ? (
-        <p role="alert" className="mt-1.5 text-[0.8125rem] font-medium text-danger">
-          {error}
-        </p>
-      ) : null}
+      {error ? <ErrorText className="mt-2">{error}</ErrorText> : null}
       <Modal open={open} onOpenChange={setOpen} title={dialogTitle} description={dialogDescription}>
         {open ? (
           <FolderPicker

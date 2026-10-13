@@ -6,6 +6,7 @@ import {
   errorsFrom,
   profileFieldOf,
   saveBarMessage,
+  SECTION_OF,
   sectionFor,
   settingForField,
 } from "./settings-form";
@@ -29,6 +30,7 @@ const base: Settings = {
   min_file_size_mb: 50,
   default_profile: profileForGoal("save_space"),
   onboarded: true,
+  popcorn_sr_url: null,
 };
 
 const invalid = (message: string) => new ApiError(400, "invalid_settings", message);
@@ -67,10 +69,10 @@ describe("errorsFrom", () => {
       "output_folder",
     );
     expect(
-      errorsFrom(invalid("The output folder can't be inside the library Movies, or Szalinski would convert its own results.")),
+      errorsFrom(invalid("The output folder can't be inside the library Movies, or Popcorn Batch would convert its own results.")),
     ).toHaveProperty("output_folder");
     expect(
-      errorsFrom(invalid("Szalinski can't write to the temporary folder /temp. Check its permissions.")),
+      errorsFrom(invalid("Popcorn Batch can't write to the temporary folder /temp. Check its permissions.")),
     ).toHaveProperty("temp_dir");
     expect(errorsFrom(invalid("Jobs at once must be between 1 and 32."))).toHaveProperty("max_jobs");
     expect(errorsFrom(invalid("Active hours must be whole hours from 0 to 23."))).toHaveProperty("active_hours");
@@ -88,8 +90,8 @@ describe("errorsFrom", () => {
   it("falls back to the only key sent, then to a general message", () => {
     expect(errorsFrom(invalid("Something odd."), ["validation"])).toEqual({ validation: "Something odd." });
     expect(errorsFrom(invalid("Something odd."), ["validation", "hardware"])).toEqual({ general: "Something odd." });
-    expect(errorsFrom(new ApiError(0, "network_error", "Can't reach the Szalinski server."), ["max_jobs"])).toEqual({
-      general: "Can't reach the Szalinski server.",
+    expect(errorsFrom(new ApiError(0, "network_error", "Can't reach the Popcorn Batch server."), ["max_jobs"])).toEqual({
+      general: "Can't reach the Popcorn Batch server.",
     });
     expect(errorsFrom(new Error("boom"))).toEqual({ general: "boom" });
   });
@@ -217,6 +219,33 @@ describe("nested profile fields", () => {
   it("puts a nested default-profile error on the default profile", () => {
     const err = new ApiError(400, "invalid_settings", "Pick a quality.", "default_profile.quality");
     expect(errorsFrom(err, ["default_profile"])).toEqual({ default_profile: "Pick a quality." });
+  });
+});
+
+describe("the Popcorn SR address", () => {
+  const notFull = "Enter the full address, starting with http:// or https://, such as http://tower:8787.";
+
+  it("lives in Advanced, and is a change of its own when set or cleared", () => {
+    expect(SECTION_OF.popcorn_sr_url).toBe("advanced");
+    const set: Settings = { ...base, popcorn_sr_url: "http://tower:8787" };
+    expect(changedKeys(set, base)).toEqual(["popcorn_sr_url"]);
+    expect(changedKeys(base, set)).toEqual(["popcorn_sr_url"]);
+    expect(changedKeys({ ...set }, set)).toEqual([]);
+  });
+
+  it("puts the server's error on the field it names, pointed at in Advanced and spelled out elsewhere", () => {
+    const err = new ApiError(400, "invalid_settings", notFull, "popcorn_sr_url");
+    const errors = errorsFrom(err, ["popcorn_sr_url", "max_jobs"]);
+    expect(errors).toEqual({ popcorn_sr_url: notFull });
+    expect(settingForField("popcorn_sr_url")).toBe("popcorn_sr_url");
+    expect(saveBarMessage({ errors, draft: base, section: "advanced", advancedValid: true })).toEqual({
+      message: "Fix the highlighted setting to save.",
+      role: "status",
+      blocked: false,
+    });
+    expect(saveBarMessage({ errors, draft: base, section: "processing", advancedValid: true }).message).toBe(
+      `${notFull} (Advanced)`,
+    );
   });
 });
 

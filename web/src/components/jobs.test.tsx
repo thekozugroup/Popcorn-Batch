@@ -327,8 +327,27 @@ describe("a running job's card", () => {
       />,
     );
     expect(screen.getByRole("article").textContent).toContain(
-      "Attempt 2: the last try made a file that failed a check (Plays start to finish), so Szalinski is trying another way.",
+      "Attempt 2: the last try made a file that failed a check (Plays start to finish), so Popcorn Batch is trying another way.",
     );
+  });
+
+  it("is a flat job row: the attempt's reason in supporting text after an amber dot, where it runs as a plain tag", () => {
+    renderWithClient(
+      <JobCard
+        job={job({ state: "running", stage: "transcoding", progress: 0, attempt: 2, attempts: [gpuFailed], hw_api: "nvenc", encoder: "hevc_nvenc" })}
+        onOpen={() => {}}
+      />,
+    );
+    const row = screen.getByRole("article");
+    expect(row.className).not.toMatch(/shadow|rounded/);
+    const reason = screen.getByText(/^Attempt 2: /).parentElement;
+    expect(reason?.className).toContain("text-muted");
+    expect(reason?.querySelector("span[aria-hidden]")?.className).toContain("bg-warn");
+    // A descriptive tag: no dot, no tooltip, not a tab stop; the encoder is named in Technical details.
+    const where = screen.getByText("NVIDIA GPU");
+    expect(where.querySelector("span[aria-hidden]")).toBeNull();
+    expect(where.hasAttribute("tabindex")).toBe(false);
+    expect(row.textContent).not.toContain("hevc_nvenc");
   });
 });
 

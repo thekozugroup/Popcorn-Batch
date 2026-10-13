@@ -7,26 +7,13 @@
  * the encoder, similarity scores, ffmpeg command and log.
  */
 
-import {
-  ArrowRight,
-  ArrowUpToLine,
-  Check,
-  CircleMinus,
-  CircleStop,
-  CircleX,
-  FileVideo,
-  Info,
-  LoaderCircle,
-  Play,
-  RotateCcw,
-  Wrench,
-} from "lucide-react";
+import { ArrowRight, Check, CircleX, Info, LoaderCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { FileName } from "@/components/file-name";
 import { useThrottledAnnouncement } from "@/components/providers";
 import { CheckIcon, EncoderBadge, JobStateBadge } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Callout, CodeBlock, CopyButton, Detail, Disclosure, Meter, Skeleton } from "@/components/ui/display";
+import { Callout, CodeBlock, CopyButton, Detail, Disclosure, Meter, Skeleton, StatusDot } from "@/components/ui/display";
 import { ConfirmDialog, Sheet } from "@/components/ui/overlays";
 import { useFileActions, useJobActions } from "@/lib/actions";
 import {
@@ -92,6 +79,12 @@ import type {
 import { cn, useRetained } from "@/lib/utils";
 
 /**
+ * A list of check, attempt, track or note rows: no enclosing box, a divider
+ * on top and between rows.
+ */
+export const ROWS = "divide-y divide-line border-t border-line";
+
+/**
  * Where a job is in Preparing → Converting → Checking quality → Finishing.
  * Phones get one line ("Checking quality · step 3 of 4") instead of the
  * stepper, which would wrap.
@@ -100,33 +93,28 @@ function StageSteps({ stage }: { stage: JobStage }) {
   const current = JOB_STAGES.indexOf(stage);
   return (
     <>
-      <p className="text-[0.8125rem] text-muted sm:hidden">
-        <span className="font-medium text-fg">{JOB_STAGE_LABEL[stage]}</span>
+      <p className="text-meta text-muted roomy:hidden">
+        <span className="font-semibold text-ink">{JOB_STAGE_LABEL[stage]}</span>
         {current >= 0 ? ` · step ${current + 1} of ${JOB_STAGES.length}` : ""}
       </p>
-      <ol className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 text-xs sm:flex" aria-label="Steps">
+      <ol className="hidden flex-wrap items-center gap-x-1.5 gap-y-1 text-meta roomy:flex" aria-label="Steps">
         {JOB_STAGES.map((s, i) => {
           const done = current > i;
           const active = current === i;
           return (
             <li key={s} className="flex items-center gap-1.5">
-              {i > 0 ? (
-                <span aria-hidden className={cn("h-px w-3", done || active ? "bg-accent-ink/60" : "bg-line")} />
-              ) : null}
+              {i > 0 ? <span aria-hidden className="h-px w-3 bg-line" /> : null}
               <span
                 aria-current={active ? "step" : undefined}
-                className={cn("inline-flex items-center gap-1", active ? "font-semibold text-fg" : "text-muted")}
+                className={cn("inline-flex items-center gap-1.5", active ? "font-semibold text-ink" : "text-muted")}
               >
-                {/* Done: a check. Current: a gold dot. Not reached: a hollow ring. */}
+                {/* Done: a check. Current: an Action Blue dot. Not reached: a hollow ring. */}
                 {done ? (
-                  <Check className="size-3 text-success" aria-hidden />
+                  <Check className="size-3 text-muted" aria-hidden />
                 ) : (
                   <span
                     aria-hidden
-                    className={cn(
-                      "size-1.5 rounded-full",
-                      active ? "bg-accent-ink" : "border border-line-strong bg-transparent",
-                    )}
+                    className={cn("size-1.5 rounded-full", active ? "bg-accent" : "border border-field bg-transparent")}
                   />
                 )}
                 {JOB_STAGE_LABEL[s]}
@@ -185,7 +173,6 @@ export function StopJobButton({
         aria-label={named ? `Remove from queue: ${job.file_name}` : undefined}
         needsServer
       >
-        <CircleMinus aria-hidden />
         Remove from queue
       </Button>
     );
@@ -199,7 +186,6 @@ export function StopJobButton({
         aria-label={named ? `${label} ${job.file_name}` : undefined}
         needsServer
       >
-        <CircleStop aria-hidden />
         {label}
       </Button>
       <ConfirmDialog
@@ -208,7 +194,6 @@ export function StopJobButton({
         title={`Stop converting ${middleTruncate(job.file_name, 60)}?`}
         confirmLabel="Stop converting"
         cancelLabel="Keep converting"
-        destructive
         loading={cancel.isPending}
         onConfirm={() => cancel.mutate(job, { onSettled: () => setConfirm(false) })}
       >
@@ -265,10 +250,8 @@ function JobProgressBlock({ job, label, lineClassName }: { job: Job; label: stri
         value={reading.kind === "unknown" ? null : reading.overall}
         valueText={reading.kind === "measured" ? undefined : said}
         label={label}
-        live
-        size="md"
       />
-      <p className={cn("text-[0.8125rem] text-fg", lineClassName)}>
+      <p className={cn("text-meta text-ink", lineClassName)}>
         <span className="font-semibold tabular">{words.lead}</span>
         {words.detail ? <span className="text-muted"> · {words.detail}</span> : null}
         {words.eta ? <span className="text-muted"> · {words.eta}</span> : null}
@@ -281,12 +264,17 @@ function JobProgressBlock({ job, label, lineClassName }: { job: Job; label: stri
 function attemptLine(job: Job): string {
   const check = lastFailedCheck(job);
   if (check) {
-    return `Attempt ${job.attempt}: the last try made a file that failed a check (${check.label}), so Szalinski is trying another way.`;
+    return `Attempt ${job.attempt}: the last try made a file that failed a check (${check.label}), so Popcorn Batch is trying another way.`;
   }
-  return `Attempt ${job.attempt}: the first try didn't work, so Szalinski is trying another way.`;
+  return `Attempt ${job.attempt}: the first try didn't work, so Popcorn Batch is trying another way.`;
 }
 
-/** Live card for a running job. */
+/**
+ * A running job as a job row, one per job inside a panel (the screen draws
+ * the panel; rows carry the dividers between them): the name, where it runs,
+ * the stage line, the progress and its words, and the actions on the right
+ * (under the content at 520px and below).
+ */
 export function JobCard({
   job: baseJob,
   onOpen,
@@ -311,38 +299,45 @@ export function JobCard({
 
   const titleId = `job-card-${job.id}`;
   return (
-    // `min-w-0`: a long name is cut to the card's width instead of widening it past the screen.
-    <article
-      aria-labelledby={titleId}
-      className="flex min-w-0 flex-col gap-3.5 rounded-lg border border-line bg-surface p-4 shadow-card sm:p-5"
-    >
-      <div className="flex items-start gap-3">
-        <div className="min-w-0 flex-1">
-          <button
-            id={titleId}
-            type="button"
-            onClick={() => onOpen(job)}
-            className="flex max-w-full text-left text-[0.9375rem] font-semibold text-fg hover:text-accent-ink"
-          >
-            <FileName name={job.file_name} />
-          </button>
-          <p className="mt-0.5 truncate text-[0.8125rem] text-muted">
-            {libraryName ? `${libraryName} · ` : ""}
-            {formatBytes(job.input_size)}
-          </p>
+    // `min-w-0`: a long name is cut to the row's width instead of widening it past the screen.
+    <article aria-labelledby={titleId} className={JOB_ROW}>
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <button
+              id={titleId}
+              type="button"
+              onClick={() => onOpen(job)}
+              className="flex min-h-11 max-w-full items-center text-left text-base leading-normal font-label text-ink hover:underline"
+            >
+              <FileName name={job.file_name} />
+            </button>
+            <p className="truncate text-meta text-muted">
+              {libraryName ? `${libraryName} · ` : ""}
+              {formatBytes(job.input_size)}
+            </p>
+          </div>
+          <span className="mt-2.5">
+            <EncoderBadge api={job.hw_api} />
+          </span>
         </div>
-        <EncoderBadge api={job.hw_api} encoder={job.encoder} />
+
+        <StageSteps stage={job.stage} />
+
+        <div>
+          <JobProgressBlock job={job} label={`${job.file_name}: whole file`} lineClassName="mt-2" />
+          {job.attempt > 1 ? (
+            <p className="mt-2 flex items-baseline gap-2 text-meta text-muted">
+              <StatusDot tone="warning" className="translate-y-[-1px]" />
+              <span className="min-w-0">{attemptLine(job)}</span>
+            </p>
+          ) : null}
+        </div>
       </div>
 
-      <StageSteps stage={job.stage} />
-
-      <div>
-        <JobProgressBlock job={job} label={`${job.file_name}: whole file`} lineClassName="mt-2" />
-        {job.attempt > 1 ? <p className="mt-2 text-[0.8125rem] text-warning">{attemptLine(job)}</p> : null}
-      </div>
-
-      {/* Named after the file: with several cards, "Stop" and "Details" alone would be ambiguous. */}
-      <div className="flex items-center justify-end gap-2 border-t border-line pt-3">
+      {/* Named after the file: with several rows, "Stop" and "Details" alone would be ambiguous. Under
+          the content at 520px and below, the quiet Stop's word lined up with the name. */}
+      <div className="-ml-3 flex flex-wrap items-center gap-2 roomy:ml-0 roomy:justify-end">
         <StopJobButton job={job} named />
         <Button variant="secondary" size="sm" onClick={() => onOpen(job)} aria-label={`Details for ${job.file_name}`}>
           Details
@@ -352,14 +347,24 @@ export function JobCard({
   );
 }
 
-/** Placeholder with the card's shape. */
+/**
+ * A job row (DESIGN.md): content beside its actions, which move under it at
+ * 520px and below; a divider below every row but the last.
+ */
+const JOB_ROW =
+  "grid min-w-0 grid-cols-[minmax(0,1fr)] items-start gap-3 border-b border-line p-[18px] last:border-b-0 roomy:grid-cols-[minmax(0,1fr)_auto] roomy:gap-5 roomy:px-6 roomy:py-5";
+
+/** Placeholder with the job row's shape. */
 export function JobCardSkeleton() {
   return (
-    <div className="flex min-w-0 flex-col gap-4 rounded-lg border border-line bg-surface p-5">
-      <Skeleton className="h-4 w-2/3" />
-      <Skeleton className="h-3 w-1/3" />
-      <Skeleton className="h-2.5 w-full rounded-full" />
-      <Skeleton className="h-3 w-1/2" />
+    <div className={JOB_ROW}>
+      <div className="flex min-w-0 flex-col gap-3">
+        <Skeleton className="h-5 w-2/3" />
+        <Skeleton className="h-3 w-1/3" />
+        <Skeleton className="h-[5px] w-full" />
+        <Skeleton className="h-3 w-1/2" />
+      </div>
+      <Skeleton className="h-11 w-36" />
     </div>
   );
 }
@@ -435,8 +440,8 @@ export function historyNote(job: Job, minSavingsPct?: number | null, standing: J
 
 export function SheetSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mt-7 first:mt-0">
-      <h3 className="mb-2.5 text-sm font-semibold text-fg">{title}</h3>
+    <section className="mt-6 first:mt-0">
+      <h3 className="mb-2 text-sm font-label text-ink">{title}</h3>
       {children}
     </section>
   );
@@ -447,16 +452,16 @@ function BeforeAfter({ job, output }: { job: Job; output: number }) {
   const kept = job.state === "done";
   const savings = savingsText(job.input_size, output, kept ? job.freed_bytes : null);
   return (
-    <div className="rounded-lg border border-line bg-sunken/50 p-4">
+    <div>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-[0.8125rem] text-muted">Before</p>
-          <p className="mt-0.5 text-lg font-semibold text-fg tabular">{formatBytes(job.input_size)}</p>
+          <p className="text-meta text-muted">Before</p>
+          <p className="mt-0.5 text-base font-semibold text-ink tabular">{formatBytes(job.input_size)}</p>
         </div>
-        <ArrowRight className="size-5 shrink-0 text-muted" aria-label="became" />
+        <ArrowRight className="size-4 shrink-0 text-muted" aria-label="became" />
         <div className="text-right">
-          <p className="text-[0.8125rem] text-muted">{kept ? "After" : "New file (not kept)"}</p>
-          <p className="mt-0.5 text-lg font-semibold text-fg tabular">{formatBytes(output)}</p>
+          <p className="text-meta text-muted">{kept ? "After" : "New file (not kept)"}</p>
+          <p className="mt-0.5 text-base font-semibold text-ink tabular">{formatBytes(output)}</p>
         </div>
       </div>
       {savings ? (
@@ -468,15 +473,11 @@ function BeforeAfter({ job, output }: { job: Job; output: number }) {
             tone={!kept ? "muted" : savings.saved ? "accent" : "danger"}
           />
           {/* A kept original's outcome above already says by how much and why. */}
-          {kept ? (
-            <p className={cn("mt-2 text-sm font-medium", savings.saved ? "text-accent-ink" : "text-danger")}>
-              {savings.text}
-            </p>
-          ) : null}
+          {kept ? <p className="mt-2 text-sm font-label text-ink">{savings.text}</p> : null}
         </>
       ) : kept && noSpaceFreed(job) ? (
         // The server's figure beats the two sizes: a hard-linked original's data stays on disk.
-        <p className="mt-3 text-sm font-medium text-muted">No space was freed.</p>
+        <p className="mt-3 text-sm font-label text-muted">No space was freed.</p>
       ) : null}
     </div>
   );
@@ -524,24 +525,24 @@ export function checksLead(report: ValidationReport): string {
 
 function Checks({ report }: { report: ValidationReport }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-line">
-      <p className="border-b border-line px-3.5 py-3 text-sm font-medium text-fg">{checksLead(report)}</p>
-      <ul className="divide-y divide-line">
+    <div>
+      <p className="mb-3 text-sm font-label text-ink">{checksLead(report)}</p>
+      <ul className={ROWS}>
         {report.checks.map((check) => {
           const value = checkValueText(check);
           return (
-            <li key={check.id} className="flex gap-3 px-3.5 py-3">
+            <li key={check.id} className="flex gap-3 py-3">
               <CheckIcon status={check.status} />
               <div className="min-w-0 flex-1">
-                <p className="text-sm text-fg">{check.label}</p>
-                <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted">{check.detail}</p>
+                <p className="text-sm font-label text-ink">{check.label}</p>
+                <p className="mt-0.5 text-meta leading-[1.5] text-muted">{check.detail}</p>
               </div>
               {value ? <span className="shrink-0 text-xs text-muted tabular">{value}</span> : null}
             </li>
           );
         })}
       </ul>
-      <p className="border-t border-line px-3.5 py-2.5 text-[0.8125rem] text-muted">
+      <p className="border-t border-line pt-3 text-meta text-muted">
         {VALIDATION_LABEL[report.level]} checks · took {formatDuration(report.elapsed_secs)}
       </p>
     </div>
@@ -571,7 +572,7 @@ export function CantBeReadCallout({ error }: { error: string | null }) {
     <Callout tone="warning" title="Can't be read">
       <p>
         This file looks damaged or isn&apos;t a video{detail ? ` (${detail})` : ""}.
-        Szalinski left it alone.
+        Popcorn Batch left it alone.
       </p>
       <p className="mt-1.5">
         Play it in Plex or Jellyfin to check. If it&apos;s broken, replace it; the new copy is picked up automatically.
@@ -598,7 +599,6 @@ function SetupCallout({ kind, error, kept = false }: { kind: SetupProblem; error
       title={fix.title}
       action={
         <a href={href(fix.setting.path, { focus: fix.setting.focus })} className={buttonVariants({ variant: "secondary", size: "sm" })}>
-          <Wrench aria-hidden />
           {fix.setting.label}
         </a>
       }
@@ -684,7 +684,7 @@ function MovedOnCallout({ job, standing }: { job: Job; standing: "converted" | "
 function Outcome({ job, standing, renamed }: { job: Job; standing: JobStanding; renamed: string | null }) {
   const settings = useSettings();
   const { library } = useLibrary(job.library_id);
-  if (standing === "unknown") return <Skeleton className="h-20 w-full rounded-lg" />;
+  if (standing === "unknown") return <Skeleton className="h-20 w-full rounded-control" />;
   if (standing === "kept") return <KeptConvertedCallout job={job} minSavingsPct={library?.profile.min_savings_pct} />;
   if ((standing === "converted" || standing === "queued") && job.state !== "skipped") {
     return <MovedOnCallout job={job} standing={standing} />;
@@ -728,7 +728,7 @@ function Outcome({ job, standing, renamed }: { job: Job; standing: JobStanding; 
         {renamed ? (
           // Another format, another extension: say so, or the old name is searched for in vain.
           <p className="mt-1.5">
-            It&apos;s now called <span className="font-medium break-all text-fg">{renamed}</span>.
+            It&apos;s now called <span className="font-label break-all">{renamed}</span>.
           </p>
         ) : null}
       </Callout>
@@ -748,26 +748,26 @@ export function Attempts({ job, gpus }: { job: Job; gpus: readonly GpuDevice[] }
   if (!rows.length) return null;
   return (
     <SheetSection title="Attempts">
-      <ol aria-label="Attempts" className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+      <ol aria-label="Attempts" className={ROWS}>
         {rows.map(({ attempt, running }) =>
           attempt ? (
-            <li key={attempt.attempt} className="flex gap-3 px-3.5 py-3">
+            <li key={attempt.attempt} className="flex gap-3 py-3">
               {attempt.result === "succeeded" ? (
-                <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                <Check className="mt-0.5 size-4 shrink-0 text-ok" aria-hidden />
               ) : (
-                <CircleX className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
+                <CircleX className="mt-0.5 size-4 shrink-0 text-error" aria-hidden />
               )}
               <div className="min-w-0">
-                <p className="text-sm font-medium text-fg">{attemptHeading(attempt, gpus)}</p>
-                <p className="mt-0.5 text-[0.8125rem] leading-snug break-words text-muted">{attemptOutcome(attempt)}</p>
+                <p className="text-sm font-label text-ink">{attemptHeading(attempt, gpus)}</p>
+                <p className="mt-0.5 text-meta leading-[1.5] break-words text-muted">{attemptOutcome(attempt)}</p>
               </div>
             </li>
           ) : running ? (
-            <li key={`running-${running.attempt}`} className="flex gap-3 px-3.5 py-3">
-              <LoaderCircle className="spin mt-0.5 size-4 shrink-0 text-accent-ink" aria-hidden />
+            <li key={`running-${running.attempt}`} className="flex gap-3 py-3">
+              <LoaderCircle className="spin mt-0.5 size-4 shrink-0 text-accent" aria-hidden />
               <div className="min-w-0">
-                <p className="text-sm font-medium text-fg">{`Attempt ${running.attempt} · ${running.device}`}</p>
-                <p className="mt-0.5 text-[0.8125rem] leading-snug text-muted">Converting now</p>
+                <p className="text-sm font-label text-ink">{`Attempt ${running.attempt} · ${running.device}`}</p>
+                <p className="mt-0.5 text-meta leading-[1.5] text-muted">Converting now</p>
               </div>
             </li>
           ) : null,
@@ -801,7 +801,7 @@ function JobTechnical({ job, gpus }: { job: Job; gpus: readonly GpuDevice[] }) {
       </Detail>
     ) : null,
     speed ? (
-      <Detail key="speed" label="Speed" mono>
+      <Detail key="speed" label="Speed">
         {speed}
       </Detail>
     ) : null,
@@ -818,22 +818,22 @@ function JobTechnical({ job, gpus }: { job: Job; gpus: readonly GpuDevice[] }) {
   ].filter(Boolean);
   if (!rows.length && !job.command && !log && !attempts.length) return null;
   return (
-    <Disclosure className="mt-7">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[0.8125rem] text-muted">Everything below, with every attempt, in one piece of text.</p>
+    <Disclosure className="mt-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <CopyButton text={jobReportText(job, gpus)} label="Copy for a bug report" />
+        <p className="text-meta text-muted">Everything below, with every attempt, in one piece of text.</p>
       </div>
-      {rows.length ? <dl className="-my-2 divide-y divide-line">{rows}</dl> : null}
+      {rows.length ? <dl className="divide-y divide-line">{rows}</dl> : null}
       {log?.errors ? <CodeBlock code={log.errors} label="What ffmpeg reported" /> : null}
       {job.command ? <CodeBlock code={job.command} label="ffmpeg command of the final attempt" /> : null}
       {log ? <CodeBlock code={log.rest} label="Last lines from ffmpeg" maxHeight="20rem" /> : null}
       {attempts.map((attempt) => (
         <section key={attempt.attempt} aria-label={`Attempt ${attempt.attempt}`} className="flex flex-col gap-2">
-          <p className="text-[0.8125rem] font-medium text-fg">
+          <p className="text-meta font-label text-ink">
             {attemptHeading(attempt, gpus)}
             <span className="font-normal text-muted">
               {" "}
-              · <span className="font-mono text-xs">{attempt.encoder}</span> · {attemptOutcome(attempt)}
+              · <span className="font-mono text-meta">{attempt.encoder}</span> · {attemptOutcome(attempt)}
             </span>
           </p>
           {attempt.command ? <CodeBlock code={attempt.command} label={`Attempt ${attempt.attempt}: ffmpeg command`} /> : null}
@@ -864,9 +864,9 @@ function JobSheetBody({ job: baseJob }: { job: Job }) {
   const gpus = useHardwareInfo().hw?.gpus ?? [];
   return (
     <>
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2">
         <JobStateBadge job={job} standing={standing} />
-        <span className="text-[0.8125rem] text-muted">
+        <span className="text-meta text-muted">
           {job.finished_at
             ? `Finished ${formatRelative(job.finished_at)}`
             : job.started_at
@@ -888,10 +888,10 @@ function JobSheetBody({ job: baseJob }: { job: Job }) {
 
       {job.notes && job.notes.length > 0 ? (
         <SheetSection title="What changed">
-          <ul className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+          <ul className={ROWS}>
             {job.notes.map((note, i) => (
-              <li key={`${i}-${note}`} className="flex gap-3 px-3.5 py-3 text-sm leading-snug text-fg">
-                <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
+              <li key={`${i}-${note}`} className="flex gap-3 py-3 text-sm leading-[1.5] text-ink">
+                <Info className="mt-0.5 size-4 shrink-0 text-muted" aria-hidden />
                 <span className="min-w-0">{note}</span>
               </li>
             ))}
@@ -914,13 +914,9 @@ function JobSheetBody({ job: baseJob }: { job: Job }) {
       <SheetSection title="Details">
         <dl className="divide-y divide-line">
           <Detail label="Library">{library?.name ?? "—"}</Detail>
-          <Detail label={renamed ? "Original" : "File"} mono>
-            {job.file_path}
-          </Detail>
+          <Detail label={renamed ? "Original" : "File"}>{job.file_path}</Detail>
           {renamed ? (
-            <Detail label="Now" mono>
-              {job.file_path.slice(0, job.file_path.lastIndexOf("/") + 1) + renamed}
-            </Detail>
+            <Detail label="Now">{job.file_path.slice(0, job.file_path.lastIndexOf("/") + 1) + renamed}</Detail>
           ) : null}
           {job.hw_api ? <Detail label="Converted on">{HW_API_LABEL[job.hw_api]}</Detail> : null}
           {job.started_at && job.finished_at ? (
@@ -955,8 +951,8 @@ export function ConvertAgainButton({
   const toFolder = settings.data?.output_mode === "folder";
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setConfirm(true)} needsServer>
-        <RotateCcw aria-hidden />
+      {/* The one next step for a file the library's goal has moved past. */}
+      <Button variant="primary" size="sm" onClick={() => setConfirm(true)} needsServer>
         {label}
       </Button>
       <ConfirmDialog
@@ -1010,7 +1006,7 @@ export function ConvertAgainAction({
  * without those rules, after a confirmation. When tracks would be lost, it
  * says plainly which, and that they're gone for good.
  */
-export function ConvertAnywayButton({ file, variant = "secondary" }: { file: MediaFile; variant?: "secondary" | "primary" }) {
+export function ConvertAnywayButton({ file, variant = "primary" }: { file: MediaFile; variant?: "secondary" | "primary" }) {
   const { convertAnyway } = useFileActions();
   const [confirm, setConfirm] = useState(false);
   const details = convertAnywayDetails(file.skip_reason);
@@ -1018,7 +1014,6 @@ export function ConvertAnywayButton({ file, variant = "secondary" }: { file: Med
   return (
     <>
       <Button variant={variant} size="sm" onClick={() => setConfirm(true)} needsServer>
-        <Play aria-hidden />
         Convert anyway
       </Button>
       <ConfirmDialog
@@ -1058,7 +1053,6 @@ export function SkipUnreadableButton({ file, variant = "primary" }: { file: Medi
       loading={skipUnreadable.isPending}
       needsServer
     >
-      <CircleMinus aria-hidden />
       Skip this file
     </Button>
   );
@@ -1080,7 +1074,6 @@ function JobSheetActions({ job }: { job: Job }) {
       loading={retry.isPending}
       needsServer
     >
-      <RotateCcw aria-hidden />
       {job.state === "cancelled" ? "Queue again" : "Try again"}
     </Button>
   );
@@ -1088,21 +1081,19 @@ function JobSheetActions({ job }: { job: Job }) {
   const current = standing === "current";
   return (
     <>
-      <a href={fileLink} className={cn(buttonVariants({ variant: "quiet", size: "sm" }), "mr-auto")}>
-        <FileVideo aria-hidden />
+      <a href={fileLink} className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mr-auto")}>
         Show file
       </a>
       {job.state === "queued" ? (
         <>
           <StopJobButton job={job} variant="secondary" />
           <Button
-            variant="primary"
+            variant="secondary"
             size="sm"
             onClick={() => moveToTop.mutate(job)}
             loading={moveToTop.isPending}
             needsServer
           >
-            <ArrowUpToLine aria-hidden />
             Move to top
           </Button>
         </>

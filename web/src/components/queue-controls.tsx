@@ -2,7 +2,6 @@
 
 /** Pause / resume / stop for the queue, with its state in words. */
 
-import { CirclePause, CirclePlay, CircleStop } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/overlays";
@@ -38,9 +37,20 @@ export function queueSentence(queue: QueueState, settings: Settings | undefined)
 
 /**
  * Pause or resume, plus a quiet "Stop now" only while files are converting
- * (stopping an idle queue would do nothing).
+ * (stopping an idle queue would do nothing). Text only: Stop now quiet,
+ * Pause secondary, Resume primary (the next processing action while
+ * paused), unless the view already shows Resume as its one primary action
+ * (`resumeVariant="secondary"`).
  */
-export function QueueControls({ queue, compact = false }: { queue: QueueState; compact?: boolean }) {
+export function QueueControls({
+  queue,
+  compact = false,
+  resumeVariant = "primary",
+}: {
+  queue: QueueState;
+  compact?: boolean;
+  resumeVariant?: "primary" | "secondary";
+}) {
   const { pause, resume, stop } = useQueueActions();
   const [confirmStop, setConfirmStop] = useState(false);
   const size = compact ? "sm" : "md";
@@ -49,18 +59,16 @@ export function QueueControls({ queue, compact = false }: { queue: QueueState; c
     <div className="flex flex-wrap items-center gap-2">
       {queue.running > 0 ? (
         <Button variant="quiet" size={size} onClick={() => setConfirmStop(true)} needsServer>
-          <CircleStop aria-hidden />
           Stop now
         </Button>
       ) : null}
+      {/* Resume is the next processing action while paused, so it is the primary one. */}
       {queue.paused ? (
-        <Button variant="primary" size={size} onClick={() => resume.mutate()} loading={resume.isPending} needsServer>
-          <CirclePlay aria-hidden />
+        <Button variant={resumeVariant} size={size} onClick={() => resume.mutate()} loading={resume.isPending} needsServer>
           Resume
         </Button>
       ) : (
         <Button variant="secondary" size={size} onClick={() => pause.mutate()} loading={pause.isPending} needsServer>
-          <CirclePause aria-hidden />
           Pause
         </Button>
       )}
@@ -70,7 +78,6 @@ export function QueueControls({ queue, compact = false }: { queue: QueueState; c
         title="Stop converting now?"
         confirmLabel="Stop now"
         cancelLabel="Keep converting"
-        destructive
         loading={stop.isPending}
         onConfirm={() => stop.mutate(undefined, { onSettled: () => setConfirmStop(false) })}
       >

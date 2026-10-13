@@ -2,13 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "szalinski-api",
+      "name": "popcorn-batch-api",
       "runtimeExecutable": "make",
       "runtimeArgs": ["dev-api"],
       "port": 8080
     },
     {
-      "name": "szalinski-web",
+      "name": "popcorn-batch-web",
       "runtimeExecutable": "make",
       "runtimeArgs": ["dev-web"],
       "port": 3000

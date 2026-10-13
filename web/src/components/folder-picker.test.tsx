@@ -1,13 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
 import type { FsBrowse, FsEntry, UserFolder } from "@/lib/types";
 import { FolderPicker, folderRefusal, groupEntries, quickFolders } from "./folder-picker";
 
 const WHOLE_SERVER =
-  "The whole server can't be a library: it includes Szalinski's own files and every share. Choose the folder that holds your videos.";
-const SETTINGS = "/config is where Szalinski keeps its database and settings. Choose the folder that holds your videos.";
+  "The whole server can't be a library: it includes Popcorn Batch's own files and every share. Choose the folder that holds your videos.";
+const SETTINGS = "/config is where Popcorn Batch keeps its database and settings. Choose the folder that holds your videos.";
 
 function listing(path: string, partial: Partial<FsBrowse> = {}): FsBrowse {
   return {
@@ -256,11 +256,89 @@ describe("FolderPicker in a container", () => {
   it("keeps the arrow keys on the folders shown", async () => {
     pick(containerRoot());
     await waitFor(() => expect(rows().length).toBeGreaterThan(0));
-    const list = screen.getByRole("list", { name: "Folders in /" });
+    // One group holds a list per kind of folder (yours, the others, the system's).
+    const list = screen.getByRole("group", { name: "Folders in /" });
     fireEvent.keyDown(list, { key: "ArrowDown" });
     expect(document.activeElement?.textContent).toBe("config");
     fireEvent.keyDown(list, { key: "End" });
     // Folded away: the last one shown is the last of the others.
     expect(document.activeElement?.textContent).toBe("mnt");
+  });
+
+  it("gives each kind of folder its own list, holding only list items (axe's list rule)", async () => {
+    pick(containerRoot());
+    await waitFor(() => expect(rows().length).toBeGreaterThan(0));
+    fireEvent.click(screen.getByRole("button", { name: /System folders/ }));
+    const group = screen.getByRole("group", { name: "Folders in /" });
+    expect(within(group).getAllByRole("list")).toHaveLength(3);
+    // Every list in the picker, the path's breadcrumb too.
+    for (const list of screen.getAllByRole("list")) {
+      for (const child of Array.from(list.children)) {
+        expect(child.tagName).toBe("LI");
+        expect(child.getAttribute("role")).toBeNull();
+      }
+    }
+    // The others are named by their visible heading.
+    expect(screen.getByRole("list", { name: "Other folders" }).textContent).toContain("home");
+    expect(screen.getByRole("list", { name: "System folders" }).textContent).toContain("etc");
+    // One roving tab stop across the groups.
+    expect(rows().filter((b) => b.tabIndex === 0)).toHaveLength(1);
+  });
+});
+
+describe("FolderPicker for a library's first folder", () => {
+  function start(libraries: { name: string; path: string }[] = []) {
+    const browse = vi.spyOn(api, "browse").mockImplementation(async (path) =>
+      path === "/media"
+        ? listing("/media", { entries: [folder("Movies", { path: "/media/Movies", media_count: 4 })], user_folders: MINE, media_count: 4 })
+        : containerRoot(),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={client}>
+        <FolderPicker onSelect={() => {}} forLibrary startInYourFolders libraries={libraries} />
+      </QueryClientProvider>,
+    );
+    return browse;
+  }
+
+  it("opens in the first of Your folders, ready to use, instead of the top with a warning", async () => {
+    const browse = start();
+    await waitFor(() => expect(browse).toHaveBeenCalledWith("/media", expect.anything()));
+    await waitFor(() => expect(useButton().disabled).toBe(false));
+    expect(useButton().textContent).toContain("Use “media”");
+    expect(screen.queryByText(WHOLE_SERVER)).toBeNull();
+  });
+
+  it("stays at the top when that folder is already a library (Add library), as before", async () => {
+    const browse = start([{ name: "Movies", path: "/media/Movies" }]);
+    await screen.findByText(WHOLE_SERVER);
+    expect(browse).not.toHaveBeenCalledWith("/media", expect.anything());
+    expect(useButton().disabled).toBe(true);
+  });
+});
+
+describe("FolderPicker's rows and messages", () => {
+  it("marks a folder that is a library with a Tag, which stays visible in the highlighted row", async () => {
+    pick(containerRoot(), { libraries: [{ name: "Movies", path: "/media" }] });
+    const tag = await screen.findByText("Library");
+    expect(tag.hasAttribute("data-tag")).toBe(true);
+    expect(tag.getAttribute("title")).toBe("Already the library “Movies”");
+    // The row fills while highlighted; data-fill lets globals.css turn the tag to the surface colour.
+    expect(tag.closest("button")?.hasAttribute("data-fill")).toBe(true);
+  });
+
+  it("says why a folder can't be used in an ordinary message", async () => {
+    pick(listing("/media/movies"), { forLibrary: true, libraries: [{ name: "Movies", path: "/media/movies" }] });
+    const reason = await screen.findByText("This folder is already the library “Movies”.");
+    expect(reason.getAttribute("role")).toBe("status");
+    expect(reason.className).toContain("border-warn");
+    expect(reason.className).toContain("rounded-control");
+  });
+
+  it("says a folder is empty without an icon", async () => {
+    pick(listing("/media/empty"));
+    const note = await screen.findByText("No folders inside");
+    expect(note.parentElement?.querySelector("svg")).toBeNull();
   });
 });

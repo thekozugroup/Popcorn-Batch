@@ -1,6 +1,22 @@
 import { clsx, type ClassValue } from "clsx";
 import { useEffect, useState } from "react";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * tailwind-merge, told about the family's tokens so they replace each other:
+ * the radii (`rounded-control`, …), the type sizes (`text-meta` and the
+ * `text-headline` and `text-title` utilities, which would otherwise be taken
+ * for text colours and dropped beside `text-ink`) and the label weight.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    theme: {
+      radius: ["tag", "control", "panel", "progress"],
+      text: ["meta", "headline", "title"],
+      "font-weight": ["label"],
+    },
+  },
+});
 
 /** Join class names and let later Tailwind utilities win over earlier ones. */
 export function cn(...inputs: ClassValue[]): string {

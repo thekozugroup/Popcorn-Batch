@@ -16,6 +16,13 @@ What is coming after 0.2.0, from an evaluation on a real AMD Unraid server.
 
 ### Added
 
+- An optional **Popcorn SR address** setting (`popcorn_sr_url`), for linking
+  to [Popcorn SR](https://github.com/thekozugroup/Popcorn-SR). `PATCH
+  /api/settings` saves it (empty or `null` clears it) after checking that it
+  is a full `http://` or `https://` address with a host, no user name or
+  password and at most 2,048 characters, and says in plain words what to fix.
+  Popcorn Batch only stores it and never connects to it. Settings saved by
+  earlier versions load with it unset.
 - A **stable update channel**. `ghcr.io/thekozugroup/szalinski:stable`
   follows the newest tagged release (not a prerelease) and only moves when a
   newer release is published, never backwards, so automatic updates (such as
@@ -41,6 +48,52 @@ What is coming after 0.2.0, from an evaluation on a real AMD Unraid server.
 
 ### Changed
 
+- **Renamed to Popcorn Batch** (it was Szalinski, and Chrysopoeia before
+  that). It joins the Popcorn family of open-source tools, next to
+  [Popcorn SR](https://github.com/thekozugroup/Popcorn-SR). The image is now
+  `ghcr.io/thekozugroup/popcorn-batch`, the binary `popcorn-batch`, the Unraid
+  template `unraid/popcorn-batch.xml`, the build label variable
+  `POPCORN_BATCH_VERSION`, and the repository
+  [thekozugroup/Popcorn-Batch](https://github.com/thekozugroup/Popcorn-Batch).
+  Version 0.4.0. An existing install under either older name keeps working:
+  the database (`szalinski.db`, or `chrysopoeia.db` when there is no
+  `szalinski.db`) is carried over to `popcorn-batch.db` on the first start,
+  backup and temporary files left by either older name are still found and
+  put back after an interrupted conversion, the container treats the older
+  databases and locks as its own (no warning about a shared Config folder,
+  and their owner is fixed like the new files'), and both older images' locks
+  are honoured so neither can share a `/config` folder with this one.
+  `SZALINSKI_VERSION`, `CHRYSOPOEIA_VERSION` and a theme saved in the browser
+  under either older name are still read. Every release is also published
+  under both older image names for a while, so an install that still pulls
+  `ghcr.io/thekozugroup/szalinski` or `ghcr.io/thekozugroup/chrysopoeia` keeps
+  updating; switch its Repository to
+  `ghcr.io/thekozugroup/popcorn-batch:stable` when convenient (see
+  [docs/UNRAID.md](docs/UNRAID.md#moving-from-szalinski-or-chrysopoeia)).
+  With Compose, the project, service and container are now `popcorn-batch`
+  (stop the old one with the old file first), and `SZALINSKI_IMAGE` is now
+  `POPCORN_BATCH_IMAGE`.
+- **The web UI is redesigned to match the Popcorn family**, the look of
+  [Popcorn SR](https://github.com/thekozugroup/Popcorn-SR), written down in
+  `DESIGN.md`. It uses your system's own font (Newsreader, DM Sans and
+  JetBrains Mono are no longer bundled), quiet grey surfaces with one blue for
+  actions, focus and progress, and status as a small coloured dot beside plain
+  words. Navigation is a sidebar with Overview, Libraries, Queue and Settings
+  and your libraries below them; on phones and tablets it becomes a short block
+  at the top of the page, and the bottom tab bar is gone. Light and dark now
+  follow the system setting, so the Appearance switch is gone. The new icon,
+  three kernels on a dark tile, is the browser icon, the sidebar mark and the
+  Unraid template's icon. Screens are flat panels of rows: the Overview leads
+  with the space saved, files converting now are one list instead of cards,
+  each Settings section is one panel, Settings › Hardware shows this machine
+  the way Popcorn SR shows a worker, and the Saved per day chart can show its
+  numbers as a table. Once a **Popcorn SR address** is saved in Settings ›
+  Advanced, "Open Popcorn SR" appears in the sidebar and in About and opens it
+  in a new tab; Popcorn Batch still never connects to it. Fixed along the way:
+  screen readers now read the folder picker's list correctly, goal cards no
+  longer run past the edge of a 768px-wide screen, and every button, link,
+  field and tab is at least 44px tall with a mouse too, not only on touch
+  screens.
 - **Renamed to Szalinski** (it was Chrysopoeia), after the inventor in *Honey,
   I Shrunk the Kids*. The image is now `ghcr.io/thekozugroup/szalinski`, the
   binary `szalinski`, the Unraid template `unraid/szalinski.xml`, and the
@@ -158,5 +211,5 @@ The first release, published as Chrysopoeia (from `main`; it was not tagged).
   through `ALLOWED_HOSTS`, and the published images `:latest` (every build of
   `main`) and `:edge` (a test build of a branch).
 
-[Unreleased]: https://github.com/thekozugroup/Szalinski/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/thekozugroup/Szalinski/releases/tag/v0.2.0
+[Unreleased]: https://github.com/thekozugroup/Popcorn-Batch/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/thekozugroup/Popcorn-Batch/releases/tag/v0.2.0

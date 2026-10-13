@@ -6,7 +6,6 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Clock, Cpu, ShieldCheck } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Brand } from "@/components/brand";
@@ -17,31 +16,20 @@ import { hasAnyHardware } from "@/lib/hardware";
 import { keys, useHardwareInfo } from "@/lib/queries";
 import { navigate } from "@/lib/router";
 import type { HardwareInfo, Settings } from "@/lib/types";
-import { cn } from "@/lib/utils";
 import { FolderStep, GoalStep, StepHeading } from "./library-steps";
 
 type Step = "welcome" | "folder" | "goal";
 const STEPS: Step[] = ["welcome", "folder", "goal"];
 
+/**
+ * Where the user is in setup: "Step 1 of 3", as plain text on the right of
+ * the header (the step headings repeat it for screen readers).
+ */
 function StepIndicator({ step }: { step: Step }) {
-  const index = STEPS.indexOf(step);
   return (
-    <div className="flex items-center gap-3" aria-label={`Step ${index + 1} of ${STEPS.length}`} role="img">
-      <div className="flex gap-1.5" aria-hidden>
-        {STEPS.map((s, i) => (
-          <span
-            key={s}
-            className={cn(
-              "h-1.5 rounded-full transition-colors duration-300",
-              i === index ? "w-6 bg-accent-ink" : i < index ? "w-1.5 bg-accent-ink/60" : "w-1.5 bg-line-strong/60",
-            )}
-          />
-        ))}
-      </div>
-      <span className="text-xs text-muted tabular" aria-hidden>
-        Step {index + 1} of {STEPS.length}
-      </span>
-    </div>
+    <p className="text-meta text-muted tabular">
+      Step {STEPS.indexOf(step) + 1} of {STEPS.length}
+    </p>
   );
 }
 
@@ -56,16 +44,15 @@ export function HardwareLine({ hw, detecting }: { hw: HardwareInfo | undefined; 
   return `No GPU found. Your ${hw.cpu.logical_cores}-core CPU will do the work, which is slower but just as good.`;
 }
 
-function Fact({ icon, title, children }: { icon: ReactNode; title: string; children: ReactNode }) {
+/**
+ * One of the three reassurances on the welcome step, as Popcorn SR lays out
+ * its onboarding: a divider above, a title and a sentence, no icon.
+ */
+function Fact({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <li className="flex gap-3.5">
-      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-full bg-accent-soft text-accent-ink [&_svg]:size-4">
-        {icon}
-      </span>
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-fg">{title}</p>
-        <div className="mt-0.5 text-[0.8125rem] leading-relaxed text-muted">{children}</div>
-      </div>
+    <li className="min-w-0 border-t border-line pt-5">
+      <p className="text-base font-semibold text-ink">{title}</p>
+      <div className="mt-2 text-sm leading-relaxed text-muted">{children}</div>
     </li>
   );
 }
@@ -95,45 +82,41 @@ export function SetupScreen({ settings }: { settings: Settings }) {
   });
 
   return (
-    <div className="min-h-dvh px-4 py-6 sm:px-8 sm:py-10">
+    // Padded like the app's main region: 24px 20px 48px up to 800px, then clamp(24px, 5vw, 64px).
+    <div className="min-h-dvh bg-page px-5 pt-6 pb-12 wide:p-[clamp(24px,5vw,64px)]">
       <div className="mx-auto flex w-full max-w-3xl flex-col">
         <header className="flex items-center justify-between gap-4">
           <Brand />
           <StepIndicator step={step} />
         </header>
 
-        <main id="main" className="mt-12 sm:mt-20">
+        <main id="main" className="mt-6 wide:mt-10">
           {step === "welcome" ? (
-            <div>
-              <StepHeading
-                level={1}
-                focusOnMount={moved}
-                className="font-display text-[2.75rem] leading-[1.08] text-fg outline-none sm:text-[3.5rem]"
-              >
+            <div className="view">
+              <StepHeading level={1} focusOnMount={moved}>
                 Make your video library smaller, safely.
               </StepHeading>
-              <p className="mt-5 max-w-xl text-[0.9375rem] leading-relaxed text-muted">
-                Point Szalinski at a folder and choose a goal. It converts files in the background, checks each
+              <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
+                Point Popcorn Batch at a folder and choose a goal. It converts files in the background, checks each
                 result against the original, and only then replaces it.
               </p>
-              <ul className="mt-10 flex max-w-xl flex-col gap-5">
-                <Fact icon={<ShieldCheck aria-hidden />} title="Nothing is replaced until it passes its checks">
+              <ul className="mt-8 grid gap-4 wide:grid-cols-3 wide:gap-6">
+                <Fact title="Nothing is replaced until it passes its checks">
                   Every new file is played through and compared with the original to catch corruption and visual
                   glitches{settings.output_mode === "folder" ? ". Your originals stay untouched." : "."}
                 </Fact>
-                <Fact icon={<Cpu aria-hidden />} title="Uses your hardware automatically">
+                <Fact title="Uses your hardware automatically">
                   <HardwareLine hw={hardware.hw} detecting={hardware.detecting} />
                 </Fact>
-                <Fact icon={<Clock aria-hidden />} title="About a minute to set up">
-                  Everything can be changed later in Settings.
-                </Fact>
+                <Fact title="About a minute to set up">Everything can be changed later in Settings.</Fact>
               </ul>
-              {/* Primary first in the DOM (and tab order); shown on the right from sm up. */}
-              <div className="mt-12 flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
-                <Button variant="primary" size="lg" onClick={() => goTo("folder")}>
+              {/* Primary first in the DOM (and tab order); shown on the right from 521px. */}
+              <div className="mt-10 flex flex-col gap-3 roomy:flex-row-reverse roomy:items-center roomy:justify-between">
+                <Button variant="primary" onClick={() => goTo("folder")}>
                   Choose a folder
                 </Button>
-                <Button variant="quiet" onClick={() => skip.mutate()} loading={skip.isPending}>
+                {/* Beside the primary, pulled left so its words line up with the page's edge. */}
+                <Button variant="quiet" onClick={() => skip.mutate()} loading={skip.isPending} className="roomy:-ml-2.5">
                   Skip for now
                 </Button>
               </div>
@@ -141,7 +124,7 @@ export function SetupScreen({ settings }: { settings: Settings }) {
           ) : null}
 
           {step === "folder" ? (
-            <div>
+            <div className="view">
               <FolderStep
                 level={1}
                 step={stepLabel("folder")}
@@ -155,8 +138,8 @@ export function SetupScreen({ settings }: { settings: Settings }) {
                 }}
               />
               <div className="mt-6">
-                <Button variant="quiet" onClick={() => goTo("welcome")}>
-                  <ArrowLeft aria-hidden />
+                {/* Pulled left so its words line up with the page's edge. */}
+                <Button variant="quiet" onClick={() => goTo("welcome")} className="-ml-2.5">
                   Back
                 </Button>
               </div>
@@ -184,8 +167,7 @@ export function SetupScreen({ settings }: { settings: Settings }) {
                 requestAnimationFrame(() => document.getElementById("main")?.focus({ preventScroll: true }));
               }}
               secondary={
-                <Button variant="quiet" onClick={() => goTo("folder")}>
-                  <ArrowLeft aria-hidden />
+                <Button variant="quiet" onClick={() => goTo("folder")} className="roomy:-ml-2.5">
                   Back
                 </Button>
               }

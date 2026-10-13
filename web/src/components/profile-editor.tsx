@@ -8,10 +8,11 @@
  * machine can no longer produce stays visible as "(not available here)".
  */
 
-import { ChevronRight, Info } from "lucide-react";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
 import { GoalPicker } from "@/components/goal-picker";
-import { Field, Input, Segmented, Select, SwitchRow } from "@/components/ui/controls";
+import { SettingsSection } from "@/components/settings-section";
+import { ErrorText, Field, Input, Segmented, Select, SwitchRow } from "@/components/ui/controls";
 import { codecSpeedHint } from "@/lib/hardware";
 import {
   AUDIO_CODEC_LABEL,
@@ -69,11 +70,7 @@ const MORE_FIELDS: readonly (keyof TranscodeProfile)[] = [
 /** An error under a control that isn't a `Field` (choice rows, switches). */
 function FieldError({ message }: { message: string | undefined }) {
   if (!message) return null;
-  return (
-    <p role="alert" className="mt-1.5 text-[0.8125rem] leading-snug font-medium text-danger">
-      {message}
-    </p>
-  );
+  return <ErrorText className="mt-2">{message}</ErrorText>;
 }
 
 /** The option for a saved value this machine doesn't offer any more. */
@@ -101,28 +98,12 @@ interface ProfileEditorProps {
   errors?: ProfileErrors;
 }
 
-function Group({
-  title,
-  description,
-  children,
-  level,
-}: {
-  title: string;
-  description?: ReactNode;
-  children: ReactNode;
-  level: 2 | 3;
-}) {
-  const Heading = level === 2 ? "h2" : "h3";
-  return (
-    <section className="grid gap-3 border-t border-line py-6 first:border-t-0 first:pt-0 md:grid-cols-[14rem_1fr] md:gap-8">
-      <div>
-        <Heading className="text-sm font-semibold text-fg">{title}</Heading>
-        {description ? <p className="mt-1 text-[0.8125rem] leading-snug text-muted">{description}</p> : null}
-      </div>
-      <div className="min-w-0">{children}</div>
-    </section>
-  );
-}
+/**
+ * The editor's groups are settings sections (DESIGN.md): the heading beside
+ * the controls once the settings panel has room, above them before. Each
+ * group's controls are one block, so their own spacing holds.
+ */
+const Group = SettingsSection;
 
 /** Calls `report` whenever `valid` changes (and once on mount). */
 function useReportValidity(valid: boolean, report: (valid: boolean) => void): void {
@@ -183,7 +164,6 @@ function LanguageField({
             onChange(parsed.codes);
           }
         }}
-        className="font-mono text-[0.8125rem]"
       />
     </Field>
   );
@@ -235,7 +215,7 @@ function QualityOverrideField({
             onChange(parsed.value);
           }
         }}
-        className="max-w-40 font-mono"
+        className="max-w-40"
       />
     </Field>
   );
@@ -302,17 +282,19 @@ export function ProfileEditor({
   return (
     <div>
       <Group level={headingLevel} title="Goal" description="What matters most. You can change it any time.">
-        <GoalPicker
-          label="Goal"
-          value={profile.goal}
-          onChange={pickGoal}
-          presets={presets}
-          hardware={hardware}
-          hardwarePending={hardwarePending}
-          preference={preference}
-          profile={profile}
-        />
-        <FieldError message={errors.goal} />
+        <div>
+          <GoalPicker
+            label="Goal"
+            value={profile.goal}
+            onChange={pickGoal}
+            presets={presets}
+            hardware={hardware}
+            hardwarePending={hardwarePending}
+            preference={preference}
+            profile={profile}
+          />
+          <FieldError message={errors.goal} />
+        </div>
       </Group>
 
       <Group
@@ -320,66 +302,79 @@ export function ProfileEditor({
         title="Quality"
         description={`How closely the new file matches the original. ${QUALITY_LABEL[RECOMMENDED_QUALITY]} suits most libraries.`}
       >
-        <Segmented<QualityLevel>
-          label="Quality"
-          value={profile.quality}
-          onChange={(quality) => update({ quality })}
-          options={QUALITY_LEVELS.map((q) => ({
-            value: q,
-            label: QUALITY_LABEL[q],
-            ariaLabel: q === RECOMMENDED_QUALITY ? `${QUALITY_LABEL[q]} (recommended)` : undefined,
-          }))}
-          stackOnPhones
-        />
-        <div className="mt-2 hidden justify-between text-xs text-muted sm:flex" aria-hidden>
-          <span>Smaller files</span>
-          <span>Closer to the original</span>
+        <div>
+          <Segmented<QualityLevel>
+            label="Quality"
+            value={profile.quality}
+            onChange={(quality) => update({ quality })}
+            options={QUALITY_LEVELS.map((q) => ({
+              value: q,
+              label: QUALITY_LABEL[q],
+              ariaLabel: q === RECOMMENDED_QUALITY ? `${QUALITY_LABEL[q]} (recommended)` : undefined,
+            }))}
+            stackOnPhones
+          />
+          {/* Beside the options only while they sit side by side (the same container rule as theirs). */}
+          <div className="mt-2 hidden justify-between text-xs text-muted @lg:flex" aria-hidden>
+            <span>Smaller files</span>
+            <span>Closer to the original</span>
+          </div>
+          <p className="mt-2 text-meta leading-relaxed text-muted">{QUALITY_HELP[profile.quality]}</p>
+          <FieldError message={errors.quality} />
         </div>
-        <p className="mt-2 text-[0.8125rem] text-fg/85">{QUALITY_HELP[profile.quality]}</p>
-        <FieldError message={errors.quality} />
       </Group>
 
       <Group level={headingLevel} title="Speed" description="Encoder effort. Slower settings squeeze files a little more.">
-        <Segmented<SpeedPreset>
-          label="Speed"
-          value={profile.speed}
-          onChange={(speed) => update({ speed })}
-          options={SPEED_PRESETS.map((s) => ({ value: s, label: SPEED_LABEL[s] }))}
-          className="sm:max-w-md"
-        />
-        <p className="mt-2 text-[0.8125rem] text-fg/85">{SPEED_HELP[profile.speed]}</p>
-        <FieldError message={errors.speed} />
+        <div>
+          <Segmented<SpeedPreset>
+            label="Speed"
+            value={profile.speed}
+            onChange={(speed) => update({ speed })}
+            options={SPEED_PRESETS.map((s) => ({ value: s, label: SPEED_LABEL[s] }))}
+            className="@lg:max-w-md"
+            // In a narrow column (a phone, or beside a settings heading), "Slower, smaller" would be cut short side by side.
+            stackOnPhones
+          />
+          <p className="mt-2 text-meta leading-relaxed text-muted">{SPEED_HELP[profile.speed]}</p>
+          <FieldError message={errors.speed} />
+        </div>
       </Group>
 
-      <section className="border-t border-line pt-4">
+      {/* Styled like a disclosure's summary row; a button, so a server error can open it. */}
+      <section className="border-t border-line pt-3">
         <button
           type="button"
           aria-expanded={advancedOpen}
           aria-controls={advancedId}
           onClick={() => setAdvancedOpen((v) => !v)}
-          className="flex w-full items-center gap-2 rounded-md py-2 text-left text-sm font-semibold text-fg hover:text-accent-ink"
+          className="flex min-h-11 w-full items-center gap-2 text-left text-sm font-label text-ink"
         >
           <ChevronRight
-            className={cn("size-4 text-muted transition-transform duration-200", advancedOpen && "rotate-90")}
+            className={cn("size-4 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200", advancedOpen && "rotate-90")}
             aria-hidden
           />
           More format options
-          <span className="hidden font-normal text-muted sm:inline">Formats, resolution, tracks and thresholds</span>
+          <span className="hidden font-normal text-muted roomy:inline">Formats, resolution, tracks and thresholds</span>
         </button>
 
-        <div id={advancedId} hidden={!advancedOpen} className="pt-4">
+        <div id={advancedId} hidden={!advancedOpen} className="@container pt-4">
           {notes.length ? (
-            <div role="status" className="mb-5 flex gap-2 rounded-md bg-info-soft px-3 py-2.5 text-[0.8125rem] text-fg">
-              <Info className="mt-0.5 size-4 shrink-0 text-info" aria-hidden />
-              <div>
-                {notes.map((note) => (
-                  <p key={note}>{note}</p>
-                ))}
-              </div>
+            // A message: subtle fill, neutral text, no border for information.
+            <div
+              role="status"
+              className="mb-5 rounded-control bg-subtle px-[18px] py-[14px] text-sm leading-relaxed [overflow-wrap:anywhere] text-ink"
+            >
+              {notes.map((note) => (
+                <p key={note}>{note}</p>
+              ))}
             </div>
           ) : null}
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          {/*
+            Field grids take columns by the room this block has (a size container), not by the
+            screen; items-start keeps a long help text from pushing its neighbour's control down.
+          */}
+          <div className="grid items-start gap-5 @sm:grid-cols-2 @2xl:grid-cols-3">
             <Field
               label="Video format"
               description={
@@ -448,7 +443,7 @@ export function ProfileEditor({
             </Field>
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
             <Field
               label="Limit resolution"
               description="Larger videos are scaled down. Smaller ones are never scaled up."
@@ -486,7 +481,7 @@ export function ProfileEditor({
             </Field>
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
             <LanguageField
               key={`audio-${resetKey}`}
               label="Audio languages to keep"
@@ -507,9 +502,9 @@ export function ProfileEditor({
             />
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
-              <span id={`${advancedId}-subs`} className="text-sm font-medium text-fg">
+          <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <span id={`${advancedId}-subs`} className="text-sm font-label text-ink">
                 Subtitles
               </span>
               <Segmented
@@ -521,7 +516,7 @@ export function ProfileEditor({
                   { value: "drop", label: "Remove" },
                 ]}
               />
-              <p className="text-[0.8125rem] leading-snug text-muted">
+              <p className="text-meta leading-relaxed text-muted">
                 {profile.subtitles === "keep"
                   ? "Text subtitles are converted when the container needs it. Picture subtitles MP4 can't hold are dropped."
                   : "Every subtitle track is removed."}

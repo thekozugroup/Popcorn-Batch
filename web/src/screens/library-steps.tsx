@@ -7,18 +7,18 @@
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FolderOpen } from "lucide-react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { FolderPicker } from "@/components/folder-picker";
 import { GoalPicker } from "@/components/goal-picker";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/controls";
+import { Callout } from "@/components/ui/display";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { recommendedGoal } from "@/lib/hardware";
 import { FACTORY_DEFAULT_GOAL, newLibraryStart, profileForNewLibrary } from "@/lib/profile";
 import { keys, useHardwareInfo, useLibraries, usePresets, useSettings } from "@/lib/queries";
 import type { Goal, Library } from "@/lib/types";
-import { titleFromFolder } from "@/lib/utils";
+import { cn, titleFromFolder } from "@/lib/utils";
 
 /**
  * Error codes from `POST /libraries` that are about the folder rather than
@@ -62,8 +62,16 @@ export function StepHeading({
     if (focusOnMount) ref.current?.focus({ preventScroll: false });
   }, [focusOnMount]);
   const Tag = level === 1 ? "h1" : "h2";
+  // The headline token: 30px, 600, 1.2, -0.025em; 28px at 520px and below.
   return (
-    <Tag ref={ref} tabIndex={-1} className={className ?? "font-display text-[2rem] leading-tight text-fg outline-none"}>
+    <Tag
+      ref={ref}
+      tabIndex={-1}
+      className={cn(
+        "text-headline break-words text-ink outline-none",
+        className,
+      )}
+    >
       {step ? <span className="sr-only">{step}: </span> : null}
       {children}
     </Tag>
@@ -93,18 +101,19 @@ export function FolderStep({
       <StepHeading step={step} level={level}>
         Where are your videos?
       </StepHeading>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
+      <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
         Choose the folder that holds your movies or shows; folders inside it are included. In Docker this is the
-        path inside the container, such as <code className="font-mono text-[0.8125rem] text-fg">/media</code>.
+        path inside the container, such as <code className="font-mono text-meta text-ink">/media</code>.
       </p>
       <FolderPicker
-        className="mt-6"
+        className="mt-8"
         initialPath={initialPath}
         onSelect={onPicked}
         error={error}
         onNavigate={onNavigate}
         libraries={libraries.data}
         forLibrary
+        startInYourFolders
       />
     </div>
   );
@@ -189,14 +198,15 @@ export function GoalStep({
       <StepHeading step={step} level={level}>
         What should happen to these videos?
       </StepHeading>
-      <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
+      <p className="mt-2.5 max-w-[58ch] text-base leading-relaxed text-muted">
         Pick what matters most. You can fine-tune quality, formats and tracks later in the library&apos;s settings.
       </p>
 
-      <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-line bg-surface px-4 py-3">
-        <FolderOpen className="size-[1.125rem] shrink-0 text-accent-ink" aria-hidden />
-        <span className="min-w-0 flex-1 truncate font-mono text-[0.8125rem] text-fg">{path}</span>
-        <Button variant="link" onClick={onChangeFolder}>
+      {/* The chosen folder as a toolbar row: the whole path, wrapping, and a way back to change it. */}
+      <div className="mt-8 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-control border border-line bg-surface px-4 py-2.5">
+        <span className="min-w-0 flex-1 text-sm text-ink [overflow-wrap:anywhere]">{path}</span>
+        {/* The negative margins keep the row slim and line its words up with the padding; the target stays 44px. */}
+        <Button variant="quiet" onClick={onChangeFolder} className="-my-1.5 -mr-2.5">
           Change folder
         </Button>
       </div>
@@ -217,13 +227,13 @@ export function GoalStep({
         }
       />
       {hardware.pending ? (
-        <p className="mt-3 text-[0.8125rem] text-muted" role="status">
+        <p className="mt-3 text-meta leading-relaxed text-muted" role="status">
           Checking your hardware to see how fast each goal converts…
         </p>
       ) : null}
 
       <Field
-        className="mt-7 max-w-sm"
+        className="mt-8 max-w-sm"
         label="Library name"
         description="Shown in the sidebar. The folder name is used if you leave it empty."
       >
@@ -231,19 +241,20 @@ export function GoalStep({
       </Field>
 
       {error ? (
-        <p role="alert" className="mt-5 rounded-md bg-danger-soft px-3 py-2.5 text-sm font-medium text-danger">
-          {error}
-        </p>
+        // An error message: neutral words, a red border.
+        <div role="alert" className="mt-6">
+          <Callout tone="danger" title={error} />
+        </div>
       ) : null}
 
-      {/* Primary first in the DOM (and tab order); shown on the right from sm up. */}
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row-reverse sm:items-center sm:justify-between">
-        <Button type="submit" variant="primary" size="lg" loading={create.isPending}>
+      {/* Primary first in the DOM (and tab order); shown on the right from 521px. */}
+      <div className="mt-10 flex flex-col gap-3 roomy:flex-row-reverse roomy:items-center roomy:justify-between">
+        <Button type="submit" variant="primary" loading={create.isPending}>
           {submitLabel}
         </Button>
         {secondary}
       </div>
-      <p className="mt-3 text-[0.8125rem] text-muted sm:text-right">
+      <p className="mt-3 text-meta leading-relaxed text-muted roomy:text-right">
         {settings.data?.auto_queue === false
           ? "The folder is scanned first. Then choose which files to convert from the library."
           : "The folder is scanned first, then files convert in the background. You can pause any time."}

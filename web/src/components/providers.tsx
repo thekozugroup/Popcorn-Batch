@@ -7,7 +7,6 @@ import { TooltipProvider } from "@/components/ui/overlays";
 import { connectLive } from "@/lib/live";
 import { shouldRetry } from "@/lib/queries";
 import { useLive } from "@/lib/store";
-import { useTheme } from "@/lib/theme";
 
 function makeClient(): QueryClient {
   return new QueryClient({
@@ -57,21 +56,38 @@ export function useThrottledAnnouncement(text: string | null, key: string, inter
   }, [text, key, intervalMs]);
 }
 
-function ThemedToaster() {
-  const theme = useTheme();
+/**
+ * The family's focus ring on a toast and its buttons: sonner's own styles
+ * (unlayered, so they beat the base `:focus-visible` rule) set no outline
+ * and draw the ring as a shadow, which toasts don't have.
+ */
+const TOAST_FOCUS =
+  "focus-visible:!outline-2 focus-visible:!outline-offset-4 focus-visible:!outline-accent focus-visible:![outline-style:solid] focus-visible:![box-shadow:none]";
+
+/**
+ * Toasts (DESIGN.md): the control radius, a 1px divider border (emerald or
+ * red for success or error), 14px text, bottom right 16px from the edges.
+ * No icon (the words and the border say it), no shadow, no close button:
+ * they go away on their own (sooner with a swipe) and wait while hovered
+ * or focused.
+ */
+export function AppToaster() {
   return (
     <Toaster
-      theme={theme}
+      theme="system"
       position="bottom-right"
-      mobileOffset={{ bottom: 88 }}
-      closeButton
+      offset={16}
+      mobileOffset={16}
+      // null, not undefined: sonner then leaves the icon out instead of drawing its own.
+      icons={{ success: null, error: null, info: null, warning: null, loading: null }}
       toastOptions={{
         classNames: {
-          toast: "!rounded-lg !border !border-line !bg-surface !text-fg !shadow-pop !font-sans",
+          toast: `!rounded-control !border !border-line !bg-surface !text-ink ![box-shadow:none] !font-sans !text-sm ${TOAST_FOCUS}`,
+          success: "!border-ok",
+          error: "!border-error",
           description: "!text-muted",
-          actionButton: "!bg-accent !text-on-accent !font-medium",
-          cancelButton: "!bg-raised !text-fg",
-          closeButton: "!bg-surface !border-line !text-muted",
+          actionButton: `!min-h-11 !rounded-control !bg-accent !px-3 !text-accent-ink !font-semibold ${TOAST_FOCUS}`,
+          cancelButton: `!min-h-11 !rounded-control !bg-subtle !px-3 !text-ink ${TOAST_FOCUS}`,
         },
       }}
     />
@@ -87,7 +103,7 @@ export function Providers({ children }: { children: ReactNode }) {
         <LiveConnection />
         {children}
         <LiveAnnouncer />
-        <ThemedToaster />
+        <AppToaster />
       </TooltipProvider>
     </QueryClientProvider>
   );
