@@ -1,21 +1,12 @@
 "use client";
 
-/** Queue: Running / Up next / History, with queue controls and job actions. */
+/**
+ * Queue: Running / Up next / History, with queue controls and job actions.
+ * Each tab is one flat panel of rows with dividers between them; empty
+ * states sit in a panel too.
+ */
 
-import {
-  ArrowUpToLine,
-  CircleCheck,
-  CirclePause,
-  CircleX,
-  FolderPlus,
-  History,
-  ListVideo,
-  RotateCcw,
-  ScanSearch,
-  Trash2,
-  TriangleAlert,
-  X,
-} from "lucide-react";
+import { CircleCheck, CircleX, ScanSearch, TriangleAlert } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { FileName, WasName } from "@/components/file-name";
 import { JobCard, JobCardSkeleton, historyNote } from "@/components/jobs";
@@ -38,6 +29,12 @@ import { cn } from "@/lib/utils";
 const PAGE = 50;
 const EMPTY_JOBS: Job[] = [];
 
+/** One panel: the theme surface, a divider border and the panel radius, with rows inside. */
+const PANEL = "overflow-hidden rounded-panel border border-line bg-surface";
+
+/** A list row's padding: 24px at the sides, 18px at 520px and below. */
+const ROW = "px-[18px] py-3.5 roomy:px-6";
+
 function openJob(job: Job) {
   openSheet({ job: job.id });
 }
@@ -55,14 +52,25 @@ function useMinSavings() {
 
 function ListSkeleton() {
   return (
-    <div className="divide-y divide-line rounded-panel border border-line bg-surface">
+    <div className={cn(PANEL, "divide-y divide-line")}>
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className="flex items-center gap-4 px-4 py-3.5">
+        <div key={i} className={cn(ROW, "flex min-h-[73px] items-center gap-4")}>
           <Skeleton className="h-4 w-6" />
           <Skeleton className="h-4 flex-1" />
           <Skeleton className="h-4 w-20" />
         </div>
       ))}
+    </div>
+  );
+}
+
+/** An empty state in its panel (it has no box of its own). */
+function Empty({ title, children, action }: { title: ReactNode; children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className={PANEL}>
+      <EmptyState title={title} action={action}>
+        {children}
+      </EmptyState>
     </div>
   );
 }
@@ -91,7 +99,7 @@ function LoadFailed({ error, onRetry }: { error: unknown; onRetry: () => void })
 function StaleNote({ show }: { show: boolean }) {
   if (!show) return null;
   return (
-    <p role="status" className="mb-3 text-[0.8125rem] text-muted">
+    <p role="status" className="mb-3 text-[13px] text-muted">
       Showing the last known state. Couldn&apos;t refresh just now; trying again shortly.
     </p>
   );
@@ -105,8 +113,7 @@ function useNoLibraries(): boolean {
 
 function AddLibraryEmpty({ title }: { title: ReactNode }) {
   return (
-    <EmptyState
-      icon={<FolderPlus aria-hidden />}
+    <Empty
       title={title}
       action={
         <a href={href("/libraries/new")} className={buttonVariants({ variant: "primary" })}>
@@ -115,7 +122,7 @@ function AddLibraryEmpty({ title }: { title: ReactNode }) {
       }
     >
       Add a folder of videos first. Files that are worth converting are queued automatically after it&apos;s scanned.
-    </EmptyState>
+    </Empty>
   );
 }
 
@@ -125,7 +132,7 @@ function RunningTab() {
   const noLibraries = useNoLibraries();
   if (running.isPending) {
     return (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className={PANEL}>
         <JobCardSkeleton />
         <JobCardSkeleton />
       </div>
@@ -137,32 +144,35 @@ function RunningTab() {
     if (noLibraries) return <AddLibraryEmpty title="Nothing to convert yet" />;
     if (queue.data?.paused) {
       return (
-        <EmptyState icon={<CirclePause aria-hidden />} title="The queue is paused">
+        <Empty title="The queue is paused">
           {queue.data.queued
             ? `${plural(queue.data.queued, "file")} waiting. Nothing new starts until you resume.`
             : "Nothing new starts until you resume."}
-        </EmptyState>
+        </Empty>
       );
     }
     if (queue.data && queue.data.running > 0) {
-      // A job just started; its card arrives with the next list refresh.
+      // A job just started; its row arrives with the next list refresh.
       return (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-busy="true" aria-label="Loading what's converting">
+        <div className={PANEL} aria-busy="true" aria-label="Loading what's converting">
           <JobCardSkeleton />
         </div>
       );
     }
     return (
-      <EmptyState icon={<ListVideo aria-hidden />} title="Nothing is converting">
+      <Empty title="Nothing is converting">
         Files in the queue start automatically, a few at a time. How many run at once is set in{" "}
-        <a href={href("/settings/processing")}>Settings › Processing</a>.
-      </EmptyState>
+        <a href={href("/settings/processing")} className="text-ink underline">
+          Settings › Processing
+        </a>
+        .
+      </Empty>
     );
   }
   return (
     <>
       <StaleNote show={Boolean(running.error)} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <div className={PANEL}>
         {items.map((job, i) => (
           <JobCard key={job.id} job={job} onOpen={openJob} announce={i === 0} />
         ))}
@@ -184,31 +194,36 @@ function UpNextTab({ offset }: { offset: number }) {
     if (offset > 0 && (queued.data?.total ?? 0) > 0) return <ListSkeleton />;
     if (noLibraries) return <AddLibraryEmpty title="The queue is empty" />;
     return (
-      <EmptyState icon={<CircleCheck aria-hidden />} title="The queue is empty">
+      <Empty title="The queue is empty">
         New files are added automatically after each scan. You can also queue files from a library.
-      </EmptyState>
+      </Empty>
     );
   }
   return (
     <>
       <StaleNote show={Boolean(queued.error)} />
-      <ol className="divide-y divide-line rounded-panel border border-line bg-surface">
+      <ol className={cn(PANEL, "divide-y divide-line")}>
         {items.map((job, i) => (
-          <li key={job.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2.5 sm:flex-nowrap sm:gap-4 sm:px-4">
-            <span className="w-7 shrink-0 text-right text-[0.8125rem] text-muted tabular">
+          <li key={job.id} className={cn(ROW, "flex flex-wrap items-center gap-x-4 gap-y-2 roomy:flex-nowrap")}>
+            <span className="w-7 shrink-0 text-right text-[13px] text-muted tabular">
               <span className="sr-only">Position </span>
               {offset + i + 1}
             </span>
-            <button type="button" onClick={() => openJob(job)} className="min-w-0 flex-1 text-left">
-              <FileName name={job.file_name} className="text-sm font-medium text-ink hover:underline" />
-              <span className="block truncate text-[0.8125rem] text-muted">
+            <button
+              type="button"
+              onClick={() => openJob(job)}
+              className="group/name flex min-h-11 min-w-0 flex-1 flex-col justify-center text-left"
+            >
+              <FileName name={job.file_name} className="text-sm font-[550] text-ink group-hover/name:underline" />
+              <span className="block truncate text-[13px] text-muted">
                 {[libraryName(job.library_id), formatBytes(job.input_size), `added ${formatRelative(job.created_at)}`]
                   .filter(Boolean)
                   .join(" · ")}
               </span>
             </button>
-            {/* Words, not bare icons: a lone ✕ beside a file name reads as "delete the file". */}
-            <div className="flex w-full shrink-0 justify-end gap-1 sm:w-auto">
+            {/* Words, not bare icons: a lone ✕ beside a file name reads as "delete the file". Under the
+                name at 520px and below, with the words lined up with it. */}
+            <div className="-ml-3 flex w-full shrink-0 gap-1 pl-11 roomy:ml-0 roomy:w-auto roomy:pl-0">
               {offset + i > 0 ? (
                 <Button
                   variant="quiet"
@@ -218,7 +233,6 @@ function UpNextTab({ offset }: { offset: number }) {
                   onClick={() => moveToTop.mutate(job)}
                   needsServer
                 >
-                  <ArrowUpToLine aria-hidden />
                   Move to top
                 </Button>
               ) : null}
@@ -230,7 +244,6 @@ function UpNextTab({ offset }: { offset: number }) {
                 onClick={() => cancel.mutate(job)}
                 needsServer
               >
-                <X aria-hidden />
                 Remove
               </Button>
             </div>
@@ -263,21 +276,20 @@ function HistoryTab({ offset }: { offset: number }) {
   if (!items.length) {
     if (offset > 0 && (history.data?.total ?? 0) > 0) return <ListSkeleton />;
     return (
-      <EmptyState icon={<History aria-hidden />} title="No history yet">
+      <Empty title="No history yet">
         Every finished, skipped or failed conversion is listed here with its checks and savings.
-      </EmptyState>
+      </Empty>
     );
   }
   return (
     <>
       <StaleNote show={Boolean(history.error)} />
-      <div className="mb-3 flex justify-end">
+      <div className="-mt-2 mb-2 flex justify-end">
         <Button variant="quiet" size="sm" onClick={() => setConfirmClear(true)} needsServer>
-          <Trash2 aria-hidden />
           Clear history
         </Button>
       </div>
-      <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
+      <ul className={cn(PANEL, "divide-y divide-line")}>
         {items.map((job) => {
           const standing = standings.get(job.id) ?? "current";
           // Retrying a damaged original can't help; its sheet offers the fix.
@@ -289,16 +301,26 @@ function HistoryTab({ offset }: { offset: number }) {
           // A conversion that changed the file's extension is listed by the new name, the old one secondary.
           const renamed = newFileName(job, undefined, outputMode);
           return (
-            <li key={job.id} className="flex items-center gap-3 px-3 py-3 sm:px-4">
-              <button type="button" onClick={() => openJob(job)} className="min-w-0 flex-1 text-left">
+            <li
+              key={job.id}
+              className={cn(ROW, "flex flex-col items-start gap-2 roomy:flex-row roomy:items-center roomy:gap-4")}
+            >
+              <button
+                type="button"
+                onClick={() => openJob(job)}
+                className="group/name min-h-11 w-full min-w-0 text-left roomy:w-auto roomy:flex-1"
+              >
                 <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <FileName name={renamed ?? job.file_name} className="text-sm font-medium text-ink hover:underline" />
+                  <FileName
+                    name={renamed ?? job.file_name}
+                    className="text-sm font-[550] text-ink group-hover/name:underline"
+                  />
                   <JobStateBadge job={job} standing={standing} />
                 </span>
                 {renamed ? <WasName name={job.file_name} className="mt-0.5" /> : null}
                 {/* When the note wraps, the library and time start their own line, with no stray "·". */}
                 <span className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
-                  <span className={cn("min-w-0 text-[0.8125rem]", job.state === "done" ? "text-ink" : "text-muted")}>
+                  <span className={cn("min-w-0 text-[13px]", job.state === "done" ? "text-ink" : "text-muted")}>
                     {standing === "unknown" ? (
                       <span aria-hidden className="skeleton inline-block h-3 w-40 align-middle" />
                     ) : (
@@ -319,7 +341,6 @@ function HistoryTab({ offset }: { offset: number }) {
                   aria-label={`${job.state === "failed" ? "Try again" : "Queue again"}: ${job.file_name}`}
                   needsServer
                 >
-                  <RotateCcw aria-hidden />
                   {job.state === "failed" ? "Try again" : "Queue again"}
                 </Button>
               ) : null}
@@ -371,14 +392,14 @@ function Log() {
   const items = activity.data?.items.filter((e) => e.level !== "success").slice(0, 30) ?? [];
   if (!items.length) return null;
   return (
-    <Disclosure title="Log: scans, warnings and problems" className="mt-8">
-      <ol className="flex flex-col gap-2.5">
+    <Disclosure title="Log: scans, warnings and problems" className="mt-10">
+      <ol className="flex flex-col gap-3">
         {items.map((entry) => (
-          <li key={entry.id} className="flex gap-2.5 text-[0.8125rem] [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0">
+          <li key={entry.id} className="flex gap-2.5 text-sm leading-[1.5] [&_svg]:mt-0.5 [&_svg]:size-4 [&_svg]:shrink-0">
             {LOG_ICON[logLevel(entry)]}
             <span className="sr-only">{logLevel(entry)}:</span>
             <span className="min-w-0 flex-1 text-ink">{entry.message}</span>
-            <span className="shrink-0 text-xs text-muted">{formatRelative(entry.at)}</span>
+            <span className="shrink-0 pt-0.5 text-xs text-muted">{formatRelative(entry.at)}</span>
           </li>
         ))}
       </ol>

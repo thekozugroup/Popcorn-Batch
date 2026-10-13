@@ -308,6 +308,12 @@ export interface Settings {
   min_file_size_mb: number;
   default_profile: TranscodeProfile;
   onboarded: boolean;
+  /**
+   * Where the user opens Popcorn SR, as `http://` or `https://` (checked on
+   * save; see `lib/popcorn-sr.ts`), or `null` when not given. Only the web UI
+   * uses it, for an "Open Popcorn SR" link: nothing ever connects to it.
+   */
+  popcorn_sr_url: string | null;
 }
 
 // ---------------------------------------------------------------------------

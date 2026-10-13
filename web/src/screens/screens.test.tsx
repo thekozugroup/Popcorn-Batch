@@ -111,6 +111,20 @@ describe("overview status sentence", () => {
       /^Looking through Movies/,
     );
   });
+
+  it("puts a status dot before it: blue while working, emerald when done, amber for a fix, Zinc Status while waiting", () => {
+    expect(overviewStatus(queue({ running: 2 }), undefined, null).dot).toBe("accent");
+    expect(overviewStatus(queue({ paused: true, running: 1 }), undefined, null).dot).toBe("accent");
+    expect(overviewStatus(queue({ paused: true }), undefined, null).dot).toBe("info");
+    expect(overviewStatus(queue({ waiting_for_schedule: true, queued: 2 }), undefined, null).dot).toBe("info");
+    expect(overviewStatus(queue(), undefined, "Looking through Movies").dot).toBe("accent");
+    expect(overviewStatus(queue({ queued: 4 }), undefined, null).dot).toBe("info");
+    expect(overviewStatus(queue(), undefined, null, { failed: 0, blocked: true }).dot).toBe("warning");
+    expect(overviewStatus(queue(), undefined, null, { failed: 0, blocked: false, settling: 3 }).dot).toBe("info");
+    expect(overviewStatus(queue(), undefined, null).dot).toBe("success");
+    // No icon any more: the dot and the words carry it.
+    expect(Object.keys(overviewStatus(queue(), undefined, null))).not.toContain("icon");
+  });
 });
 
 describe("needs your attention", () => {

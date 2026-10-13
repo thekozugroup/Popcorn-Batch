@@ -1563,8 +1563,9 @@ served by the Rust binary. All data comes from `/api` on the same origin
 
 Navigation, as in Popcorn SR: from 801px a 228px sidebar with the brand,
 Overview, Libraries, Queue and Settings, then each library with its state
-and "Add library", and a footer with the queue status link and the
-server's version; at 800px and below the same element is a compact top
+and "Add library", and a footer with the queue status link, "Open Popcorn
+SR" when its address is set (`Settings.popcorn_sr_url`), and the server's
+version; at 800px and below the same element is a compact top
 block that scrolls away (the brand and the queue status on one line, then
 the four sections). There is no bottom tab bar and no appearance switch:
 light and dark follow the system preference. The queue status link shows
@@ -1592,13 +1593,16 @@ Screens:
    trade-off and the detected hardware's speed) → start (creates the
    library, scanning begins, `onboarded = true`). Later libraries are added
    with the same two steps under "Add library".
-2. **Overview**, a status page: the space saved as one big number with a
-   one-line status sentence (what is happening now, what is left) and a
-   savings chart once there is history worth charting; **Needs your
+2. **Overview**, a status page: the space saved as the page's heading
+   ("612 GB saved") with a one-line status sentence after a status dot
+   (what is happening now, what is left) and **Saved per day**, a chart of
+   `Overview.savings_history` once at least three days have savings, with
+   the same numbers as a table under "Show the daily numbers"; **Needs your
    attention** (setup hints from hardware detection, libraries that can't be
-   reached, failed files grouped by `problem` with the fix for each);
-   **Converting now** (live cards per running job: file, stage, progress,
-   speed, time left, where it runs; while the share isn't known
+   reached, failed files grouped by `problem` with the fix for each, one
+   row each with an amber or red dot); **Converting now** (one panel with
+   a row per running job: file, stage, progress, speed, time left, where
+   it runs; while the share isn't known
    (`progress_basis` `unknown`) a moving bar with "1,017 frames · 7 min
    elapsed" instead of a percentage and no time left, and an estimate from
    frames reads "About 37% · estimated from 1,017 frames"; a later attempt
@@ -1644,13 +1648,26 @@ Screens:
    files: replace the original or save to a separate folder; the work
    folder, naming `SystemInfo.default_temp_dir` as the automatic one; keep
    file dates; **Checks before replacing**: the verification level, with a
-   warning when checks are off); **This machine** (detected processor,
-   memory and graphics, setup tips, hardware preference and CPU fallback,
-   "check again", and encoders and ffmpeg details under a disclosure);
-   **Advanced** (ignored files, minimum file size in MB, defaults for new
-   libraries); and **About** (version, build, and a copyable bug-report
-   summary). Changes are saved with one save bar; a field error is shown
-   next to the field named by the API's `field` and in the save bar. The
+   warning when checks are off); **Hardware** (the This machine panel:
+   when it was checked, one sentence about what converts what, the
+   processor, memory and graphics, and a tag per format whose test encode
+   passed, such as "HEVC · NVIDIA GPU"; setup tips, hardware preference and
+   CPU fallback, "Check again", and encoders and ffmpeg details under a
+   disclosure); **Advanced** (ignored files, minimum file size in MB,
+   defaults for new libraries, and last the optional **Popcorn SR
+   address**, `popcorn_sr_url`: a URL field checked in the browser with
+   the server's rules and words before Save is enabled, its error shown
+   under the field once it is left and the server's own error landing
+   there through `field`; empty is sent as `null` and clears it); and
+   **About** (version, build, a copyable bug-report summary that never
+   includes the Popcorn SR address, and "Open Popcorn SR" when one is
+   saved). The Popcorn SR link, here and in the sidebar footer, is an
+   `<a target="_blank" rel="noopener noreferrer">` shown only for a saved
+   address that passes the same checks; Popcorn Batch never fetches, pings
+   or embeds the address and shows no connection state for it. Each
+   section is one panel of setting groups. Changes are saved with one save
+   bar; a field error is shown next to the field named by the API's
+   `field` and in the save bar. The
    output or work folder picked again as it is is no change. When the
    drive the saved output or work folder sits on isn't connected as it
    was (`GET /api/settings/folders`, looked at again every 15 s), its

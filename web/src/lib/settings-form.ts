@@ -45,6 +45,7 @@ export const SECTION_OF: Partial<Record<keyof Settings, SectionId>> = {
   ignore_patterns: "advanced",
   min_file_size_mb: "advanced",
   default_profile: "advanced",
+  popcorn_sr_url: "advanced",
 };
 
 /** Errors to show, by setting, plus `general` for anything else. */
@@ -90,6 +91,7 @@ const SETTING_KEYS: readonly (keyof Settings)[] = [
   "min_file_size_mb",
   "default_profile",
   "onboarded",
+  "popcorn_sr_url",
 ];
 
 /**
@@ -179,6 +181,7 @@ function errorShownInline(field: keyof Settings, draft: Settings, profileFieldSh
     case "active_hours":
     case "ignore_patterns":
     case "min_file_size_mb":
+    case "popcorn_sr_url":
       return true;
     case "output_folder":
       return draft.output_mode === "folder";

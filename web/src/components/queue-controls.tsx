@@ -37,9 +37,20 @@ export function queueSentence(queue: QueueState, settings: Settings | undefined)
 
 /**
  * Pause or resume, plus a quiet "Stop now" only while files are converting
- * (stopping an idle queue would do nothing).
+ * (stopping an idle queue would do nothing). Text only: Stop now quiet,
+ * Pause secondary, Resume primary (the next processing action while
+ * paused), unless the view already shows Resume as its one primary action
+ * (`resumeVariant="secondary"`).
  */
-export function QueueControls({ queue, compact = false }: { queue: QueueState; compact?: boolean }) {
+export function QueueControls({
+  queue,
+  compact = false,
+  resumeVariant = "primary",
+}: {
+  queue: QueueState;
+  compact?: boolean;
+  resumeVariant?: "primary" | "secondary";
+}) {
   const { pause, resume, stop } = useQueueActions();
   const [confirmStop, setConfirmStop] = useState(false);
   const size = compact ? "sm" : "md";
@@ -53,7 +64,7 @@ export function QueueControls({ queue, compact = false }: { queue: QueueState; c
       ) : null}
       {/* Resume is the next processing action while paused, so it is the primary one. */}
       {queue.paused ? (
-        <Button variant="primary" size={size} onClick={() => resume.mutate()} loading={resume.isPending} needsServer>
+        <Button variant={resumeVariant} size={size} onClick={() => resume.mutate()} loading={resume.isPending} needsServer>
           Resume
         </Button>
       ) : (

@@ -299,7 +299,9 @@ interface ChoiceCardProps {
  * A large radio option (a goal card): title, one-line explanation, optional
  * detail. The selected card has an Action Blue border and radio. The radio
  * is named by its title alone and described by the rest, so screen readers
- * don't read the whole card on every arrow key.
+ * don't read the whole card on every arrow key. The card's outline follows
+ * its own radio's focus only, so a control inside it (the files-at-once
+ * stepper, a folder field) shows just its own outline.
  */
 export function ChoiceCard({
   name,
@@ -324,7 +326,7 @@ export function ChoiceCard({
   return (
     <label
       className={cn(
-        "relative grid min-w-0 cursor-pointer content-start gap-1 rounded-control border bg-surface p-5 text-left has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-accent has-[:focus-visible]:outline-solid",
+        "relative grid min-w-0 cursor-pointer content-start gap-1 rounded-control border bg-surface p-5 text-left has-[>input:focus-visible]:outline-2 has-[>input:focus-visible]:outline-offset-4 has-[>input:focus-visible]:outline-accent has-[>input:focus-visible]:outline-solid",
         checked ? "border-accent" : "border-line hover:border-field",
         disabled && "cursor-default opacity-50",
         className,

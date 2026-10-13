@@ -56,10 +56,14 @@ function library(id: string, name: string, partial: Partial<Library> = {}): Libr
   } as unknown as Library;
 }
 
-function showShell(hash: string, libraries: Library[] = [library(MOVIES, "Movies"), library(TV, "TV")]) {
+function showShell(
+  hash: string,
+  libraries: Library[] = [library(MOVIES, "Movies"), library(TV, "TV")],
+  settings: Partial<Settings> = {},
+) {
   vi.spyOn(api, "libraries").mockResolvedValue(libraries);
   vi.spyOn(api, "queue").mockResolvedValue(queue({ running: 2 }));
-  vi.spyOn(api, "settings").mockResolvedValue({ watch_folders: true } as Settings);
+  vi.spyOn(api, "settings").mockResolvedValue({ watch_folders: true, popcorn_sr_url: null, ...settings } as Settings);
   vi.spyOn(api, "system").mockResolvedValue({
     version: "0.4.0",
     build: null,
@@ -184,6 +188,33 @@ describe("the app frame", () => {
     const dot = status.querySelector("span[aria-hidden]");
     expect(dot?.className).toContain("border-field");
     expect(dot?.className).not.toContain("bg-accent");
+  });
+
+  it("links to Popcorn SR in the footer, before the version, only once its address is set", async () => {
+    const fetched = vi.spyOn(globalThis, "fetch");
+    showShell("#/", undefined, { popcorn_sr_url: "http://tower:8787" });
+    const link = await screen.findByRole("link", { name: "Open Popcorn SR (opens in a new tab)" });
+    expect(link.getAttribute("href")).toBe("http://tower:8787");
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+    expect(link.textContent).toBe("Open Popcorn SR (opens in a new tab)");
+    expect(link.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    // A quiet link in the footer, after the queue status and before the version.
+    const version = await screen.findByText("Version 0.4.0");
+    expect(link.parentElement).toBe(version.parentElement);
+    expect(link.compareDocumentPosition(version) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(link.className).toContain("border-transparent");
+    // Only a link: nothing is fetched from it and no connection state is shown.
+    expect(fetched.mock.calls.some(([url]) => String(url).includes("tower"))).toBe(false);
+    expect(screen.queryByText(/Not connected|Connected/)).toBeNull();
+  });
+
+  it("says nothing about Popcorn SR without an address", async () => {
+    showShell("#/");
+    await screen.findByText("Version 0.4.0");
+    await screen.findAllByRole("link", { name: "Converting 2 files" });
+    expect(screen.queryByRole("link", { name: /Popcorn SR/ })).toBeNull();
+    expect(document.body.textContent).not.toContain("Popcorn SR");
   });
 
   it("has no light/dark switch: the theme follows the system", () => {

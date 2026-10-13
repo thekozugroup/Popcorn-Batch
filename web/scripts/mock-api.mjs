@@ -74,6 +74,10 @@
  * finish", and the CPU's encode reports frames but no share (`unknown`);
  * the second estimates its share from frames; the failed-check file in
  * Movies failed its check on all three attempts.
+ *
+ * 0.4.0: `Settings.popcorn_sr_url` (null in every scenario), stored and
+ * checked like the server does, with its three sentences and `field:
+ * "popcorn_sr_url"`; nothing connects to it. The version is "0.4.0-mock".
  */
 
 import { randomUUID } from "node:crypto";
@@ -168,7 +172,32 @@ const settings = {
   min_file_size_mb: 0,
   default_profile: profileForGoal("save_space"),
   onboarded: SCENARIO !== "fresh",
+  // Not given in any scenario: Settings › Advanced shows the empty field and no link.
+  popcorn_sr_url: null,
 };
+
+/** The server's check of the Popcorn SR address (services/settings.rs, `check_popcorn_sr_url`), with its words. */
+const POPCORN_SR_URL_MAX_LEN = 2048;
+function popcornSrUrlError(address) {
+  if (address === null) return null;
+  if ([...address].length > POPCORN_SR_URL_MAX_LEN) return "This address is too long. Use the address you open Popcorn SR at.";
+  const notFull = "Enter the full address, starting with http:// or https://, such as http://tower:8787.";
+  const lower = address.toLowerCase();
+  const afterScheme = lower.startsWith("http://") ? lower.slice(7) : lower.startsWith("https://") ? lower.slice(8) : null;
+  if (afterScheme === null || /[\s\p{Cc}]/u.test(address)) return notFull;
+  let parsed;
+  try {
+    parsed = new URL(address);
+  } catch {
+    return notFull;
+  }
+  if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) return notFull;
+  const end = afterScheme.search(/[/?#\\]/);
+  const authority = end < 0 ? afterScheme : afterScheme.slice(0, end);
+  if (parsed.username || parsed.password || authority.includes("@"))
+    return "Leave out the user name and password. Popcorn SR asks for its key when you open it.";
+  return null;
+}
 
 const CONTAINERS = {
   mkv: { video: ["av1", "hevc", "h264", "vp9"], audio: ["copy", "opus", "aac", "flac", "ac3", "eac3", "mp3", "vorbis"] },
@@ -1727,7 +1756,7 @@ const route = (method, pattern, handler) => {
   routes.push({ method, regex, keys, handler });
 };
 
-route("GET", "/api/health", () => ({ ok: true, version: "0.3.0-mock" }));
+route("GET", "/api/health", () => ({ ok: true, version: "0.4.0-mock" }));
 route("GET", "/api/overview", () => overview());
 route("GET", "/api/libraries", () => [...libraries.values()].map(libraryView));
 route("GET", "/api/libraries/:id", ({ id }) => libraryView(getLibrary(id)));
@@ -2049,9 +2078,15 @@ route("PATCH", "/api/settings", async (_p, _q, req) => {
   const blank = (v) => (typeof v === "string" && !v.trim() ? null : typeof v === "string" ? v.trim() : v);
   next.temp_dir = blank(next.temp_dir);
   next.output_folder = blank(next.output_folder);
+  if (next.popcorn_sr_url !== null && typeof next.popcorn_sr_url !== "string")
+    throw new HttpError(400, "invalid_settings", 'The value for "popcorn_sr_url" isn\'t valid. Send text or null.', "popcorn_sr_url");
+  // Only stored, never connected to (like the server).
+  next.popcorn_sr_url = blank(next.popcorn_sr_url);
   // Same code, wording and `field` as the server (services/settings.rs):
   // `invalid_settings` for every validation failure, naming the setting.
   const invalid = (message, field) => new HttpError(400, "invalid_settings", message, field);
+  const srError = popcornSrUrlError(next.popcorn_sr_url);
+  if (srError) throw invalid(srError, "popcorn_sr_url");
   if (next.max_jobs !== null && !(Number.isInteger(next.max_jobs) && next.max_jobs >= 1 && next.max_jobs <= 32))
     throw invalid("Files at once must be between 1 and 32.", "max_jobs");
   if (next.active_hours && (next.active_hours.start > 23 || next.active_hours.end > 23))
@@ -2147,7 +2182,7 @@ route("POST", "/api/hardware/detect", async () => {
 route("GET", "/api/presets", () => presets);
 
 route("GET", "/api/system", () => ({
-  version: "0.3.0-mock",
+  version: "0.4.0-mock",
   build: "edge-mock",
   // The Docker image sets TEMP_DIR=/temp when that folder is mapped.
   default_temp_dir: "/temp",

@@ -336,8 +336,9 @@ export function JobCard({
         </div>
       </div>
 
-      {/* Named after the file: with several rows, "Stop" and "Details" alone would be ambiguous. */}
-      <div className="flex flex-wrap items-center gap-2 roomy:justify-end">
+      {/* Named after the file: with several rows, "Stop" and "Details" alone would be ambiguous. Under
+          the content at 520px and below, the quiet Stop's word lined up with the name. */}
+      <div className="-ml-3 flex flex-wrap items-center gap-2 roomy:ml-0 roomy:justify-end">
         <StopJobButton job={job} named />
         <Button variant="secondary" size="sm" onClick={() => onOpen(job)} aria-label={`Details for ${job.file_name}`}>
           Details

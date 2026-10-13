@@ -6,10 +6,11 @@
  * version) that becomes a compact top block at 800px and below (the brand
  * and the queue status on one line, then the four sections). Nothing is
  * fixed to the viewport. Also the quiet status pieces that live in the
- * frame: the queue status link and "Reconnecting…".
+ * frame: the queue status link, "Reconnecting…" and, when its address is
+ * set, the link to Popcorn SR.
  */
 
-import { LoaderCircle, WifiOff } from "lucide-react";
+import { ArrowUpRight, LoaderCircle, WifiOff } from "lucide-react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Brand } from "@/components/brand";
 import { finishedText } from "@/components/library-bar";
@@ -18,6 +19,7 @@ import { Callout, StatusDot } from "@/components/ui/display";
 import { Tooltip } from "@/components/ui/overlays";
 import { settlingBrief } from "@/lib/convertible";
 import { formatHour, plural } from "@/lib/format";
+import { popcornSrLink } from "@/lib/popcorn-sr";
 import { useFailures, useLibraries, useQueueState, useSettings, useSetupProblems, useSystem } from "@/lib/queries";
 import { href, type Route } from "@/lib/router";
 import { useLive, useServerDown, type ConnectionState } from "@/lib/store";
@@ -199,6 +201,30 @@ function ServerDownBanner() {
   );
 }
 
+/**
+ * "Open Popcorn SR", only when its address is saved and passes the checks:
+ * a link that opens it in a new tab (and says so to screen readers). Never
+ * a connection state: Popcorn Batch doesn't contact Popcorn SR. A quiet
+ * button in the sidebar footer, a secondary one in Settings › About.
+ */
+export function PopcornSrLink({ variant, className }: { variant: "quiet" | "secondary"; className?: string }) {
+  const settings = useSettings();
+  const address = popcornSrLink(settings.data);
+  if (!address) return null;
+  return (
+    <a
+      href={address}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(buttonVariants({ variant, size: "sm" }), className)}
+    >
+      Open Popcorn SR
+      <span className="sr-only"> (opens in a new tab)</span>
+      <ArrowUpRight aria-hidden />
+    </a>
+  );
+}
+
 /** A section of the main navigation: text only, 44px, the subtle fill when current or hovered. */
 function NavItem({ to, current, children }: { to: string; current: "page" | "true" | undefined; children: ReactNode }) {
   return (
@@ -325,6 +351,7 @@ function Sidebar({ route }: { route: Route }) {
       <div className="mt-auto hidden gap-1 border-t border-line pt-4 wide:grid">
         <QueueStatusLink className="w-full" />
         <ConnectionNotice />
+        <PopcornSrLink variant="quiet" className="w-full justify-start px-3.5" />
         {system.data?.version ? (
           <p className="px-3.5 pt-1 text-xs text-muted tabular">Version {system.data.version}</p>
         ) : null}

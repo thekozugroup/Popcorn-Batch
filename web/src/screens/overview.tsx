@@ -1,27 +1,14 @@
 "use client";
 
 /**
- * Overview: a calm status page. The space saved and one sentence about what
- * is happening; "Needs your attention" only when something needs fixing,
- * grouped by cause with its fix; live cards only while files are
- * converting; then each library and the latest results.
+ * Overview: a calm status page. The space saved as the page's heading and
+ * one sentence about what is happening; "Needs your attention" only when
+ * something needs fixing, grouped by cause with its fix; one panel of job
+ * rows only while files are converting; then each library, the latest
+ * results and the space saved per day. Flat panels with dividers between
+ * rows, and status as a dot beside neutral words.
  */
 
-import {
-  CircleCheck,
-  CirclePause,
-  Clock,
-  FileClock,
-  FileWarning,
-  FolderLock,
-  FolderX,
-  HardDrive,
-  Hourglass,
-  LoaderCircle,
-  MonitorCog,
-  RotateCcw,
-  TriangleAlert,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import { SavingsChart, worthCharting } from "@/components/charts";
 import { FileName, WasName } from "@/components/file-name";
@@ -30,7 +17,7 @@ import { LibraryBar, LibraryLegend, finishedText, remainingCount } from "@/compo
 import { QueueControls } from "@/components/queue-controls";
 import { JobStateBadge } from "@/components/status";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Callout, SectionHeading, Skeleton } from "@/components/ui/display";
+import { Callout, SectionHeading, Skeleton, StatusDot } from "@/components/ui/display";
 import { useFileActions, useQueueActions } from "@/lib/actions";
 import { errorMessage } from "@/lib/api";
 import { settlingText } from "@/lib/convertible";
@@ -95,8 +82,15 @@ export function copyingFiles(libraries: readonly Library[]): number {
   return libraries.reduce((n, l) => n + (l.enabled && !l.path_error ? l.stats.settling : 0), 0);
 }
 
+/** The colour of a status dot: Action Blue, emerald, amber or Zinc Status. */
+type Dot = "accent" | "success" | "warning" | "info";
+
+/** One panel: the theme surface, a divider border and the panel radius, with rows inside. */
+const PANEL = "overflow-hidden rounded-panel border border-line bg-surface";
+
 interface Status {
-  icon: ReactNode;
+  /** Action Blue while working, emerald when all is done, amber for a fix, else Zinc Status. */
+  dot: Dot;
   text: string;
   /** Quiet words after the sentence. */
   detail?: string;
@@ -126,39 +120,34 @@ export function overviewStatus(
 ): Status {
   const waiting = queue.queued ? `${formatCount(queue.queued)} waiting` : undefined;
   if (queue.paused) {
+    // Pausing is still work in progress; paused is a deliberate wait.
     return queue.running
-      ? { icon: <CirclePause aria-hidden />, text: `Pausing · ${plural(queue.running, "file")} finishing`, resume: true }
-      : { icon: <CirclePause aria-hidden />, text: "Paused", detail: waiting, resume: true };
+      ? { dot: "accent", text: `Pausing · ${plural(queue.running, "file")} finishing`, resume: true }
+      : { dot: "info", text: "Paused", detail: waiting, resume: true };
   }
-  if (queue.running) {
-    return {
-      icon: <LoaderCircle className="spin text-ink" aria-hidden />,
-      text: `Converting ${plural(queue.running, "file")}`,
-      detail: waiting,
-    };
-  }
+  if (queue.running) return { dot: "accent", text: `Converting ${plural(queue.running, "file")}`, detail: waiting };
   if (queue.waiting_for_schedule) {
     const hours = settings?.active_hours;
     return {
-      icon: <Clock aria-hidden />,
+      dot: "info",
       text: hours ? `Starts at ${formatHour(hours.start)}` : "Waiting for active hours",
       detail: waiting,
     };
   }
-  if (scanning) return { icon: <LoaderCircle className="spin text-ink" aria-hidden />, text: scanning };
-  if (queue.queued) return { icon: <Clock aria-hidden />, text: `${plural(queue.queued, "file")} waiting to start` };
+  if (scanning) return { dot: "accent", text: scanning };
+  if (queue.queued) return { dot: "info", text: `${plural(queue.queued, "file")} waiting to start` };
   // "Needs your attention" follows right below with the fix.
-  if (attention.blocked) return { icon: <TriangleAlert className="text-warn" aria-hidden />, text: "Waiting for a fix" };
+  if (attention.blocked) return { dot: "warning", text: "Waiting for a fix" };
   // Not "All caught up" while a file is still arriving.
   if (attention.settling) {
     return {
-      icon: <Hourglass aria-hidden />,
+      dot: "info",
       text: settlingText(attention.settling),
       detail: attention.failed > 0 ? `${plural(attention.failed, "file")} to review` : undefined,
     };
   }
   return {
-    icon: <CircleCheck className="text-ok" aria-hidden />,
+    dot: "success",
     text: "All caught up",
     detail:
       attention.failed > 0
@@ -175,7 +164,7 @@ function StatusLine({ queue, failed }: { queue: QueueState; failed: number }) {
   const scans = useLive((s) => s.scans);
   const { resume } = useQueueActions();
   const blocked = useSetupProblems().open;
-  // While the server is away this is only what it last said: no live icon.
+  // While the server is away this is only what it last said: a hollow dot, not a live one.
   const down = useServerDown();
   const status = overviewStatus(queue, settings.data, scanSentence(libraries.data ?? [], scans), {
     failed,
@@ -183,18 +172,16 @@ function StatusLine({ queue, failed }: { queue: QueueState; failed: number }) {
     settling: copyingFiles(libraries.data ?? []),
   });
   return (
-    <div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2">
-      <p
-        role="status"
-        className={cn(
-          "flex items-center gap-2 text-[1.0625rem] [&_svg]:size-[1.125rem] [&_svg]:shrink-0",
-          down ? "text-muted" : "text-ink",
+    <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+      <p role="status" className={cn("flex min-w-0 items-start gap-2.5 text-base", down ? "text-muted" : "text-ink")}>
+        {down ? (
+          <span aria-hidden className="mt-[8.5px] size-[7px] shrink-0 rounded-full border border-field" />
+        ) : (
+          <StatusDot tone={status.dot} className="mt-[8.5px]" />
         )}
-      >
-        {down ? null : status.icon}
-        <span>
+        <span className="min-w-0">
           {down ? <span>Last known: </span> : null}
-          <span className={down ? undefined : "font-medium"}>{down ? lowerFirst(status.text) : status.text}</span>
+          <span className={down ? undefined : "font-[550]"}>{down ? lowerFirst(status.text) : status.text}</span>
           {status.detail ? <span className="text-muted"> · {status.detail}</span> : null}
         </span>
       </p>
@@ -222,7 +209,8 @@ function SavedFrom({ totals }: { totals: LibraryStats }) {
   const count = useSavedFileCount(totals);
   // Counting failed: the converted files are the closest answer.
   const saved = count.data ?? (count.error ? { files: totals.done, larger: 0 } : null);
-  if (saved === null) return <Skeleton className="inline-block h-3.5 w-36 align-middle" />;
+  // Inside a sentence: a span, as a block can't sit in a paragraph.
+  if (saved === null) return <span aria-hidden className="skeleton inline-block h-3.5 w-36 align-middle" />;
   return <>{savedFromText(saved)}</>;
 }
 
@@ -235,7 +223,7 @@ function SavedHero({ overview }: { overview: Overview }) {
   const remaining = totals.pending + totals.queued + totals.processing;
   const holdings =
     totals.total_bytes > 0 ? (
-      <p className="mt-3 text-[0.8125rem] text-muted">
+      <p className="mt-3 text-[13px] text-muted">
         Your libraries hold {formatBytes(totals.total_bytes)} across {plural(totals.file_count, "file")}.
       </p>
     ) : null;
@@ -276,8 +264,10 @@ function SavedHero({ overview }: { overview: Overview }) {
               : "Once a library is scanned and files are converted, the space you get back shows up here.";
     return (
       <div className="min-w-0">
-        <h1 className="font-semibold text-[2.5rem] leading-[1.08] text-ink sm:text-[3.25rem]">{title}</h1>
-        <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted">{detail}</p>
+        <h1 className="text-3xl leading-[1.2] font-semibold tracking-[-0.025em] text-ink max-roomy:text-[28px]">
+          {title}
+        </h1>
+        <p className="mt-3 max-w-[58ch] text-base leading-[1.6] text-muted">{detail}</p>
         <StatusLine queue={overview.queue} failed={totals.failed} />
         {holdings}
       </div>
@@ -286,15 +276,14 @@ function SavedHero({ overview }: { overview: Overview }) {
 
   return (
     <div className="min-w-0">
-      <h1 className="sr-only">Overview</h1>
-      <p className="flex flex-wrap items-baseline gap-x-3 text-ink">
-        <span className="font-semibold text-[4.25rem] leading-[0.95] tracking-[-0.015em] sm:text-[5.5rem]">
-          {value}
-          <span className="ml-2 text-[0.5em] tracking-normal text-ink">{unit}</span>
-        </span>
-        <span className="text-lg font-medium text-muted">saved</span>
-      </p>
-      <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
+      {/* The amount is the page's heading; "saved" stays its own element (the browser e2e test finds it). */}
+      <h1 className="flex flex-wrap items-baseline gap-x-3">
+        <span className="text-5xl leading-[1.1] font-semibold tracking-[-0.025em] text-ink tabular max-roomy:text-[2.5rem]">
+          {value} {unit}
+        </span>{" "}
+        <span className="text-xl font-semibold text-muted">saved</span>
+      </h1>
+      <p className="mt-3 max-w-[58ch] text-base leading-[1.6] text-muted">
         <SavedFrom totals={totals} />
         {projected && projected > 0 && remaining > 0 ? (
           <>
@@ -313,7 +302,11 @@ function SavedHero({ overview }: { overview: Overview }) {
 
 interface Problem {
   key: string;
-  icon: ReactNode;
+  /**
+   * The row's dot: red for conversions that failed (`danger`), amber for
+   * everything else that needs the user (`warning`; `info` is a file that
+   * changed meanwhile, where nothing was lost either).
+   */
   tone: "warning" | "danger" | "info";
   title: string;
   detail: string;
@@ -342,7 +335,7 @@ function perLibrary(
   key: string,
   libraries: Library[],
   counts: Record<string, number>,
-  row: (n: number) => Pick<Problem, "icon" | "tone" | "title" | "detail">,
+  row: (n: number) => Pick<Problem, "tone" | "title" | "detail">,
 ): Problem[] {
   const hit = libraries.filter((l) => (counts[l.id] ?? 0) > 0);
   const review = (library: Library) => ({
@@ -355,13 +348,6 @@ function perLibrary(
     return { ...problem, key: `${key}-${library.id}`, title: `${library.name}: ${problem.title}`, action: review(library) };
   });
 }
-
-const SETUP_ICON: Record<SetupProblem, ReactNode> = {
-  hardware_unavailable: <MonitorCog aria-hidden />,
-  work_folder: <FolderX aria-hidden />,
-  disk_full: <HardDrive aria-hidden />,
-  destination: <FolderLock aria-hidden />,
-};
 
 /**
  * "3 files couldn't be converted because of it." `kept` counts converted
@@ -439,7 +425,6 @@ export function problemsFrom(
     const stopped = hardwareFailed.length + hardwareKept.length;
     problems.push({
       key: "hardware",
-      icon: <MonitorCog aria-hidden />,
       tone: blocking ? "danger" : "warning",
       title: blocking ? "Nothing can be converted until setup is fixed" : "Hardware setup needs a fix",
       detail: stopped ? `${tips} ${blockedText(hardwareFailed.length, hardwareKept.length, !failures.complete)}` : tips,
@@ -450,7 +435,6 @@ export function problemsFrom(
   for (const library of libraries.filter((l) => l.path_error)) {
     problems.push({
       key: `folder-${library.id}`,
-      icon: <FolderX aria-hidden />,
       tone: "warning",
       title: `${library.name}: the folder can't be read`,
       detail: library.path_error ?? "",
@@ -467,7 +451,6 @@ export function problemsFrom(
       const reasons = reasonLines([...files, ...keptJobs]);
       problems.push({
         key: `setup-${kind}`,
-        icon: SETUP_ICON[kind],
         tone: "warning",
         title: fix.title,
         // The server's sentences name the exact cause and fix; the generic fix only without them.
@@ -489,19 +472,16 @@ export function problemsFrom(
       );
     problems.push(
       ...perLibrary("unreadable", libraries, count("unreadable"), (n) => ({
-        icon: <FileWarning aria-hidden />,
         tone: "warning",
         title: `${plural(n, "file")} can't be read`,
         detail: `${n === 1 ? "It looks" : "They look"} damaged or ${n === 1 ? "isn't a video" : "aren't videos"}. Popcorn Batch left ${n === 1 ? "it" : "them"} alone.`,
       })),
       ...perLibrary("failed", libraries, count("conversion"), (n) => ({
-        icon: <TriangleAlert aria-hidden />,
         tone: "danger",
         title: `${plural(n, "file")} couldn't be converted`,
         detail: `The ${n === 1 ? "original is" : "originals are"} untouched. See why, then try again.`,
       })),
       ...perLibrary("unsorted", libraries, failures.unsorted, (n) => ({
-        icon: <TriangleAlert aria-hidden />,
         tone: "danger",
         title: `${plural(n, "more file")} couldn't be converted`,
         detail: "There are too many failed files to sort them all here. The list shows why each one failed.",
@@ -513,7 +493,6 @@ export function problemsFrom(
       const reasons = reasonLines(changed);
       problems.push({
         key: "changed",
-        icon: <FileClock aria-hidden />,
         tone: "info",
         title: `${plural(changed.length, "file")} changed or moved while ${one ? "it was" : "they were"} being converted`,
         detail: reasons.length
@@ -543,7 +522,6 @@ function RetryAll({ retry }: { retry: Retry }) {
       aria-label={`Try again, ${plural(retry.count, "file")}`}
       needsServer
     >
-      <RotateCcw aria-hidden />
       Try again
     </Button>
   );
@@ -563,34 +541,24 @@ function NeedsAttention() {
   return (
     <section aria-labelledby="attention-heading">
       <SectionHeading id="attention-heading" title="Needs your attention" />
-      <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
-        {problems.map((p) => {
-          // Two actions go under the text on phones, lined up with it.
-          const two = Boolean(p.action && p.retry);
-          return (
-            <li
-              key={p.key}
-              className={cn(
-                "flex items-start gap-x-3 gap-y-2.5 px-4 py-3.5 sm:px-5",
-                !p.reasons?.length && "sm:items-center",
-                two && "max-sm:flex-wrap",
-              )}
-            >
-              <span
-                className={cn(
-                  "mt-0.5 shrink-0 [&_svg]:size-[1.125rem]",
-                  !p.reasons?.length && "sm:mt-0",
-                  p.tone === "danger" ? "text-error" : p.tone === "warning" ? "text-warn" : "text-muted",
-                )}
-              >
-                {p.icon}
-              </span>
-              <div className={cn("min-w-0 flex-1", two && "max-sm:basis-[calc(100%-1.875rem)]")}>
-                <p className="text-sm font-medium text-ink">{p.title}</p>
-                <p className="mt-0.5 max-w-[31rem] text-[0.8125rem] leading-snug text-muted">{p.detail}</p>
+      <ul className={cn(PANEL, "divide-y divide-line")}>
+        {problems.map((p) => (
+          <li
+            key={p.key}
+            className={cn(
+              "flex flex-col gap-3 p-[18px] roomy:flex-row roomy:justify-between roomy:gap-5 roomy:px-6 roomy:py-5",
+              p.reasons?.length ? "roomy:items-start" : "roomy:items-center",
+            )}
+          >
+            <div className="flex min-w-0 flex-1 items-start gap-3">
+              {/* Red for conversions that failed; amber for the rest, where nothing was lost. */}
+              <StatusDot tone={p.tone === "danger" ? "danger" : "warning"} className="mt-[8.5px]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-base font-[550] text-ink">{p.title}</p>
+                <p className="mt-1 max-w-[62ch] text-[13px] leading-[1.6] text-muted">{p.detail}</p>
                 {p.reasons?.length ? (
                   // The server's own words: the exact cause and what to do about it.
-                  <ul className="mt-2 max-w-[31rem] space-y-1.5 border-l-2 border-line pl-3 text-[0.8125rem] leading-snug text-ink">
+                  <ul className="mt-2 max-w-[62ch] space-y-1.5 border-l border-line pl-3 text-[13px] leading-[1.6] text-ink">
                     {p.reasons.map((reason) => (
                       <li key={reason} className="break-words">
                         {reason}
@@ -599,8 +567,10 @@ function NeedsAttention() {
                   </ul>
                 ) : null}
               </div>
-              {/* Under the text on a phone, wrapping rather than running past the screen's edge (320 px). */}
-              <div className={cn("flex shrink-0 flex-wrap gap-2", two && "max-sm:ml-[1.875rem] max-sm:max-w-[calc(100%-1.875rem)]")}>
+            </div>
+            {p.action || p.retry ? (
+              // Under the text at 520px and below, lined up with it, wrapping rather than running past the edge.
+              <div className="flex flex-wrap gap-2 pl-[19px] roomy:shrink-0 roomy:pl-0">
                 {p.action ? (
                   <a href={p.action.href} className={buttonVariants({ variant: "secondary", size: "sm" })}>
                     {p.action.label}
@@ -608,15 +578,15 @@ function NeedsAttention() {
                 ) : null}
                 {p.retry ? <RetryAll retry={p.retry} /> : null}
               </div>
-            </li>
-          );
-        })}
+            ) : null}
+          </li>
+        ))}
       </ul>
     </section>
   );
 }
 
-/** Live cards, only while files are converting. */
+/** One panel of job rows, only while files are converting. */
 function NowConverting({ queue }: { queue: QueueState }) {
   const running = useJobs({ state: "running", limit: 12 });
   const jobs = running.data?.items ?? [];
@@ -632,7 +602,8 @@ function NowConverting({ queue }: { queue: QueueState }) {
             <a href={href("/queue")} className={buttonVariants({ variant: "quiet", size: "sm" })}>
               Open queue
             </a>
-            <QueueControls queue={queue} compact />
+            {/* The status line above already offers Resume as the page's one primary action. */}
+            <QueueControls queue={queue} compact resumeVariant="secondary" />
           </>
         }
       />
@@ -641,14 +612,14 @@ function NowConverting({ queue }: { queue: QueueState }) {
           {errorMessage(running.error)} This retries on its own.
         </Callout>
       ) : jobs.length > 0 ? (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className={PANEL}>
           {jobs.map((job, i) => (
             <JobCard key={job.id} job={job} onOpen={open} announce={i === 0} />
           ))}
         </div>
       ) : (
-        // A job just started; its card arrives with the next list refresh.
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" aria-busy="true" aria-label="Loading what's converting">
+        // A job just started; its row arrives with the next list refresh.
+        <div className={PANEL} aria-busy="true" aria-label="Loading what's converting">
           <JobCardSkeleton />
         </div>
       )}
@@ -674,16 +645,11 @@ export function LibraryRow({ library }: { library: Library }) {
   } else if (!library.enabled) {
     status = "Paused. Not scanned or converted.";
   } else if (scanning) {
-    status = (
-      <span className="inline-flex items-center gap-1.5">
-        <LoaderCircle className="spin size-3.5" aria-hidden />
-        {scan
-          ? scan.phase === "discovering"
-            ? `Looking for videos · ${formatCount(scan.discovered)} found`
-            : `Checking ${formatCount(scan.analyzed)} of ${formatCount(scan.to_analyze)}`
-          : "Scanning"}
-      </span>
-    );
+    status = scan
+      ? scan.phase === "discovering"
+        ? `Looking for videos · ${formatCount(scan.discovered)} found`
+        : `Checking ${formatCount(scan.analyzed)} of ${formatCount(scan.to_analyze)}`
+      : "Scanning";
   } else if (left > 0) {
     status = `${plural(left, "file")} to go`;
   } else if (copying > 0) {
@@ -702,29 +668,26 @@ export function LibraryRow({ library }: { library: Library }) {
         : "Everything is finished";
   }
   return (
-    <li className="group relative px-4 py-4 transition-colors hover:bg-subtle sm:px-5">
+    <li className="group relative p-[18px] hover:bg-subtle roomy:px-6 roomy:py-5">
       <div className="flex items-baseline justify-between gap-4">
         {/* The name's link covers the whole row; "to review" sits above it. */}
         <a
           href={href(`/library/${library.id}`)}
-          className="min-w-0 truncate text-[0.9375rem] font-semibold text-ink no-underline outline-none group-hover:underline after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-accent focus-visible:after:outline-solid"
+          className="min-w-0 truncate text-base font-[550] text-ink no-underline outline-none group-hover:underline after:absolute after:inset-0 focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-accent focus-visible:after:outline-solid"
         >
           {library.name}
         </a>
-        <span className="shrink-0 text-sm text-muted tabular">
+        <span className="shrink-0 text-sm text-ink tabular">
           {stats.saved_bytes > 0 ? `${formatBytes(stats.saved_bytes)} saved` : null}
         </span>
       </div>
-      <div className="mt-0.5 flex items-baseline justify-between gap-4 text-[0.8125rem] text-muted">
+      <div className="mt-1 flex items-baseline justify-between gap-4 text-[13px] text-muted">
         <span className="min-w-0 truncate">
           {status}
           {stats.failed > 0 ? (
             <>
               {" · "}
-              <a
-                href={href(`/library/${library.id}`, { status: "failed" })}
-                className="relative z-10 text-ink underline decoration-field underline-offset-2"
-              >
+              <a href={href(`/library/${library.id}`, { status: "failed" })} className="relative z-10 text-ink underline">
                 {formatCount(stats.failed)} to review
               </a>
             </>
@@ -732,12 +695,7 @@ export function LibraryRow({ library }: { library: Library }) {
         </span>
         {stats.file_count > 0 && finished ? <span className="shrink-0 tabular">{finished}</span> : null}
       </div>
-      {settling ? (
-        <p className="mt-0.5 flex items-center gap-1.5 text-[0.8125rem] text-muted">
-          <Hourglass className="size-3.5 shrink-0 text-ink" aria-hidden />
-          {settlingText(copying)}
-        </p>
-      ) : null}
+      {settling ? <p className="mt-1 text-[13px] text-muted">{settlingText(copying)}</p> : null}
       <LibraryBar stats={stats} unreadable={unreadable} className="mt-3" />
     </li>
   );
@@ -784,14 +742,14 @@ function Libraries() {
           </a>
         }
       />
-      <div className="rounded-panel border border-line bg-surface">
+      <div className={PANEL}>
         <ul className="divide-y divide-line">
           {list.map((library) => (
             <LibraryRow key={library.id} library={library} />
           ))}
         </ul>
         {totals.file_count > 0 ? (
-          <div className="hidden border-t border-line px-4 py-3 sm:block sm:px-5">
+          <div className="hidden border-t border-line px-6 py-3.5 roomy:block">
             <LibraryLegend stats={totals} unreadable={failures.total.unreadable} />
           </div>
         ) : null}
@@ -825,13 +783,13 @@ export function RecentResults() {
         }
       />
       {history.isPending ? (
-        <div className="space-y-3 rounded-panel border border-line bg-surface p-4">
+        <div className={cn(PANEL, "space-y-3 p-[18px] roomy:p-6")}>
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-10 w-full" />
           ))}
         </div>
       ) : (
-        <ul className="divide-y divide-line rounded-panel border border-line bg-surface">
+        <ul className={cn(PANEL, "divide-y divide-line")}>
           {items.map((job) => {
             const standing = standings.get(job.id) ?? "current";
             // A conversion that changed the file's extension is listed by the new name, the old one secondary.
@@ -841,16 +799,17 @@ export function RecentResults() {
                 <button
                   type="button"
                   onClick={() => openSheet({ job: job.id })}
-                  className="flex w-full flex-col gap-1.5 px-4 py-3 text-left transition-colors hover:bg-subtle"
+                  // Full width inside the panel: the focus outline sits inside so it isn't clipped.
+                  className="flex w-full flex-col gap-1.5 px-[18px] py-4 text-left -outline-offset-2 hover:bg-subtle roomy:px-6"
                 >
                   <span className="flex w-full items-center justify-between gap-3">
                     <span className="min-w-0 flex-1">
-                      <FileName name={renamed ?? job.file_name} className="text-sm font-medium text-ink" />
+                      <FileName name={renamed ?? job.file_name} className="text-sm font-[550] text-ink" />
                       {renamed ? <WasName name={job.file_name} className="mt-0.5" /> : null}
                     </span>
                     <JobStateBadge job={job} standing={standing} />
                   </span>
-                  <span className="flex w-full items-baseline justify-between gap-3 text-[0.8125rem]">
+                  <span className="flex w-full items-baseline justify-between gap-3 text-[13px]">
                     {standing === "unknown" ? (
                       <span aria-hidden className="skeleton inline-block h-3 w-40" />
                     ) : (
@@ -899,22 +858,22 @@ function Welcome() {
   const { kept } = useSetupProblems();
   const problems = problemsFrom(libraries.data ?? [], failures, hardware.hw, settings.data, kept);
   return (
-    <div className="max-w-2xl">
-      <h1 className="font-semibold text-[2.75rem] leading-[1.08] text-ink sm:text-[3.5rem]">
+    <div className="max-w-3xl">
+      <h1 className="text-3xl leading-[1.2] font-semibold tracking-[-0.025em] text-ink max-roomy:text-[28px]">
         Make your video library smaller, safely.
       </h1>
-      <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted">
+      <p className="mt-2.5 max-w-[58ch] text-base leading-[1.6] text-muted">
         Point Popcorn Batch at a folder and choose a goal. It converts files in the background, checks each result
         against the original, and only then replaces it.
       </p>
       <a href={href("/libraries/new")} className={cn(buttonVariants({ variant: "primary" }), "mt-8")}>
         Choose a folder
       </a>
-      <div className="mt-5 text-[0.8125rem] text-muted">
+      <div className="mt-5 text-[13px] text-muted">
         <HardwareLine hw={hardware.hw} detecting={hardware.detecting} />
       </div>
       {problems.length ? (
-        <div className="mt-12">
+        <div className="mt-10">
           <NeedsAttention />
         </div>
       ) : null}
@@ -940,7 +899,7 @@ export function OverviewScreen() {
   return (
     <div>
       <LiveUpdatesOff />
-      <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-x-10">
+      <div className="flex flex-col gap-10 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)]">
         <div className={cn("lg:col-start-1 lg:row-start-1", !chart && "lg:col-span-2")}>
           {data ? (
             <SavedHero overview={data} />
@@ -950,8 +909,8 @@ export function OverviewScreen() {
             </Callout>
           ) : (
             <div>
-              <Skeleton className="h-20 w-72" />
-              <Skeleton className="mt-5 h-4 w-96 max-w-full" />
+              <Skeleton className="h-[53px] w-72 max-w-full" />
+              <Skeleton className="mt-4 h-5 w-96 max-w-full" />
             </div>
           )}
         </div>
@@ -973,12 +932,9 @@ export function OverviewScreen() {
           <Libraries />
           <RecentResults />
         </div>
-        {/* Last on phones (after the libraries); beside the saved number on wide screens. */}
+        {/* Last on narrower screens (after the libraries); beside the saved amount from 1024px. */}
         {chart ? (
-          <SavingsChart
-            points={data.savings_history}
-            className="rounded-panel border border-line bg-surface p-4 lg:col-start-2 lg:row-start-1 lg:self-end"
-          />
+          <SavingsChart points={data.savings_history} className="lg:col-start-2 lg:row-start-1 lg:self-end" />
         ) : null}
       </div>
     </div>

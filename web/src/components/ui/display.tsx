@@ -314,8 +314,9 @@ export function Disclosure({
   return (
     <details className={cn("group mt-6 border-t border-line pt-3", className)}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-[550] text-ink select-none [&::-webkit-details-marker]:hidden">
+        {/* Turns with its own disclosure only, so one inside an open one still looks closed. */}
         <ChevronRight
-          className="size-4 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200 group-open:rotate-90"
+          className="size-4 shrink-0 text-muted motion-safe:transition-transform motion-safe:duration-200 [details[open]>summary>&]:rotate-90"
           aria-hidden
         />
         {title}

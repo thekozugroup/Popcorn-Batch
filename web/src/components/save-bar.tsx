@@ -58,6 +58,8 @@ export function SaveBar({
   useNavigationGuard(dirty, { blocks, save: saveAndLeave, discard: onDiscard });
 
   if (!dirty && !error) return null;
+  // Red only while saving failed; a note that points at a highlighted field stays neutral.
+  const failed = Boolean(error) && errorRole === "alert";
   return (
     <div className="pointer-events-none sticky bottom-4 z-20 mt-8 flex justify-center">
       <div
@@ -65,7 +67,7 @@ export function SaveBar({
         aria-label="Unsaved changes"
         className={cn(
           "pointer-events-auto flex w-full max-w-2xl flex-col gap-3 rounded-panel border bg-surface px-4 py-3 roomy:flex-row roomy:items-center",
-          error ? "border-error" : "border-line",
+          failed ? "border-error" : "border-line",
         )}
       >
         <p

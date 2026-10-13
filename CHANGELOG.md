@@ -73,6 +73,27 @@ What is coming after 0.2.0, from an evaluation on a real AMD Unraid server.
   With Compose, the project, service and container are now `popcorn-batch`
   (stop the old one with the old file first), and `SZALINSKI_IMAGE` is now
   `POPCORN_BATCH_IMAGE`.
+- **The web UI is redesigned to match the Popcorn family**, the look of
+  [Popcorn SR](https://github.com/thekozugroup/Popcorn-SR), written down in
+  `DESIGN.md`. It uses your system's own font (Newsreader, DM Sans and
+  JetBrains Mono are no longer bundled), quiet grey surfaces with one blue for
+  actions, focus and progress, and status as a small coloured dot beside plain
+  words. Navigation is a sidebar with Overview, Libraries, Queue and Settings
+  and your libraries below them; on phones and tablets it becomes a short block
+  at the top of the page, and the bottom tab bar is gone. Light and dark now
+  follow the system setting, so the Appearance switch is gone. The new icon,
+  three kernels on a dark tile, is the browser icon, the sidebar mark and the
+  Unraid template's icon. Screens are flat panels of rows: the Overview leads
+  with the space saved, files converting now are one list instead of cards,
+  each Settings section is one panel, Settings › Hardware shows this machine
+  the way Popcorn SR shows a worker, and the Saved per day chart can show its
+  numbers as a table. Once a **Popcorn SR address** is saved in Settings ›
+  Advanced, "Open Popcorn SR" appears in the sidebar and in About and opens it
+  in a new tab; Popcorn Batch still never connects to it. Fixed along the way:
+  screen readers now read the folder picker's list correctly, goal cards no
+  longer run past the edge of a 768px-wide screen, and every button, link,
+  field and tab is at least 44px tall with a mouse too, not only on touch
+  screens.
 - **Renamed to Szalinski** (it was Chrysopoeia), after the inventor in *Honey,
   I Shrunk the Kids*. The image is now `ghcr.io/thekozugroup/szalinski`, the
   binary `szalinski`, the Unraid template `unraid/szalinski.xml`, and the
