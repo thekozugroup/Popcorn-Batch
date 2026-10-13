@@ -79,6 +79,15 @@ describe("ProfileEditor", () => {
     expect(state()).toBe("valid dirty");
   });
 
+  it("stacks the quality and speed options below 521px, so none is cut short inside a panel", () => {
+    render(<Form saved={profileForGoal("balanced")} />);
+    for (const name of ["Quality", "Speed"]) {
+      const group = screen.getByRole("radiogroup", { name });
+      expect(group.className).toContain("flex-col");
+      expect(group.className).toContain("roomy:flex-row");
+    }
+  });
+
   it("names each goal card by its title alone", () => {
     render(<Form saved={profileForGoal("balanced")} />);
     const radio = screen.getByRole("radio", { name: "Balanced" });

@@ -442,7 +442,7 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
       open={Boolean(fileId)}
       onOpenChange={(open) => !open && onClose()}
       title={file ? middleTruncate(file.file_name, 80) : "Loading…"}
-      description={file ? <span className="break-all">{file.relative_path}</span> : undefined}
+      description={file ? <span className="[overflow-wrap:anywhere]">{file.relative_path}</span> : undefined}
       footer={file && detail && hasActions(file, library?.profile) ? <FileActions file={file} jobs={detail.jobs} /> : undefined}
     >
       {detail && file ? (
@@ -482,6 +482,7 @@ export function FileSheet({ fileId, onClose }: { fileId: string | null; onClose:
                   const renamed = newFileName(job, undefined, settings.data?.output_mode);
                   return (
                     <li key={job.id}>
+                      {/* A history row: the outcome tag, when, the note on the right, and "Was …" under them. */}
                       <button
                         type="button"
                         onClick={() => openSheet({ file: null, job: job.id })}

@@ -97,7 +97,14 @@ interface ProfileEditorProps {
   errors?: ProfileErrors;
 }
 
-function Group({
+/**
+ * A settings section (DESIGN.md): from 1024px a 240px column with the
+ * heading and its explanation beside the controls; below, the heading sits
+ * above them. A divider separates it from the section before; the first in
+ * its parent has none and the last no bottom padding, so a panel's own
+ * padding frames them. The library's Settings tab uses it for its own groups.
+ */
+export function SettingsSection({
   title,
   description,
   children,
@@ -110,15 +117,18 @@ function Group({
 }) {
   const Heading = level === 2 ? "h2" : "h3";
   return (
-    <section className="grid gap-4 border-t border-line py-6 first:border-t-0 first:pt-0 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
+    <section className="grid gap-4 border-t border-line py-6 first:border-t-0 first:pt-0 last:pb-0 lg:grid-cols-[15rem_minmax(0,1fr)] lg:gap-10">
       <div>
         <Heading className="text-base font-semibold text-ink">{title}</Heading>
         {description ? <p className="mt-2 max-w-[68ch] text-sm leading-[1.7] text-muted">{description}</p> : null}
       </div>
-      <div className="min-w-0">{children}</div>
+      {/* A size container, so field grids inside take as many columns as the room beside the heading allows. */}
+      <div className="@container min-w-0">{children}</div>
     </section>
   );
 }
+
+const Group = SettingsSection;
 
 /** Calls `report` whenever `valid` changes (and once on mount). */
 function useReportValidity(valid: boolean, report: (valid: boolean) => void): void {
@@ -341,6 +351,8 @@ export function ProfileEditor({
           onChange={(speed) => update({ speed })}
           options={SPEED_PRESETS.map((s) => ({ value: s, label: SPEED_LABEL[s] }))}
           className="roomy:max-w-md"
+          // Inside a padded panel at 390px, "Slower, smaller" would be cut short side by side.
+          stackOnPhones
         />
         <p className="mt-2 text-[13px] leading-[1.6] text-muted">{SPEED_HELP[profile.speed]}</p>
         <FieldError message={errors.speed} />
@@ -363,7 +375,7 @@ export function ProfileEditor({
           <span className="hidden font-normal text-muted roomy:inline">Formats, resolution, tracks and thresholds</span>
         </button>
 
-        <div id={advancedId} hidden={!advancedOpen} className="pt-4">
+        <div id={advancedId} hidden={!advancedOpen} className="@container pt-4">
           {notes.length ? (
             // A message: subtle fill, neutral text, no border for information.
             <div
@@ -376,7 +388,11 @@ export function ProfileEditor({
             </div>
           ) : null}
 
-          <div className="grid gap-5 sm:grid-cols-3">
+          {/*
+            Field grids take columns by the room this block has (a size container), not by the
+            screen; items-start keeps a long help text from pushing its neighbour's control down.
+          */}
+          <div className="grid items-start gap-5 @sm:grid-cols-2 @2xl:grid-cols-3">
             <Field
               label="Video format"
               description={
@@ -445,7 +461,7 @@ export function ProfileEditor({
             </Field>
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
             <Field
               label="Limit resolution"
               description="Larger videos are scaled down. Smaller ones are never scaled up."
@@ -483,7 +499,7 @@ export function ProfileEditor({
             </Field>
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
             <LanguageField
               key={`audio-${resetKey}`}
               label="Audio languages to keep"
@@ -504,7 +520,7 @@ export function ProfileEditor({
             />
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+          <div className="mt-6 grid items-start gap-5 @sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <span id={`${advancedId}-subs`} className="text-sm font-[550] text-ink">
                 Subtitles
