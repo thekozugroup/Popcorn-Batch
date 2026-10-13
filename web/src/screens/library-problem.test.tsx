@@ -79,6 +79,16 @@ describe("other folder problems", () => {
     expect(screen.queryByRole("button", { name: "Use the drive that's there now" })).toBeNull();
   });
 
+  it("are a message: neutral words, an amber border and no icon", () => {
+    renderWithClient(<FolderProblem library={library({ path_error: DIFFERENT, changed_mount: "/mnt/remotes/nas" })} />);
+    const message = screen.getByText("A different drive is mounted").parentElement as HTMLElement;
+    expect(message.className).toContain("border-warn");
+    expect(message.className).toContain("text-ink");
+    expect(message.querySelector("svg")).toBeNull();
+    // Its action is a secondary button.
+    expect(screen.getByRole("button", { name: "Use the drive that's there now" }).className).toContain("bg-surface");
+  });
+
   it("show nothing when the folder is fine, also from a server that doesn't send the drive", () => {
     const fine = library();
     delete (fine as Partial<Library>).changed_mount;

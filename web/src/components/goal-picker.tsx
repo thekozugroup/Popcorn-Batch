@@ -68,7 +68,7 @@ interface GoalPickerProps {
   profile?: TranscodeProfile;
   label: string;
   className?: string;
-  /** Two columns on wide screens (default) or always one. */
+  /** Two columns where the picker is at least 512px wide (default), or always one. */
   columns?: 1 | 2;
   /**
    * Offer the defaults for new libraries (Settings › Advanced) as the first
@@ -98,52 +98,58 @@ export function GoalPicker({
   return (
     <fieldset className={className}>
       <legend className="sr-only">{label}</legend>
-      <div className={cn("grid gap-3", columns === 2 && "sm:grid-cols-2")}>
-        {defaults ? (
-          <ChoiceCard
-            name={name}
-            value="defaults"
-            checked={defaults.selected}
-            onChange={defaults.onSelect}
-            title="Your defaults"
-            description="The settings for new libraries you chose in Settings › Advanced."
-            className={cn(columns === 2 && "sm:col-span-2")}
-          >
-            {formats(defaults.profile)}
-          </ChoiceCard>
-        ) : null}
-        {GOALS.map((goal) => {
-          const preset = presets?.goals.find((g) => g.goal === goal);
-          return (
+      {/*
+        Two columns once the picker itself is 32rem (512px) wide, not at a screen width: beside the
+        sidebar, or beside a settings heading, a 640px screen rule would squeeze each card to ~170px.
+      */}
+      <div className="@container">
+        <div className={cn("grid gap-3", columns === 2 && "@lg:grid-cols-2")}>
+          {defaults ? (
             <ChoiceCard
-              key={goal}
               name={name}
-              value={goal}
-              checked={!defaults?.selected && value === goal}
-              onChange={() => onChange(goal)}
-              title={preset?.title ?? GOAL_LABEL[goal]}
-              // Our own outcome line: the server's summary names formats and
-              // speeds, which the line below already shows.
-              description={GOAL_SUMMARY[goal]}
-              badge={recommended === goal ? <Tag>Best fit</Tag> : null}
+              value="defaults"
+              checked={defaults.selected}
+              onChange={defaults.onSelect}
+              title="Your defaults"
+              description="The settings for new libraries you chose in Settings › Advanced."
+              className={cn(columns === 2 && "@lg:col-span-2")}
             >
-              {formats(presetProfile(presets, goal))}
+              {formats(defaults.profile)}
             </ChoiceCard>
-          );
-        })}
-        {value === "custom" && profile && !defaults ? (
-          <ChoiceCard
-            name={name}
-            value="custom"
-            checked
-            onChange={() => undefined}
-            title="Custom"
-            description="You changed the format under More format options. Pick a goal to start from its defaults again."
-            className={cn(columns === 2 && "sm:col-span-2")}
-          >
-            {formats(profile)}
-          </ChoiceCard>
-        ) : null}
+          ) : null}
+          {GOALS.map((goal) => {
+            const preset = presets?.goals.find((g) => g.goal === goal);
+            return (
+              <ChoiceCard
+                key={goal}
+                name={name}
+                value={goal}
+                checked={!defaults?.selected && value === goal}
+                onChange={() => onChange(goal)}
+                title={preset?.title ?? GOAL_LABEL[goal]}
+                // Our own outcome line: the server's summary names formats and
+                // speeds, which the line below already shows.
+                description={GOAL_SUMMARY[goal]}
+                badge={recommended === goal ? <Tag>Best fit</Tag> : null}
+              >
+                {formats(presetProfile(presets, goal))}
+              </ChoiceCard>
+            );
+          })}
+          {value === "custom" && profile && !defaults ? (
+            <ChoiceCard
+              name={name}
+              value="custom"
+              checked
+              onChange={() => undefined}
+              title="Custom"
+              description="You changed the format under More format options. Pick a goal to start from its defaults again."
+              className={cn(columns === 2 && "@lg:col-span-2")}
+            >
+              {formats(profile)}
+            </ChoiceCard>
+          ) : null}
+        </div>
       </div>
     </fieldset>
   );

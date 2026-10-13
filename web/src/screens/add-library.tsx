@@ -5,10 +5,10 @@
  * Each step's question is the page's one heading.
  */
 
-import { ArrowLeft } from "lucide-react";
 import { useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { href, navigate } from "@/lib/router";
+import { cn } from "@/lib/utils";
 import { FolderStep, GoalStep } from "./library-steps";
 
 export function AddLibraryScreen() {
@@ -33,7 +33,8 @@ export function AddLibraryScreen() {
             }}
           />
           <div className="mt-6">
-            <a href={href("/")} className={buttonVariants({ variant: "quiet" })}>
+            {/* A quiet button-link, pulled left so its words line up with the page's edge. */}
+            <a href={href("/")} className={cn(buttonVariants({ variant: "quiet" }), "-ml-2.5")}>
               Cancel
             </a>
           </div>
@@ -54,8 +55,7 @@ export function AddLibraryScreen() {
             navigate(`/library/${library.id}`, { replace: true });
           }}
           secondary={
-            <Button variant="quiet" onClick={() => setStep("folder")}>
-              <ArrowLeft aria-hidden />
+            <Button variant="quiet" onClick={() => setStep("folder")} className="roomy:-ml-2.5">
               Back
             </Button>
           }
